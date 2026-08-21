@@ -31,36 +31,32 @@ function saveLocal(value) {
 function euro(value) {
   return `${Number(value).toFixed(2).replace('.', ',')} €`;
 }
-/**
- * Retourne l'heure de retrait sans passer par Date().
+/*
+ * IMPORTANT :
+ * pickup_time est affiché tel qu'il est stocké dans Supabase.
  *
- * pickup_time peut être :
- * 2026-08-21T20:30:00
- * 2026-08-21T20:30:00+00:00
- * 2026-08-21 20:30:00+00
- * 20:30
+ * Exemple :
+ * 2026-08-21 22:15:00+00
+ *                  ↓
+ *                22:15
+ *
+ * On ne passe PAS par new Date().toLocaleTimeString()
+ * afin d'éviter une conversion automatique UTC → Europe/Paris.
  */
 function formatPickupTime(value) {
   if (!value) return '—';
-  const stringValue = String(value).trim();
-  // Déjà au format HH:mm
-  if (/^\d{2}:\d{2}$/.test(stringValue)) {
-    return stringValue;
-  }
-  // ISO / timestamp PostgreSQL
-  const match = stringValue.match(
-    /T(\d{2}):(\d{2})|(\d{2}):(\d{2})/
-  );
-  if (match) {
-    const hour = match[1] ?? match[3];
-    const minute = match[2] ?? match[4];
-    return `${hour}:${minute}`;
+  const text = String(value);
+  // Format PostgreSQL :
+  // 2026-08-21 22:15:00+00
+  if (text.length >= 16) {
+    return text.slice(11, 16);
   }
   return '—';
 }
 async function init() {
   if (!supabase) {
-    return renderSetup();
+    renderSetup();
+    return;
   }
   session = await getAdminSession(supabase);
   if (session) {
@@ -85,7 +81,9 @@ function renderSetup() {
   root.innerHTML = `
     <main class="admin-auth">
       <div class="auth-card">
-        <p class="eyebrow">CAZ FOOD · CONFIGURATION</p>
+        <p class="eyebrow">
+          CAZ FOOD · CONFIGURATION
+        </p>
         <h1>
           Le comptoir<br>
           <em>arrive bientôt.</em>
@@ -105,11 +103,15 @@ function renderLogin(error = '') {
   root.innerHTML = `
     <main class="admin-auth">
       <div class="auth-card">
-        <div class="auth-mark">CF</div>
+        <div class="auth-mark">
+          CF
+        </div>
         <p class="eyebrow">
           CAZ FOOD · LE COMPTOIR
         </p>
-        <h1>Bon retour.</h1>
+        <h1>
+          Bon retour.
+        </h1>
         <p>
           Connexion réservée à l'équipe Caz Food.
         </p>
@@ -118,7 +120,10 @@ function renderLogin(error = '') {
             ? `<div class="auth-error">${error}</div>`
             : ''
         }
-        <form id="login-form" class="auth-form">
+        <form
+          id="login-form"
+          class="auth-form"
+        >
           <label>
             EMAIL
             <input
@@ -159,22 +164,25 @@ function renderLogin(error = '') {
     .querySelector('#login-form')
     .onsubmit = async event => {
       event.preventDefault();
-      const form = new FormData(
-        event.currentTarget
-      );
+      const form =
+        new FormData(event.currentTarget);
       const button =
-        event.currentTarget.querySelector('button');
+        event.currentTarget.querySelector(
+          'button'
+        );
       button.disabled = true;
-      button.textContent = 'CONNEXION…';
+      button.textContent =
+        'CONNEXION…';
       try {
         session = await signInAdmin(
           supabase,
           form.get('email'),
           form.get('password')
         );
-        remote = createSupabaseOrderStore(
-          supabase
-        );
+        remote =
+          createSupabaseOrderStore(
+            supabase
+          );
         mode = 'remote';
         subscribeRealtime();
         await render();
@@ -224,29 +232,37 @@ async function advance(order) {
   await render();
 }
 async function render() {
-  if (!session && mode === 'remote') {
-    return renderLogin();
+  if (
+    !session &&
+    mode === 'remote'
+  ) {
+    renderLogin();
+    return;
   }
-  const data = (await getOrders())
-    .slice()
-    .sort(
-      (a, b) =>
-        new Date(
-          b.created_at ?? b.createdAt
-        ) -
-        new Date(
-          a.created_at ?? a.createdAt
-        )
+  const data =
+    (await getOrders())
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(
+            b.created_at ??
+            b.createdAt
+          ) -
+          new Date(
+            a.created_at ??
+            a.createdAt
+          )
+      );
+  const total =
+    data.reduce(
+      (sum, order) =>
+        sum +
+        Number(
+          order.total ??
+          (order.total_cents ?? 0) / 100
+        ),
+      0
     );
-  const total = data.reduce(
-    (sum, order) =>
-      sum +
-      Number(
-        order.total ??
-        (order.total_cents ?? 0) / 100
-      ),
-    0
-  );
   root.innerHTML = `
     <main class="admin-shell">
       <header class="admin-header">
@@ -254,7 +270,9 @@ async function render() {
           <p class="eyebrow">
             CAZ FOOD · SERVICE
           </p>
-          <h1>Le comptoir.</h1>
+          <h1>
+            Le comptoir.
+          </h1>
           <p>
             ${
               mode === 'remote'
@@ -280,40 +298,52 @@ async function render() {
       </header>
       <section class="admin-stats">
         <div>
-          <span>À prendre en charge</span>
+          <span>
+            À prendre en charge
+          </span>
           <strong>
             ${
               data.filter(
-                order => order.status === 'NEW'
+                o => o.status === 'NEW'
               ).length
             }
           </strong>
         </div>
         <div>
-          <span>En préparation</span>
+          <span>
+            En préparation
+          </span>
           <strong>
             ${
               data.filter(
-                order =>
-                  order.status === 'PREPARING'
+                o =>
+                  o.status ===
+                  'PREPARING'
               ).length
             }
           </strong>
         </div>
         <div>
-          <span>Prêtes</span>
+          <span>
+            Prêtes
+          </span>
           <strong>
             ${
               data.filter(
-                order =>
-                  order.status === 'READY'
+                o =>
+                  o.status ===
+                  'READY'
               ).length
             }
           </strong>
         </div>
         <div>
-          <span>Commandé</span>
-          <strong>${euro(total)}</strong>
+          <span>
+            Commandé
+          </span>
+          <strong>
+            ${euro(total)}
+          </strong>
         </div>
       </section>
       <section class="orders-grid">
@@ -331,8 +361,8 @@ async function render() {
                   Le comptoir est calme.
                 </h2>
                 <p>
-                  La prochaine commande apparaîtra
-                  ici dès qu'elle sera envoyée.
+                  La prochaine commande apparaîtra ici
+                  dès qu'elle sera envoyée.
                 </p>
               </div>
             `
@@ -374,9 +404,13 @@ async function render() {
       button.onclick = () => {
         const order =
           data.find(
-            order =>
-              String(order.id ?? '') ===
-              String(button.dataset.id)
+            item =>
+              String(
+                item.id ?? ''
+              ) ===
+              String(
+                button.dataset.id
+              )
           );
         if (order) {
           advance(order);
@@ -389,9 +423,13 @@ async function render() {
       button.onclick = () => {
         const order =
           data.find(
-            order =>
-              String(order.id ?? '') ===
-              String(button.dataset.id)
+            item =>
+              String(
+                item.id ?? ''
+              ) ===
+              String(
+                button.dataset.id
+              )
           );
         if (order) {
           printOrder(order);
@@ -400,51 +438,50 @@ async function render() {
     });
 }
 function orderCard(order) {
-  const status = order.status;
+  const status =
+    order.status;
   const items =
     order.items ??
     order.order_items ??
     [];
-  const pickupTime =
-    order.customer?.pickupTime ??
-    formatPickupTime(
-      order.pickup_time
-    );
-  const customer = {
-    name:
-      order.customer?.name ??
-      order.customer_name ??
-      '—',
-    phone:
-      order.customer?.phone ??
-      order.customer_phone ??
-      '—',
-    pickupTime
-  };
+  const customer =
+    order.customer ??
+    {
+      name:
+        order.customer_name,
+      phone:
+        order.customer_phone,
+      pickupTime:
+        formatPickupTime(
+          order.pickup_time
+        )
+    };
   const number =
     order.number ??
-    order.order_number ??
-    '—';
+    order.order_number;
   const total =
     order.total ??
     (order.total_cents ?? 0) / 100;
   const actionLabel =
-    getNextStatusLabel(status);
-  const action = actionLabel
-    ? `
-      <button
-        class="primary"
-        data-next
-        data-id="${order.id}"
-      >
-        ${actionLabel} →
-      </button>
-    `
-    : `
-      <span class="ready-badge">
-        ✓ Prête pour retrait
-      </span>
-    `;
+    getNextStatusLabel(
+      status
+    );
+  const action =
+    actionLabel
+      ? `
+        <button
+          class="primary"
+          data-next
+          data-id="${order.id}"
+        >
+          ${actionLabel} →
+        </button>
+      `
+      : `
+        <span class="ready-badge">
+          ✓ Prête pour retrait
+        </span>
+      `;
   return `
     <article
       class="order-card status-${String(
@@ -462,32 +499,33 @@ function orderCard(order) {
           </span>
         </div>
         <strong>
-          ${customer.pickupTime}
+          ${
+            customer.pickupTime ||
+            '—'
+          }
         </strong>
       </header>
       <div class="order-customer">
         <strong>
-          ${customer.name}
+          ${
+            customer.name ||
+            'Client'
+          }
         </strong>
         <span>
-          ${customer.phone}
+          ${
+            customer.phone ||
+            '—'
+          }
         </span>
       </div>
-      <ul>
-        ${
-          items.length
-            ? items
-                .map(item => {
-                  const options =
-                    item.options ??
-                    {};
-                  const optionLabels = [
-                    options.meat,
-                    options.sauce,
-                    options.drink,
-                    options.boisson
-                  ].filter(Boolean);
-                  return `
+      ${
+        items.length
+          ? `
+            <ul>
+              ${items
+                .map(
+                  item => `
                     <li>
                       <strong>
                         ${item.quantity}×
@@ -498,30 +536,44 @@ function orderCard(order) {
                         'Article'
                       }
                       ${
-                        optionLabels.length
+                        item.options?.meat
                           ? `
                             <small>
-                              ·
-                              ${optionLabels.join(
-                                ' · '
-                              )}
+                              · ${item.options.meat}
+                            </small>
+                          `
+                          : ''
+                      }
+                      ${
+                        item.options?.sauce
+                          ? `
+                            <small>
+                              · ${item.options.sauce}
+                            </small>
+                          `
+                          : ''
+                      }
+                      ${
+                        item.options?.drink
+                          ? `
+                            <small>
+                              · ${item.options.drink}
                             </small>
                           `
                           : ''
                       }
                     </li>
-                  `;
-                })
-                .join('')
-            : `
-              <li>
-                <span>
-                  Détail des articles indisponible
-                </span>
-              </li>
-            `
-        }
-      </ul>
+                  `
+                )
+                .join('')}
+            </ul>
+          `
+          : `
+            <p class="order-items-empty">
+              Détail des articles indisponible
+            </p>
+          `
+      }
       <footer>
         <strong>
           ${euro(total)}
