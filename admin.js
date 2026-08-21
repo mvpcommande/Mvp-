@@ -29,96 +29,40 @@ function saveLocal(value) {
   );
 }
 function euro(value) {
-  return `${Number(value || 0).toFixed(2).replace('.', ',')} €`;
+  return `${Number(value).toFixed(2).replace('.', ',')} €`;
 }
 /**
- * Lecture directe de Supabase.
+ * Retourne l'heure de retrait sans passer par Date().
  *
- * On ne passe volontairement pas par remote.listOrders()
- * pour éviter qu'une implémentation incorrecte du store
- * masque les commandes existantes.
+ * pickup_time peut être :
+ * 2026-08-21T20:30:00
+ * 2026-08-21T20:30:00+00:00
+ * 2026-08-21 20:30:00+00
+ * 20:30
  */
-async function getRemoteOrders() {
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('orders')
-    .select(`
-      id,
-      order_number,
-      customer_name,
-      customer_phone,
-      pickup_time,
-      status,
-      payment_status,
-      fulfillment_type,
-      total_cents,
-      notes,
-      created_at,
-      updated_at,
-      order_items (
-        id,
-        order_id,
-        product_id,
-        product_name,
-        quantity,
-        unit_price_cents,
-        options,
-        line_total_cents
-      )
-    `)
-    .order('created_at', {
-      ascending: false
-    });
-  if (error) {
-    console.error(
-      '[CAZ FOOD ADMIN] Erreur lecture orders:',
-      error
-    );
-    throw error;
+function formatPickupTime(value) {
+  if (!value) return '—';
+  const stringValue = String(value).trim();
+  // Déjà au format HH:mm
+  if (/^\d{2}:\d{2}$/.test(stringValue)) {
+    return stringValue;
   }
-  return (data || []).map(order => ({
-    ...order,
-    number: order.order_number,
-    total: Number(order.total_cents || 0) / 100,
-    customer: {
-      name: order.customer_name,
-      phone: order.customer_phone,
-      pickupTime: order.pickup_time
-        ? new Date(order.pickup_time).toLocaleTimeString(
-            'fr-FR',
-            {
-              hour: '2-digit',
-              minute: '2-digit'
-            }
-          )
-        : '—'
-    },
-    items: (order.order_items || []).map(item => ({
-      id: item.id,
-      product_id: item.product_id,
-      name: item.product_name,
-      product_name: item.product_name,
-      quantity: item.quantity,
-      price: Number(item.unit_price_cents || 0) / 100,
-      options: item.options || {},
-      line_total: Number(item.line_total_cents || 0) / 100
-    }))
-  }));
+  // ISO / timestamp PostgreSQL
+  const match = stringValue.match(
+    /T(\d{2}):(\d{2})|(\d{2}):(\d{2})/
+  );
+  if (match) {
+    const hour = match[1] ?? match[3];
+    const minute = match[2] ?? match[4];
+    return `${hour}:${minute}`;
+  }
+  return '—';
 }
 async function init() {
   if (!supabase) {
-    renderSetup();
-    return;
+    return renderSetup();
   }
-  try {
-    session = await getAdminSession(supabase);
-  } catch (error) {
-    console.error(
-      '[CAZ FOOD ADMIN] Impossible de récupérer la session:',
-      error
-    );
-    session = null;
-  }
+  session = await getAdminSession(supabase);
   if (session) {
     remote = createSupabaseOrderStore(supabase);
     mode = 'remote';
@@ -129,28 +73,19 @@ async function init() {
   renderLogin();
 }
 function subscribeRealtime() {
-  if (!supabase) return;
-  if (realtimeChannel) {
+  if (realtimeChannel && supabase) {
     supabase.removeChannel(realtimeChannel);
-    realtimeChannel = null;
   }
   realtimeChannel = subscribeToOrderChanges(
     supabase,
-    async () => {
-      console.log(
-        '[CAZ FOOD ADMIN] Changement détecté, actualisation…'
-      );
-      await render();
-    }
+    () => render()
   );
 }
 function renderSetup() {
   root.innerHTML = `
     <main class="admin-auth">
       <div class="auth-card">
-        <p class="eyebrow">
-          CAZ FOOD · CONFIGURATION
-        </p>
+        <p class="eyebrow">CAZ FOOD · CONFIGURATION</p>
         <h1>
           Le comptoir<br>
           <em>arrive bientôt.</em>
@@ -170,15 +105,11 @@ function renderLogin(error = '') {
   root.innerHTML = `
     <main class="admin-auth">
       <div class="auth-card">
-        <div class="auth-mark">
-          CF
-        </div>
+        <div class="auth-mark">CF</div>
         <p class="eyebrow">
           CAZ FOOD · LE COMPTOIR
         </p>
-        <h1>
-          Bon retour.
-        </h1>
+        <h1>Bon retour.</h1>
         <p>
           Connexion réservée à l'équipe Caz Food.
         </p>
@@ -187,10 +118,7 @@ function renderLogin(error = '') {
             ? `<div class="auth-error">${error}</div>`
             : ''
         }
-        <form
-          id="login-form"
-          class="auth-form"
-        >
+        <form id="login-form" class="auth-form">
           <label>
             EMAIL
             <input
@@ -227,48 +155,44 @@ function renderLogin(error = '') {
       </div>
     </main>
   `;
-  const form = root.querySelector('#login-form');
-  form.onsubmit = async event => {
-    event.preventDefault();
-    const formData = new FormData(
-      event.currentTarget
-    );
-    const email = formData.get('email');
-    const password = formData.get('password');
-    const button =
-      event.currentTarget.querySelector('button');
-    button.disabled = true;
-    button.textContent = 'CONNEXION…';
-    try {
-      session = await signInAdmin(
-        supabase,
-        email,
-        password
+  root
+    .querySelector('#login-form')
+    .onsubmit = async event => {
+      event.preventDefault();
+      const form = new FormData(
+        event.currentTarget
       );
-      remote = createSupabaseOrderStore(
-        supabase
-      );
-      mode = 'remote';
-      subscribeRealtime();
-      await render();
-    } catch (error) {
-      console.error(
-        '[CAZ FOOD ADMIN] Connexion:',
-        error
-      );
-      renderLogin(
-        'Email ou mot de passe incorrect.'
-      );
-    }
-  };
+      const button =
+        event.currentTarget.querySelector('button');
+      button.disabled = true;
+      button.textContent = 'CONNEXION…';
+      try {
+        session = await signInAdmin(
+          supabase,
+          form.get('email'),
+          form.get('password')
+        );
+        remote = createSupabaseOrderStore(
+          supabase
+        );
+        mode = 'remote';
+        subscribeRealtime();
+        await render();
+      } catch (error) {
+        console.error(error);
+        renderLogin(
+          'Email ou mot de passe incorrect.'
+        );
+      }
+    };
 }
 async function getOrders() {
   if (mode === 'remote') {
     try {
-      return await getRemoteOrders();
+      return await remote.listOrders();
     } catch (error) {
       console.error(
-        '[CAZ FOOD ADMIN] Impossible de charger les commandes:',
+        'Impossible de récupérer les commandes:',
         error
       );
       return [];
@@ -283,53 +207,35 @@ async function advance(order) {
     PREPARING: 'READY'
   }[order.status];
   if (!next) return;
-  try {
-    if (mode === 'remote') {
-      await remote.updateStatus(
+  if (mode === 'remote') {
+    await remote.updateStatus(
+      order.id,
+      next
+    );
+  } else {
+    saveLocal(
+      updateOrderStatus(
+        localOrders(),
         order.id,
         next
-      );
-    } else {
-      saveLocal(
-        updateOrderStatus(
-          localOrders(),
-          order.id,
-          next
-        )
-      );
-    }
-    await render();
-  } catch (error) {
-    console.error(
-      '[CAZ FOOD ADMIN] Mise à jour statut:',
-      error
-    );
-    alert(
-      'Impossible de mettre à jour la commande.'
+      )
     );
   }
+  await render();
 }
 async function render() {
-  if (
-    !session &&
-    mode === 'remote'
-  ) {
-    renderLogin();
-    return;
+  if (!session && mode === 'remote') {
+    return renderLogin();
   }
-  const data = (
-    await getOrders()
-  )
+  const data = (await getOrders())
     .slice()
     .sort(
       (a, b) =>
         new Date(
-          b.created_at ??
-          b.createdAt
+          b.created_at ?? b.createdAt
         ) -
         new Date(
-          a.created_at ??
-          a.createdAt
+          a.created_at ?? a.createdAt
         )
     );
   const total = data.reduce(
@@ -337,26 +243,10 @@ async function render() {
       sum +
       Number(
         order.total ??
-        (
-          Number(
-            order.total_cents || 0
-          ) / 100
-        )
+        (order.total_cents ?? 0) / 100
       ),
     0
   );
-  const newCount = data.filter(
-    order =>
-      order.status === 'NEW'
-  ).length;
-  const preparingCount = data.filter(
-    order =>
-      order.status === 'PREPARING'
-  ).length;
-  const readyCount = data.filter(
-    order =>
-      order.status === 'READY'
-  ).length;
   root.innerHTML = `
     <main class="admin-shell">
       <header class="admin-header">
@@ -364,9 +254,7 @@ async function render() {
           <p class="eyebrow">
             CAZ FOOD · SERVICE
           </p>
-          <h1>
-            Le comptoir.
-          </h1>
+          <h1>Le comptoir.</h1>
           <p>
             ${
               mode === 'remote'
@@ -392,36 +280,40 @@ async function render() {
       </header>
       <section class="admin-stats">
         <div>
-          <span>
-            À prendre en charge
-          </span>
+          <span>À prendre en charge</span>
           <strong>
-            ${newCount}
+            ${
+              data.filter(
+                order => order.status === 'NEW'
+              ).length
+            }
           </strong>
         </div>
         <div>
-          <span>
-            En préparation
-          </span>
+          <span>En préparation</span>
           <strong>
-            ${preparingCount}
+            ${
+              data.filter(
+                order =>
+                  order.status === 'PREPARING'
+              ).length
+            }
           </strong>
         </div>
         <div>
-          <span>
-            Prêtes
-          </span>
+          <span>Prêtes</span>
           <strong>
-            ${readyCount}
+            ${
+              data.filter(
+                order =>
+                  order.status === 'READY'
+              ).length
+            }
           </strong>
         </div>
         <div>
-          <span>
-            Commandé
-          </span>
-          <strong>
-            ${euro(total)}
-          </strong>
+          <span>Commandé</span>
+          <strong>${euro(total)}</strong>
         </div>
       </section>
       <section class="orders-grid">
@@ -439,15 +331,16 @@ async function render() {
                   Le comptoir est calme.
                 </h2>
                 <p>
-                  La prochaine commande apparaîtra ici
-                  dès qu'elle sera envoyée.
+                  La prochaine commande apparaîtra
+                  ici dès qu'elle sera envoyée.
                 </p>
               </div>
             `
         }
       </section>
       <p class="admin-note">
-        ● ${
+        ●
+        ${
           mode === 'remote'
             ? 'Temps réel actif. Les nouvelles commandes apparaissent automatiquement.'
             : 'Mode démo local.'
@@ -455,43 +348,34 @@ async function render() {
       </p>
     </main>
   `;
-  const logout =
-    root.querySelector('#logout');
-  if (logout) {
-    logout.onclick = async () => {
-      try {
-        if (
-          realtimeChannel &&
-          supabase
-        ) {
-          await supabase.removeChannel(
-            realtimeChannel
-          );
-        }
-        await signOutAdmin(
-          supabase
-        );
-      } catch (error) {
-        console.error(
-          '[CAZ FOOD ADMIN] Déconnexion:',
-          error
+  root
+    .querySelector('#logout')
+    .onclick = async () => {
+      if (
+        realtimeChannel &&
+        supabase
+      ) {
+        await supabase.removeChannel(
+          realtimeChannel
         );
       }
+      await signOutAdmin(
+        supabase
+      );
       session = null;
       remote = null;
       mode = 'local';
       realtimeChannel = null;
       renderLogin();
     };
-  }
   root
     .querySelectorAll('[data-next]')
     .forEach(button => {
       button.onclick = () => {
         const order =
           data.find(
-            item =>
-              String(item.id) ===
+            order =>
+              String(order.id ?? '') ===
               String(button.dataset.id)
           );
         if (order) {
@@ -505,8 +389,8 @@ async function render() {
       button.onclick = () => {
         const order =
           data.find(
-            item =>
-              String(item.id) ===
+            order =>
+              String(order.id ?? '') ===
               String(button.dataset.id)
           );
         if (order) {
@@ -516,65 +400,51 @@ async function render() {
     });
 }
 function orderCard(order) {
-  const status =
-    order.status || 'NEW';
+  const status = order.status;
   const items =
     order.items ??
     order.order_items ??
     [];
-  const customer =
-    order.customer ??
-    {
-      name:
-        order.customer_name ||
-        'Client',
-      phone:
-        order.customer_phone ||
-        '—',
-      pickupTime:
-        order.pickup_time
-          ? new Date(
-              order.pickup_time
-            ).toLocaleTimeString(
-              'fr-FR',
-              {
-                hour: '2-digit',
-                minute: '2-digit'
-              }
-            )
-          : '—'
-    };
+  const pickupTime =
+    order.customer?.pickupTime ??
+    formatPickupTime(
+      order.pickup_time
+    );
+  const customer = {
+    name:
+      order.customer?.name ??
+      order.customer_name ??
+      '—',
+    phone:
+      order.customer?.phone ??
+      order.customer_phone ??
+      '—',
+    pickupTime
+  };
   const number =
     order.number ??
     order.order_number ??
     '—';
   const total =
     order.total ??
-    (
-      Number(
-        order.total_cents || 0
-      ) / 100
-    );
+    (order.total_cents ?? 0) / 100;
   const actionLabel =
-    getNextStatusLabel(
-      status
-    );
-  const action =
-    actionLabel
-      ? `
-        <button
-          class="primary"
-          data-next
-          data-id="${order.id}"
-        >
-          ${actionLabel} →
-        </button>
-      `
-      : `
-        <span class="ready-badge">
-          ✓ Prête pour retrait
-        </span>
-      `;
+    getNextStatusLabel(status);
+  const action = actionLabel
+    ? `
+      <button
+        class="primary"
+        data-next
+        data-id="${order.id}"
+      >
+        ${actionLabel} →
+      </button>
+    `
+    : `
+      <span class="ready-badge">
+        ✓ Prête pour retrait
+      </span>
+    `;
   return `
     <article
       class="order-card status-${String(
@@ -588,31 +458,19 @@ function orderCard(order) {
             ${number}
           </span>
           <span class="status">
-            ${
-              labels[status] ??
-              status
-            }
+            ${labels[status] ?? status}
           </span>
         </div>
         <strong>
-          ${
-            customer.pickupTime ||
-            '—'
-          }
+          ${customer.pickupTime}
         </strong>
       </header>
       <div class="order-customer">
         <strong>
-          ${
-            customer.name ||
-            'Client'
-          }
+          ${customer.name}
         </strong>
         <span>
-          ${
-            customer.phone ||
-            '—'
-          }
+          ${customer.phone}
         </span>
       </div>
       <ul>
@@ -621,26 +479,14 @@ function orderCard(order) {
             ? items
                 .map(item => {
                   const options =
-                    item.options ||
+                    item.options ??
                     {};
-                  const optionText =
-                    options.meat ||
-                    options.sauce ||
-                    options.drink
-                      ? `
-                        <small>
-                          · ${
-                            [
-                              options.meat,
-                              options.sauce,
-                              options.drink
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')
-                          }
-                        </small>
-                      `
-                      : '';
+                  const optionLabels = [
+                    options.meat,
+                    options.sauce,
+                    options.drink,
+                    options.boisson
+                  ].filter(Boolean);
                   return `
                     <li>
                       <strong>
@@ -651,7 +497,18 @@ function orderCard(order) {
                         item.product_name ??
                         'Article'
                       }
-                      ${optionText}
+                      ${
+                        optionLabels.length
+                          ? `
+                            <small>
+                              ·
+                              ${optionLabels.join(
+                                ' · '
+                              )}
+                            </small>
+                          `
+                          : ''
+                      }
                     </li>
                   `;
                 })
