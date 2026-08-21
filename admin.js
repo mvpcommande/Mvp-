@@ -32,24 +32,48 @@ function euro(value) {
   return `${Number(value).toFixed(2).replace('.', ',')} €`;
 }
 /*
- * IMPORTANT :
- * pickup_time est affiché tel qu'il est stocké dans Supabase.
+ * IMPORTANT
+ *
+ * pickup_time vient de PostgreSQL/Supabase.
  *
  * Exemple :
  * 2026-08-21 22:15:00+00
- *                  ↓
- *                22:15
  *
- * On ne passe PAS par new Date().toLocaleTimeString()
- * afin d'éviter une conversion automatique UTC → Europe/Paris.
+ * On ne fait volontairement PAS :
+ *
+ * new Date(value).toLocaleTimeString(...)
+ *
+ * car JavaScript convertit alors automatiquement
+ * l'heure UTC vers le fuseau local.
+ *
+ * Ici, on affiche exactement l'heure choisie
+ * par le client dans pickup_time.
  */
 function formatPickupTime(value) {
   if (!value) return '—';
-  const text = String(value);
-  // Format PostgreSQL :
-  // 2026-08-21 22:15:00+00
-  if (text.length >= 16) {
-    return text.slice(11, 16);
+  const text = String(value).trim();
+  /*
+   * PostgreSQL timestamp :
+   *
+   * 2026-08-21 22:15:00+00
+   * 2026-08-21T22:15:00+00:00
+   *
+   * Dans les deux cas, l'heure commence
+   * à l'index 11.
+   */
+  const match = text.match(
+    /^\d{4}-\d{2}-\d{2}[T ](\d{2}:\d{2})/
+  );
+  if (match) {
+    return match[1];
+  }
+  /*
+   * Si Supabase renvoie déjà HH:MM
+   */
+  const shortMatch =
+    text.match(/^(\d{2}):(\d{2})/);
+  if (shortMatch) {
+    return `${shortMatch[1]}:${shortMatch[2]}`;
   }
   return '—';
 }
@@ -58,7 +82,16 @@ async function init() {
     renderSetup();
     return;
   }
-  session = await getAdminSession(supabase);
+  try {
+    session = await getAdminSession(supabase);
+  } catch (error) {
+    console.error(
+      'Erreur récupération session:',
+      error
+    );
+    renderLogin();
+    return;
+  }
   if (session) {
     remote = createSupabaseOrderStore(supabase);
     mode = 'remote';
@@ -69,18 +102,27 @@ async function init() {
   renderLogin();
 }
 function subscribeRealtime() {
-  if (realtimeChannel && supabase) {
-    supabase.removeChannel(realtimeChannel);
+  if (
+    realtimeChannel &&
+    supabase
+  ) {
+    supabase.removeChannel(
+      realtimeChannel
+    );
   }
-  realtimeChannel = subscribeToOrderChanges(
-    supabase,
-    () => render()
-  );
+  realtimeChannel =
+    subscribeToOrderChanges(
+      supabase,
+      () => render()
+    );
 }
 function renderSetup() {
   root.innerHTML = `
     <main class="admin-auth">
       <div class="auth-card">
+        <div class="auth-mark">
+          CF
+        </div>
         <p class="eyebrow">
           CAZ FOOD · CONFIGURATION
         </p>
@@ -117,7 +159,11 @@ function renderLogin(error = '') {
         </p>
         ${
           error
-            ? `<div class="auth-error">${error}</div>`
+            ? `
+              <div class="auth-error">
+                ${error}
+              </div>
+            `
             : ''
         }
         <form
@@ -160,12 +206,17 @@ function renderLogin(error = '') {
       </div>
     </main>
   `;
-  root
-    .querySelector('#login-form')
-    .onsubmit = async event => {
+  const form =
+    root.querySelector(
+      '#login-form'
+    );
+  form.onsubmit =
+    async event => {
       event.preventDefault();
-      const form =
-        new FormData(event.currentTarget);
+      const formData =
+        new FormData(
+          event.currentTarget
+        );
       const button =
         event.currentTarget.querySelector(
           'button'
@@ -174,11 +225,12 @@ function renderLogin(error = '') {
       button.textContent =
         'CONNEXION…';
       try {
-        session = await signInAdmin(
-          supabase,
-          form.get('email'),
-          form.get('password')
-        );
+        session =
+          await signInAdmin(
+            supabase,
+            formData.get('email'),
+            formData.get('password')
+          );
         remote =
           createSupabaseOrderStore(
             supabase
@@ -187,7 +239,10 @@ function renderLogin(error = '') {
         subscribeRealtime();
         await render();
       } catch (error) {
-        console.error(error);
+        console.error(
+          'Erreur connexion admin:',
+          error
+        );
         renderLogin(
           'Email ou mot de passe incorrect.'
         );
@@ -200,7 +255,7 @@ async function getOrders() {
       return await remote.listOrders();
     } catch (error) {
       console.error(
-        'Impossible de récupérer les commandes:',
+        'Erreur récupération commandes:',
         error
       );
       return [];
@@ -214,22 +269,34 @@ async function advance(order) {
     ACCEPTED: 'PREPARING',
     PREPARING: 'READY'
   }[order.status];
-  if (!next) return;
-  if (mode === 'remote') {
-    await remote.updateStatus(
-      order.id,
-      next
-    );
-  } else {
-    saveLocal(
-      updateOrderStatus(
-        localOrders(),
+  if (!next) {
+    return;
+  }
+  try {
+    if (mode === 'remote') {
+      await remote.updateStatus(
         order.id,
         next
-      )
+      );
+    } else {
+      saveLocal(
+        updateOrderStatus(
+          localOrders(),
+          order.id,
+          next
+        )
+      );
+    }
+    await render();
+  } catch (error) {
+    console.error(
+      'Erreur changement statut:',
+      error
+    );
+    alert(
+      'Impossible de modifier le statut de la commande.'
     );
   }
-  await render();
 }
 async function render() {
   if (
@@ -259,7 +326,8 @@ async function render() {
         sum +
         Number(
           order.total ??
-          (order.total_cents ?? 0) / 100
+          (order.total_cents ?? 0) /
+            100
         ),
       0
     );
@@ -304,7 +372,9 @@ async function render() {
           <strong>
             ${
               data.filter(
-                o => o.status === 'NEW'
+                order =>
+                  order.status ===
+                  'NEW'
               ).length
             }
           </strong>
@@ -316,8 +386,8 @@ async function render() {
           <strong>
             ${
               data.filter(
-                o =>
-                  o.status ===
+                order =>
+                  order.status ===
                   'PREPARING'
               ).length
             }
@@ -330,8 +400,8 @@ async function render() {
           <strong>
             ${
               data.filter(
-                o =>
-                  o.status ===
+                order =>
+                  order.status ===
                   'READY'
               ).length
             }
@@ -378,63 +448,79 @@ async function render() {
       </p>
     </main>
   `;
-  root
-    .querySelector('#logout')
-    .onclick = async () => {
-      if (
-        realtimeChannel &&
-        supabase
-      ) {
-        await supabase.removeChannel(
-          realtimeChannel
-        );
-      }
-      await signOutAdmin(
-        supabase
-      );
-      session = null;
-      remote = null;
-      mode = 'local';
-      realtimeChannel = null;
-      renderLogin();
-    };
-  root
-    .querySelectorAll('[data-next]')
-    .forEach(button => {
-      button.onclick = () => {
-        const order =
-          data.find(
-            item =>
-              String(
-                item.id ?? ''
-              ) ===
-              String(
-                button.dataset.id
-              )
-          );
-        if (order) {
-          advance(order);
+  const logout =
+    root.querySelector(
+      '#logout'
+    );
+  if (logout) {
+    logout.onclick =
+      async () => {
+        try {
+          if (
+            realtimeChannel &&
+            supabase
+          ) {
+            await supabase.removeChannel(
+              realtimeChannel
+            );
+          }
+          if (supabase) {
+            await signOutAdmin(
+              supabase
+            );
+          }
+        } finally {
+          session = null;
+          remote = null;
+          mode = 'local';
+          realtimeChannel = null;
+          renderLogin();
         }
       };
+  }
+  root
+    .querySelectorAll(
+      '[data-next]'
+    )
+    .forEach(button => {
+      button.onclick =
+        () => {
+          const order =
+            data.find(
+              item =>
+                String(
+                  item.id ?? ''
+                ) ===
+                String(
+                  button.dataset.id
+                )
+            );
+          if (order) {
+            advance(order);
+          }
+        };
     });
   root
-    .querySelectorAll('[data-print]')
+    .querySelectorAll(
+      '[data-print]'
+    )
     .forEach(button => {
-      button.onclick = () => {
-        const order =
-          data.find(
-            item =>
-              String(
-                item.id ?? ''
-              ) ===
-              String(
-                button.dataset.id
-              )
-          );
-        if (order) {
-          printOrder(order);
-        }
-      };
+      button.onclick =
+        () => {
+          const order =
+            data.find(
+              item =>
+                String(
+                  item.id ?? ''
+                ) ===
+                String(
+                  button.dataset.id
+                )
+            );
+          if (order) {
+            printOrder(order);
+          }
+        };
     });
 }
 function orderCard(order) {
@@ -444,24 +530,41 @@ function orderCard(order) {
     order.items ??
     order.order_items ??
     [];
-  const customer =
-    order.customer ??
-    {
-      name:
-        order.customer_name,
-      phone:
-        order.customer_phone,
-      pickupTime:
-        formatPickupTime(
-          order.pickup_time
-        )
-    };
+  /*
+   * IMPORTANT :
+   *
+   * On reconstruit TOUJOURS customer.pickupTime
+   * depuis order.pickup_time.
+   *
+   * Même si order.customer.pickupTime existe,
+   * on l'écrase volontairement.
+   *
+   * Cela évite que le supabaseStore.mjs fournisse
+   * une heure déjà convertie en UTC/local.
+   */
+  const customer = {
+    ...(order.customer ?? {}),
+    name:
+      order.customer?.name ??
+      order.customer_name ??
+      'Client',
+    phone:
+      order.customer?.phone ??
+      order.customer_phone ??
+      '—',
+    pickupTime:
+      formatPickupTime(
+        order.pickup_time
+      )
+  };
   const number =
     order.number ??
-    order.order_number;
+    order.order_number ??
+    '—';
   const total =
     order.total ??
-    (order.total_cents ?? 0) / 100;
+    (order.total_cents ?? 0) /
+      100;
   const actionLabel =
     getNextStatusLabel(
       status
@@ -495,7 +598,10 @@ function orderCard(order) {
             ${number}
           </span>
           <span class="status">
-            ${labels[status] ?? status}
+            ${
+              labels[status] ??
+              status
+            }
           </span>
         </div>
         <strong>
@@ -507,16 +613,10 @@ function orderCard(order) {
       </header>
       <div class="order-customer">
         <strong>
-          ${
-            customer.name ||
-            'Client'
-          }
+          ${customer.name}
         </strong>
         <span>
-          ${
-            customer.phone ||
-            '—'
-          }
+          ${customer.phone}
         </span>
       </div>
       ${
