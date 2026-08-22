@@ -6,21 +6,42 @@ function isUuid(value) {
     )
   );
 }
+
 /**
- * Convertit une heure HH:mm choisie en Europe/Paris
- * vers un timestamp ISO UTC.
+ * Convertit une heure HH:mm choisie par le client
+ * en timestamp ISO correspondant à l'heure Europe/Paris.
  */
 function parisTimeToIsoDate(time) {
-  if (!time || !/^\d{2}:\d{2}$/.test(String(time))) {
+  if (
+    !time ||
+    !/^\d{2}:\d{2}$/.test(String(time))
+  ) {
     return null;
   }
+
   const [hours, minutes] = String(time)
     .split(':')
     .map(Number);
+
+  if (
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+
   const now = new Date();
+
   const year = now.getFullYear();
   const month = now.getMonth();
   const day = now.getDate();
+
+  /*
+   * On part d'une approximation UTC puis on calcule
+   * le décalage réel Europe/Paris à cette date.
+   */
   const utcGuess = new Date(
     Date.UTC(
       year,
@@ -32,73 +53,102 @@ function parisTimeToIsoDate(time) {
       0
     )
   );
-  const parisFormatter = new Intl.DateTimeFormat(
-    'en-US',
-    {
-      timeZone: 'Europe/Paris',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23'
-    }
-  );
+
+  const parisFormatter =
+    new Intl.DateTimeFormat(
+      'en-US',
+      {
+        timeZone: 'Europe/Paris',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+      }
+    );
+
   const parisParts =
-    parisFormatter.formatToParts(utcGuess);
+    parisFormatter.formatToParts(
+      utcGuess
+    );
+
   const parisHour = Number(
     parisParts.find(
       part => part.type === 'hour'
     )?.value ?? 0
   );
+
   const parisMinute = Number(
     parisParts.find(
       part => part.type === 'minute'
     )?.value ?? 0
   );
+
   const requestedMinutes =
     hours * 60 + minutes;
+
   const guessedParisMinutes =
     parisHour * 60 + parisMinute;
+
   const offsetMinutes =
     guessedParisMinutes -
     requestedMinutes;
+
   const utcDate = new Date(
     utcGuess.getTime() -
       offsetMinutes * 60 * 1000
   );
+
   return utcDate.toISOString();
 }
+
+/**
+ * Convertit un timestamp Supabase
+ * en heure locale Europe/Paris.
+ */
+function formatPickupTime(value) {
+  if (!value) {
+    return '—';
+  }
+
+  const date = new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return '—';
+  }
+
+  return new Intl.DateTimeFormat(
+    'fr-FR',
+    {
+      timeZone:
+        'Europe/Paris',
+      hour:
+        '2-digit',
+      minute:
+        '2-digit',
+      hourCycle:
+        'h23'
+    }
+  ).format(date);
+}
+
 /**
  * Génère un numéro de commande FOODATOI.
- *
- * Exemple :
- * FA-260822-483921
  */
 function generateOrderNumber() {
-  const now = new Date();
-  const datePart =
-    `${String(now.getFullYear()).slice(-2)}` +
-    `${String(now.getMonth() + 1).padStart(2, '0')}` +
-    `${String(now.getDate()).padStart(2, '0')}`;
-  const randomPart =
-    Math.floor(
-      100000 +
-      Math.random() * 900000
-    );
-  return `FA-${datePart}-${randomPart}`;
+  return `FA-${Date.now()
+    .toString()
+    .slice(-8)}`;
 }
+
 /**
- * Crée un store Supabase FOODATOI.
+ * Crée un store Supabase isolé sur un restaurant.
  *
- * restaurantId est obligatoire.
- *
- * Architecture :
- *
- * FOODATOI
- *   ↓
- * restaurantId
- *   ↓
- * orders.restaurant_id
- *   ↓
- * order_items.restaurant_id
+ * IMPORTANT :
+ * restaurantId doit venir du contexte du tenant
+ * résolu par l'application FOODATOI.
  */
 export function createSupabaseOrderStore(
   client,
@@ -109,119 +159,160 @@ export function createSupabaseOrderStore(
       'Supabase client manquant.'
     );
   }
+
   if (!isUuid(restaurantId)) {
     throw new Error(
-      'restaurantId FOODATOI invalide ou manquant.'
+      'restaurantId FOODATOI invalide.'
     );
   }
+
   return {
+    /**
+     * Identifiant du restaurant courant.
+     */
+    restaurantId,
+
     /**
      * Crée une commande pour le restaurant courant.
      */
     async createOrder(order) {
       const orderId =
         crypto.randomUUID();
+
       const orderNumber =
         generateOrderNumber();
+
       const pickupTime =
         parisTimeToIsoDate(
           order.customer?.pickupTime
         );
+
       const totalCents =
         Math.round(
           Number(
             order.total ?? 0
           ) * 100
         );
+
       const {
+        data: createdOrder,
         error: orderError
       } = await client
         .from('orders')
         .insert({
-          id: orderId,
+          id:
+            orderId,
+
           restaurant_id:
             restaurantId,
+
           order_number:
             orderNumber,
+
           customer_name:
             order.customer?.name ??
             '',
+
           customer_phone:
             order.customer?.phone ??
             '',
+
           pickup_time:
             pickupTime,
+
           status:
             'NEW',
+
           payment_status:
             'PAY_AT_STORE',
+
           fulfillment_type:
             'PICKUP',
+
           total_cents:
             totalCents
-        });
+        })
+        .select()
+        .single();
+
       if (orderError) {
         console.error(
-          'FOODATOI — erreur création commande:',
+          'Erreur création commande FOODATOI:',
           orderError
         );
+
         throw orderError;
       }
+
       const items =
-        Array.isArray(order.items)
+        Array.isArray(
+          order.items
+        )
           ? order.items
           : [];
+
       if (items.length) {
-        const rows =
-          items.map(item => ({
-            order_id:
-              orderId,
-            restaurant_id:
-              restaurantId,
-            product_id:
-              isUuid(item.id)
-                ? item.id
-                : null,
-            product_name:
-              item.name ?? '',
-            quantity:
-              Number(
-                item.quantity ?? 1
-              ),
-            unit_price_cents:
+        const payload =
+          items.map(item => {
+            const quantity =
+              Math.max(
+                1,
+                Number(
+                  item.quantity ?? 1
+                )
+              );
+
+            const unitPriceCents =
               Math.round(
                 Number(
                   item.price ?? 0
                 ) * 100
-              ),
-            options:
-              item.options ?? {},
-            line_total_cents:
-              Math.round(
-                Number(
-                  item.price ?? 0
-                ) *
-                Number(
-                  item.quantity ?? 1
-                ) *
-                100
-              )
-          }));
+              );
+
+            return {
+              order_id:
+                orderId,
+
+              product_id:
+                isUuid(item.id)
+                  ? item.id
+                  : null,
+
+              product_name:
+                item.name ?? '',
+
+              quantity,
+
+              unit_price_cents:
+                unitPriceCents,
+
+              options:
+                item.options &&
+                typeof item.options ===
+                  'object'
+                  ? item.options
+                  : {},
+
+              line_total_cents:
+                unitPriceCents *
+                quantity
+            };
+          });
+
         const {
           error: itemsError
         } = await client
           .from('order_items')
-          .insert(rows);
+          .insert(payload);
+
         if (itemsError) {
           console.error(
-            'FOODATOI — erreur création articles:',
+            'Erreur création articles FOODATOI:',
             itemsError
           );
+
           /*
            * Rollback logique.
-           *
-           * La suppression est limitée
-           * au restaurant courant.
            */
           await client
             .from('orders')
@@ -234,29 +325,36 @@ export function createSupabaseOrderStore(
               'restaurant_id',
               restaurantId
             );
+
           throw itemsError;
         }
       }
+
       return {
         ...order,
+
         id:
+          createdOrder?.id ??
           orderId,
+
         number:
+          createdOrder?.order_number ??
           orderNumber,
+
         orderNumber:
+          createdOrder?.order_number ??
           orderNumber,
-        restaurantId:
-          restaurantId,
+
+        restaurantId,
+
         status:
+          createdOrder?.status ??
           'NEW'
       };
     },
+
     /**
-     * Récupère les commandes du restaurant courant.
-     *
-     * IMPORTANT :
-     * Le filtre restaurant_id est volontairement
-     * systématique pour éviter les fuites cross-tenant.
+     * Récupère les commandes du restaurant courant uniquement.
      */
     async listOrders() {
       const {
@@ -281,13 +379,13 @@ export function createSupabaseOrderStore(
           order_items (
             id,
             order_id,
-            restaurant_id,
             product_id,
             product_name,
             quantity,
             unit_price_cents,
             options,
-            line_total_cents
+            line_total_cents,
+            created_at
           )
         `)
         .eq(
@@ -300,56 +398,77 @@ export function createSupabaseOrderStore(
             ascending: false
           }
         );
+
       if (error) {
         console.error(
-          'FOODATOI — erreur récupération commandes:',
+          'Erreur récupération commandes FOODATOI:',
           error
         );
+
         throw error;
       }
+
       return (
         data ?? []
       ).map(order => ({
         ...order,
-        number:
-          order.order_number,
+
         restaurantId:
           order.restaurant_id,
+
+        number:
+          order.order_number,
+
         total:
           Number(
             order.total_cents ?? 0
           ) / 100,
+
         customer: {
           name:
             order.customer_name,
+
           phone:
             order.customer_phone,
+
           pickupTime:
             formatPickupTime(
               order.pickup_time
             )
         },
+
         items:
           (
-            order.order_items ?? []
+            order.order_items ??
+            []
           ).map(item => ({
             id:
+              item.product_id ??
               item.id,
+
+            orderItemId:
+              item.id,
+
             productId:
               item.product_id,
+
             name:
               item.product_name,
+
             quantity:
               Number(
                 item.quantity ?? 1
               ),
+
             price:
               Number(
                 item.unit_price_cents ??
                   0
               ) / 100,
+
             options:
               item.options ?? {},
+
             lineTotal:
               Number(
                 item.line_total_cents ??
@@ -358,10 +477,13 @@ export function createSupabaseOrderStore(
           }))
       }));
     },
+
     /**
      * Change le statut d'une commande.
      *
-     * Le restaurant_id est toujours vérifié.
+     * Le restaurant_id est toujours utilisé
+     * dans le filtre afin d'éviter de modifier
+     * une commande appartenant à un autre tenant.
      */
     async updateStatus(
       orderId,
@@ -369,16 +491,29 @@ export function createSupabaseOrderStore(
     ) {
       if (!isUuid(orderId)) {
         throw new Error(
-          'Identifiant de commande invalide.'
+          'orderId invalide.'
         );
       }
+
+      if (
+        typeof status !==
+        'string' ||
+        !status.trim()
+      ) {
+        throw new Error(
+          'Statut de commande invalide.'
+        );
+      }
+
       const {
         data,
         error
       } = await client
         .from('orders')
         .update({
-          status,
+          status:
+            status.trim(),
+
           updated_at:
             new Date().toISOString()
         })
@@ -392,45 +527,17 @@ export function createSupabaseOrderStore(
         )
         .select()
         .single();
+
       if (error) {
         console.error(
-          'FOODATOI — erreur changement statut:',
+          'Erreur changement statut FOODATOI:',
           error
         );
+
         throw error;
       }
+
       return data;
     }
   };
-}
-/**
- * Convertit un timestamp Supabase
- * en heure locale Europe/Paris.
- */
-function formatPickupTime(value) {
-  if (!value) {
-    return '—';
-  }
-  const date =
-    new Date(value);
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return '—';
-  }
-  return new Intl.DateTimeFormat(
-    'fr-FR',
-    {
-      timeZone:
-        'Europe/Paris',
-      hour:
-        '2-digit',
-      minute:
-        '2-digit',
-      hourCycle:
-        'h23'
-    }
-  ).format(date);
 }
