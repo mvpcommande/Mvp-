@@ -4,186 +4,427 @@ import { createSupabaseOrderStore } from './supabaseStore.mjs';
 import { supabase } from './supabaseClient.js';
 import { buildTicketModel } from './uiModel.mjs';
 import './styles.css';
-
-const menu = [
-  {
-    id: 'menu-tacos-simple',
-    category: 'Tacos',
-    name: 'Menu tacos simple',
-    description: 'Sauce fromagère, frites et 1 viande au choix.',
-    price: 12.90,
-    emoji: '🌮',
-    meat: true,
-    sauce: true,
-    drink: true
-  },
-  {
-    id: 'menu-tacos-double',
-    category: 'Tacos',
-    name: 'Menu tacos double',
-    description: 'Sauce fromagère, frites et 2 viandes au choix.',
-    price: 16.80,
-    emoji: '🌮',
-    meat: true,
-    sauce: true,
-    drink: true,
-    multipleMeat: true
-  },
-  {
-    id: 'menu-tacos-triple',
-    category: 'Tacos',
-    name: 'Menu tacos triple',
-    description: 'Sauce fromagère, frites et 3 viandes au choix.',
-    price: 18.10,
-    emoji: '🌮',
-    meat: true,
-    sauce: true,
-    drink: true,
-    multipleMeat: true,
-    tripleMeat: true
-  },
-  {
-    id: 'menu-sandwich',
-    category: 'Sandwichs',
-    name: 'Menu sandwich',
-    description: 'Pain, viande au choix, sauce et frites + boisson.',
-    price: 11.05,
-    emoji: '🥙',
-    meat: true,
-    sauce: true,
-    drink: true
-  },
-  {
-    id: 'menu-burger',
-    category: 'Burgers',
-    name: 'Menu burger',
-    description: 'Burger, frites et boisson 33 cl.',
-    price: 11.05,
-    emoji: '🍔',
-    sauce: false,
-    drink: true
-  },
-  {
-    id: 'menu-chicken-burger',
-    category: 'Burgers',
-    name: 'Menu chicken burger',
-    description: 'Chicken burger, frites et boisson 33 cl.',
-    price: 11.05,
-    emoji: '🍔',
-    sauce: false,
-    drink: true
-  },
-  {
-    id: 'menu-double-burger',
-    category: 'Burgers',
-    name: 'Menu double burger',
-    description: 'Double burger, frites et boisson 33 cl.',
-    price: 13.70,
-    emoji: '🍔',
-    sauce: false,
-    drink: true
-  },
-  {
-    id: 'menu-assiette',
-    category: 'Assiettes',
-    name: 'Menu assiette',
-    description: '1 viande au choix, servi avec boisson 33 cl.',
-    price: 16.80,
-    emoji: '🍽️',
-    meat: true,
-    sauce: true,
-    drink: true
-  },
-  {
-    id: 'tenders',
-    category: 'Tex-Mex',
-    name: 'Chicken tenders',
-    description: 'Portion de tenders.',
-    price: 5.90,
-    emoji: '🍗',
-    sauce: true,
-    drink: false
-  },
-  {
-    id: 'kids',
-    category: 'Enfants',
-    name: 'Kids box',
-    description: 'Formule enfant.',
-    price: 7.80,
-    emoji: '🧒',
-    sauce: false,
-    drink: true
-  }
-];
-
-const MEATS = [
-  'Kebab',
-  'Poulet',
-  'Steak',
-  'Merguez'
-];
-
-const SAUCES = [
-  'Algérienne',
-  'Biggy',
-  'Blanche',
-  'Barbecue',
-  'Curry',
-  'Ketchup',
-  'Mayonnaise',
-  'Samouraï'
-];
-
-const DRINKS = [
-  'Coca-Cola',
-  'Coca-Cola Zéro',
-  'Coca-Cola Cherry',
-  'Fanta Orange',
-  'Fanta Citron',
-  'Sprite',
-  'Oasis Tropical',
-  'Oasis Pomme Cassis',
-  'Ice Tea',
-  'Eau'
-];
-
+/*
+ * ============================================================
+ * FOODATOI — FRONTEND MULTI-TENANT
+ * ============================================================
+ *
+ * Le menu n'est plus stocké dans le code.
+ *
+ * Flux :
+ *
+ *   hostname
+ *       ↓
+ *   resolve_restaurant()
+ *       ↓
+ *   restaurant_id
+ *       ↓
+ *   configuration tenant
+ *       ↓
+ *   catalogue Supabase
+ *       ↓
+ *   interface
+ *
+ * Exemple :
+ *
+ *   caz-food.foodatoi.fr
+ *   restaurant-x.foodatoi.fr
+ *   www.restaurant-x.fr
+ *
+ * Chaque établissement possède ses propres données.
+ */
+/* ============================================================
+ * ÉTAT APPLICATION
+ * ========================================================== */
+let restaurantContext = null;
+let menu = [];
 let cart = [];
 let activeCategory = 'Tous';
-
+let MEATS = [];
+let SAUCES = [];
+let DRINKS = [];
+const app = document.querySelector('#root');
 const remoteStore = supabase
   ? createSupabaseOrderStore(supabase)
   : null;
-
-const categories = [
-  'Tous',
-  ...new Set(menu.map(item => item.category))
-];
-
-const app = document.querySelector('#root');
-
+/* ============================================================
+ * UTILITAIRES
+ * ========================================================== */
 const euro = value =>
-  `${Number(value).toFixed(2).replace('.', ',')} €`;
-
+  `${Number(value || 0).toFixed(2).replace('.', ',')} €`;
 const itemCount = () =>
   cart.reduce(
     (sum, item) => sum + item.quantity,
     0
   );
-
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+function getRestaurantName() {
+  return (
+    restaurantContext?.name ||
+    restaurantContext?.restaurant_name ||
+    'FOODATOI'
+  );
+}
+function getRestaurantAddress() {
+  return (
+    restaurantContext?.address ||
+    restaurantContext?.settings?.address ||
+    ''
+  );
+}
+function getRestaurantPhone() {
+  return (
+    restaurantContext?.phone ||
+    restaurantContext?.settings?.phone ||
+    ''
+  );
+}
+function getRestaurantSettings() {
+  return (
+    restaurantContext?.settings &&
+    typeof restaurantContext.settings === 'object'
+      ? restaurantContext.settings
+      : {}
+  );
+}
+/* ============================================================
+ * RÉSOLUTION DU TENANT
+ * ========================================================== */
+async function loadRestaurant() {
+  if (!supabase) {
+    throw new Error(
+      'Supabase n’est pas configuré.'
+    );
+  }
+  const hostname =
+    window.location.hostname
+      .toLowerCase()
+      .trim();
+  console.info(
+    '[FOODATOI] Résolution du domaine:',
+    hostname
+  );
+  const { data, error } =
+    await supabase.rpc(
+      'resolve_restaurant',
+      {
+        p_hostname: hostname
+      }
+    );
+  if (error) {
+    console.error(
+      '[FOODATOI] Erreur resolve_restaurant:',
+      error
+    );
+    throw error;
+  }
+  /*
+   * PostgreSQL peut retourner :
+   *
+   *   un objet
+   *
+   * ou :
+   *
+   *   [{ ... }]
+   *
+   * On supporte les deux.
+   */
+  const restaurant =
+    Array.isArray(data)
+      ? data[0]
+      : data;
+  if (!restaurant) {
+    throw new Error(
+      `Aucun établissement FOODATOI trouvé pour ${hostname}.`
+    );
+  }
+  if (!restaurant.restaurant_id) {
+    throw new Error(
+      'Le tenant retourné par Supabase ne possède pas de restaurant_id.'
+    );
+  }
+  /*
+   * Protection supplémentaire :
+   * le frontend travaille uniquement avec le restaurant
+   * retourné par le resolver.
+   */
+  restaurantContext = restaurant;
+  console.info(
+    '[FOODATOI] Restaurant:',
+    getRestaurantName()
+  );
+  console.info(
+    '[FOODATOI] Restaurant ID:',
+    restaurantContext.restaurant_id
+  );
+  console.info(
+    '[FOODATOI] Secteur:',
+    restaurantContext.sector || 'non défini'
+  );
+}
+/* ============================================================
+ * CONFIGURATION TENANT
+ * ========================================================== */
+function loadTenantConfiguration() {
+  const settings =
+    getRestaurantSettings();
+  /*
+   * Ces valeurs peuvent être alimentées par le template
+   * sectoriel ou personnalisées par l'entreprise.
+   */
+  MEATS =
+    settings.meats ||
+    settings.options?.meats ||
+    [];
+  SAUCES =
+    settings.sauces ||
+    settings.sauces_list ||
+    settings.options?.sauces ||
+    [];
+  DRINKS =
+    settings.drinks ||
+    settings.drinks_list ||
+    settings.options?.drinks ||
+    [];
+}
+/* ============================================================
+ * CATALOGUE SUPABASE
+ * ========================================================== */
+async function loadMenu() {
+  if (!restaurantContext?.restaurant_id) {
+    throw new Error(
+      'Impossible de charger le menu : restaurant_id absent.'
+    );
+  }
+  /*
+   * IMPORTANT :
+   *
+   * On filtre systématiquement par restaurant_id.
+   *
+   * Même si les politiques RLS constituent la protection
+   * principale, ce filtre rend également le comportement
+   * du frontend explicite.
+   */
+  const { data, error } =
+    await supabase
+      .from('products')
+      .select('*')
+      .eq(
+        'restaurant_id',
+        restaurantContext.restaurant_id
+      )
+      .eq('active', true)
+      .order(
+        'sort_order',
+        {
+          ascending: true,
+          nullsFirst: false
+        }
+      );
+  if (error) {
+    console.error(
+      '[FOODATOI] Erreur chargement catalogue:',
+      error
+    );
+    throw error;
+  }
+  menu = (data || []).map(
+    normalizeProduct
+  );
+  console.info(
+    `[FOODATOI] ${menu.length} produit(s) chargé(s).`
+  );
+}
+/* ============================================================
+ * NORMALISATION PRODUIT
+ * ========================================================== */
+function normalizeProduct(product) {
+  const options =
+    product.options &&
+    typeof product.options === 'object'
+      ? product.options
+      : {};
+  /*
+   * On accepte plusieurs noms afin de rester compatible
+   * avec l'évolution du schéma.
+   */
+  return {
+    ...product,
+    category:
+      product.category ||
+      product.category_name ||
+      options.category ||
+      'Notre carte',
+    name:
+      product.name ||
+      'Produit',
+    description:
+      product.description ||
+      '',
+    price:
+      Number(product.price || 0),
+    emoji:
+      product.emoji ||
+      options.emoji ||
+      '🍽️',
+    image_url:
+      product.image_url ||
+      options.image_url ||
+      null,
+    meat:
+      Boolean(
+        product.meat ??
+        options.meat
+      ),
+    sauce:
+      Boolean(
+        product.sauce ??
+        options.sauce
+      ),
+    drink:
+      Boolean(
+        product.drink ??
+        options.drink
+      ),
+    multipleMeat:
+      Boolean(
+        product.multiple_meat ??
+        options.multipleMeat
+      ),
+    tripleMeat:
+      Boolean(
+        product.triple_meat ??
+        options.tripleMeat
+      )
+  };
+}
+/* ============================================================
+ * BRANDING
+ * ========================================================== */
+function applyRestaurantBranding() {
+  const settings =
+    getRestaurantSettings();
+  const name =
+    getRestaurantName();
+  const primaryColor =
+    settings.primary_color ||
+    settings.primaryColor ||
+    '#111111';
+  document.title =
+    `${name} — FOODATOI`;
+  document.documentElement.style.setProperty(
+    '--restaurant-primary',
+    primaryColor
+  );
+  /*
+   * Favicon/logo si configuré.
+   */
+  if (
+    settings.logo_url ||
+    settings.logoUrl
+  ) {
+    const logo =
+      settings.logo_url ||
+      settings.logoUrl;
+    let favicon =
+      document.querySelector(
+        'link[rel="icon"]'
+      );
+    if (!favicon) {
+      favicon =
+        document.createElement('link');
+      favicon.rel = 'icon';
+      document.head.appendChild(
+        favicon
+      );
+    }
+    favicon.href = logo;
+  }
+}
+/* ============================================================
+ * CATÉGORIES
+ * ========================================================== */
+function getCategories() {
+  return [
+    'Tous',
+    ...new Set(
+      menu
+        .map(item =>
+          item.category
+        )
+        .filter(Boolean)
+    )
+  ];
+}
+/* ============================================================
+ * RENDER PRINCIPAL
+ * ========================================================== */
 function render() {
+  const categories =
+    getCategories();
+  /*
+   * Si la catégorie active n'existe plus après un changement
+   * de menu, on revient à Tous.
+   */
+  if (
+    activeCategory !== 'Tous' &&
+    !categories.includes(activeCategory)
+  ) {
+    activeCategory = 'Tous';
+  }
+  const name =
+    getRestaurantName();
+  const address =
+    getRestaurantAddress();
+  const phone =
+    getRestaurantPhone();
+  const settings =
+    getRestaurantSettings();
+  const introText =
+    settings.intro_text ||
+    settings.introText ||
+    `Ton repas, directement chez ${name}.`;
+  const pickupLabel =
+    settings.pickup_label ||
+    settings.pickupLabel ||
+    'Retrait sur place';
+  const paymentLabel =
+    settings.payment_label ||
+    settings.paymentLabel ||
+    'Paiement au restaurant';
+  const filteredMenu =
+    menu.filter(
+      item =>
+        activeCategory === 'Tous' ||
+        item.category === activeCategory
+    );
   app.innerHTML = `
     <div class="app-frame">
-
       <header class="masthead">
         <div class="brand-lockup">
-          <span class="brand-mark">CF</span>
-
+          <span class="brand-mark">
+            ${escapeHtml(
+              name
+                .slice(0, 2)
+                .toUpperCase()
+            )}
+          </span>
           <div>
-            <strong>CAZ FOOD</strong>
-            <span>CAZÈRES · 31220</span>
+            <strong>
+              ${escapeHtml(name)}
+            </strong>
+            <span>
+              ${escapeHtml(address)}
+            </span>
           </div>
         </div>
-
         <button
           class="order-pill"
           id="open-cart"
@@ -193,54 +434,59 @@ function render() {
           <b>${itemCount()}</b>
         </button>
       </header>
-
       <main>
-
         <section class="order-intro">
-
           <div class="intro-copy">
             <p class="eyebrow">
               COMMANDE DIRECTE
             </p>
-
             <h1>
               Choisis.<br>
               <em>On prépare.</em>
             </h1>
-
             <p class="intro-lede">
-              Ton repas, directement chez Caz Food.
-              Pas de détour, pas de plateforme.
+              ${escapeHtml(introText)}
             </p>
-
             <div class="pickup-line">
               <span class="live-dot"></span>
-              <span>Retrait sur place</span>
-              <span class="slash">/</span>
-              <span>Paiement au restaurant</span>
+              <span>
+                ${escapeHtml(pickupLabel)}
+              </span>
+              <span class="slash">
+                /
+              </span>
+              <span>
+                ${escapeHtml(paymentLabel)}
+              </span>
             </div>
           </div>
-
           <div
             class="receipt-hero"
-            aria-label="Retrait sur place"
+            aria-label="${escapeHtml(
+              pickupLabel
+            )}"
           >
             <div class="receipt-top">
-              <span>CAZ FOOD</span>
-              <span>AUJ.</span>
+              <span>
+                ${escapeHtml(name)}
+              </span>
+              <span>
+                AUJ.
+              </span>
             </div>
-
             <div class="receipt-hole"></div>
-
             <div class="receipt-main">
-              <small>TON REPAS</small>
+              <small>
+                TON REPAS
+              </small>
               <strong>
                 COMMENCE<br>
                 ICI.
               </strong>
-              <span>17 AV. PASTEUR</span>
+              <span>
+                ${escapeHtml(address)}
+              </span>
             </div>
-
             <div class="receipt-barcode">
               <i></i>
               <i></i>
@@ -250,34 +496,30 @@ function render() {
               <i></i>
               <i></i>
             </div>
-
             <div class="receipt-code">
-              CF · CAZÈRES
+              FOODATOI · ${escapeHtml(
+                name.slice(0, 12)
+              )}
             </div>
           </div>
-
         </section>
-
         <section class="menu-section">
-
           <div class="section-head">
-
             <div>
               <p class="eyebrow">
                 LA CARTE
               </p>
-
               <h2>
                 Tu prends quoi ?
               </h2>
             </div>
-
             <span class="menu-count">
-              ${menu.length} incontournables
+              ${menu.length}
+              ${menu.length > 1
+                ? 'produits'
+                : 'produit'}
             </span>
-
           </div>
-
           <nav
             class="category-rail"
             aria-label="Catégories"
@@ -290,7 +532,9 @@ function render() {
                       ? 'is-active'
                       : ''
                   }"
-                  data-category="${escapeHtml(category)}"
+                  data-category="${escapeHtml(
+                    category
+                  )}"
                   type="button"
                 >
                   ${escapeHtml(category)}
@@ -298,59 +542,67 @@ function render() {
               `)
               .join('')}
           </nav>
-
           <div class="menu-grid">
-            ${menu
-              .filter(
-                item =>
-                  activeCategory === 'Tous' ||
-                  item.category === activeCategory
-              )
-              .map(card)
-              .join('')}
+            ${
+              filteredMenu.length
+                ? filteredMenu
+                    .map(card)
+                    .join('')
+                : `
+                  <div class="empty-ticket">
+                    <h3>
+                      Menu en préparation
+                    </h3>
+                    <p>
+                      Cet établissement n'a pas encore
+                      publié de produits.
+                    </p>
+                  </div>
+                `
+            }
           </div>
-
         </section>
-
       </main>
-
       <footer class="site-footer">
         <div>
-          <strong>CAZ FOOD</strong>
+          <strong>
+            ${escapeHtml(name)}
+          </strong>
           <span>
-            17 Av. Pasteur · Cazères
+            ${escapeHtml(address)}
           </span>
         </div>
-
-        <a href="tel:0562015990">
-          05 62 01 59 90
-        </a>
+        ${
+          phone
+            ? `
+              <a
+                href="tel:${escapeHtml(phone)}"
+              >
+                ${escapeHtml(phone)}
+              </a>
+            `
+            : ''
+        }
       </footer>
-
     </div>
-
     <div
       class="drawer-backdrop hidden"
       id="backdrop"
     ></div>
-
     <aside
       class="drawer"
       id="drawer"
       aria-label="Panier"
     >
       <div class="drawer-head">
-
         <div>
           <p class="eyebrow">
-            CAZ FOOD
+            ${escapeHtml(name)}
           </p>
-
           <h2>
             Ton ticket
           </h2>
         </div>
-
         <button
           id="close-cart"
           class="icon-btn"
@@ -359,12 +611,9 @@ function render() {
         >
           ×
         </button>
-
       </div>
-
       <div id="cart-content"></div>
     </aside>
-
     <div
       class="modal hidden"
       id="product-modal"
@@ -375,96 +624,149 @@ function render() {
       ></div>
     </div>
   `;
-
   bind();
   renderCart();
 }
-
+/* ============================================================
+ * CARTE PRODUIT
+ * ========================================================== */
 function card(item) {
   return `
     <article class="menu-card">
-
       <div class="menu-card-top">
         <span class="menu-icon">
-          ${item.emoji}
+          ${escapeHtml(
+            item.emoji
+          )}
         </span>
-
         <span class="category-tag">
-          ${escapeHtml(item.category)}
+          ${escapeHtml(
+            item.category
+          )}
         </span>
       </div>
-
+      ${
+        item.image_url
+          ? `
+            <div class="menu-card-image">
+              <img
+                src="${escapeHtml(
+                  item.image_url
+                )}"
+                alt="${escapeHtml(
+                  item.name
+                )}"
+                loading="lazy"
+              >
+            </div>
+          `
+          : ''
+      }
       <div class="menu-card-body">
         <h3>
-          ${escapeHtml(item.name)}
+          ${escapeHtml(
+            item.name
+          )}
         </h3>
-
         <p>
-          ${escapeHtml(item.description)}
+          ${escapeHtml(
+            item.description
+          )}
         </p>
       </div>
-
       <div class="menu-card-bottom">
-
         <strong>
           ${euro(item.price)}
         </strong>
-
         <button
           class="add-button"
-          data-add="${escapeHtml(item.id)}"
+          data-add="${escapeHtml(
+            item.id
+          )}"
           type="button"
-          aria-label="Ajouter ${escapeHtml(item.name)}"
+          aria-label="Ajouter ${escapeHtml(
+            item.name
+          )}"
         >
-          <span>+</span>
+          <span>
+            +
+          </span>
           Ajouter
         </button>
-
       </div>
-
     </article>
   `;
 }
-
+/* ============================================================
+ * EVENTS
+ * ========================================================== */
 function bind() {
   document
-    .querySelectorAll('[data-category]')
+    .querySelectorAll(
+      '[data-category]'
+    )
     .forEach(button => {
       button.onclick = () => {
-        activeCategory = button.dataset.category;
+        activeCategory =
+          button.dataset.category;
         render();
       };
     });
-
   document
-    .querySelectorAll('[data-add]')
+    .querySelectorAll(
+      '[data-add]'
+    )
     .forEach(button => {
       button.onclick = () =>
-        openProduct(button.dataset.add);
+        openProduct(
+          button.dataset.add
+        );
     });
-
-  document.querySelector('#open-cart').onclick =
-    openCart;
-
-  document.querySelector('#close-cart').onclick =
-    closeCart;
-
-  document.querySelector('#backdrop').onclick =
-    closeCart;
+  const openCartButton =
+    document.querySelector(
+      '#open-cart'
+    );
+  if (openCartButton) {
+    openCartButton.onclick =
+      openCart;
+  }
+  const closeCartButton =
+    document.querySelector(
+      '#close-cart'
+    );
+  if (closeCartButton) {
+    closeCartButton.onclick =
+      closeCart;
+  }
+  const backdrop =
+    document.querySelector(
+      '#backdrop'
+    );
+  if (backdrop) {
+    backdrop.onclick =
+      closeCart;
+  }
 }
-
+/* ============================================================
+ * PRODUIT / OPTIONS
+ * ========================================================== */
 function openProduct(id) {
-  const item = menu.find(
-    product => product.id === id
-  );
-
+  const item =
+    menu.find(
+      product =>
+        String(product.id) ===
+        String(id)
+    );
   if (!item) return;
-
-  const meatField = buildMeatField(item);
-  const sauceField = buildSauceField(item);
-  const drinkField = buildDrinkField(item);
-
-  document.querySelector('#modal-content').innerHTML = `
+  const meatField =
+    buildMeatField(item);
+  const sauceField =
+    buildSauceField(item);
+  const drinkField =
+    buildDrinkField(item);
+  document.querySelector(
+    '#modal-content'
+  ).innerHTML = `
     <button
       class="modal-close"
       id="modal-close"
@@ -473,31 +775,47 @@ function openProduct(id) {
     >
       ×
     </button>
-
-    <div class="product-mark">
-      ${item.emoji}
-    </div>
-
+    ${
+      item.image_url
+        ? `
+          <div class="product-image">
+            <img
+              src="${escapeHtml(
+                item.image_url
+              )}"
+              alt="${escapeHtml(
+                item.name
+              )}"
+            >
+          </div>
+        `
+        : `
+          <div class="product-mark">
+            ${escapeHtml(
+              item.emoji
+            )}
+          </div>
+        `
+    }
     <p class="eyebrow">
-      ${escapeHtml(item.category)}
+      ${escapeHtml(
+        item.category
+      )}
     </p>
-
     <h2>
-      ${escapeHtml(item.name)}
+      ${escapeHtml(
+        item.name
+      )}
     </h2>
-
     <p>
-      ${escapeHtml(item.description)}
+      ${escapeHtml(
+        item.description
+      )}
     </p>
-
     <div class="form-grid">
-
       ${meatField}
-
       ${sauceField}
-
       ${drinkField}
-
       <label>
         QUANTITÉ
         <input
@@ -509,237 +827,297 @@ function openProduct(id) {
           inputmode="numeric"
         >
       </label>
-
     </div>
-
     <button
       class="primary full"
       id="confirm-add"
       type="button"
     >
-      Ajouter · ${euro(item.price)}
+      Ajouter · ${euro(
+        item.price
+      )}
     </button>
   `;
-
   document
-    .querySelector('#product-modal')
-    .classList.remove('hidden');
-
-  document.querySelector('#modal-close').onclick =
-    () => {
-      document
-        .querySelector('#product-modal')
-        .classList.add('hidden');
-    };
-
-  document.querySelector('#confirm-add').onclick =
-    () => {
-      const quantity = Math.max(
-        1,
-        Math.min(
-          20,
-          Number(
-            document.querySelector('#qty').value || 1
-          )
-        )
+    .querySelector(
+      '#product-modal'
+    )
+    .classList.remove(
+      'hidden'
+    );
+  document.querySelector(
+    '#modal-close'
+  ).onclick = () => {
+    document
+      .querySelector(
+        '#product-modal'
+      )
+      .classList.add(
+        'hidden'
       );
-
-      const options = {};
-
-      const meat1 =
-        document.querySelector('#meat-1')?.value;
-
-      const meat2 =
-        document.querySelector('#meat-2')?.value;
-
-      const meat3 =
-        document.querySelector('#meat-3')?.value;
-
-      const sauce =
-        document.querySelector('#sauce')?.value;
-
-      const drink =
-        document.querySelector('#drink')?.value;
-
-      if (meat1) {
-        options.meat = meat1;
-      }
-
-      if (meat2) {
-        options.meat2 = meat2;
-      }
-
-      if (meat3) {
-        options.meat3 = meat3;
-      }
-
-      if (meat2 || meat3) {
-        options.meats = [
-          meat1,
-          meat2,
-          meat3
-        ].filter(Boolean);
-      }
-
-      if (sauce) {
-        options.sauce = sauce;
-      }
-
-      if (drink) {
-        options.drink = drink;
-      }
-
-      cart = addItem(cart, {
+  };
+  document.querySelector(
+    '#confirm-add'
+  ).onclick = () => {
+    const quantity = Math.max(
+      1,
+      Math.min(
+        20,
+        Number(
+          document.querySelector(
+            '#qty'
+          ).value || 1
+        )
+      )
+    );
+    const options = {};
+    const meat1 =
+      document.querySelector(
+        '#meat-1'
+      )?.value;
+    const meat2 =
+      document.querySelector(
+        '#meat-2'
+      )?.value;
+    const meat3 =
+      document.querySelector(
+        '#meat-3'
+      )?.value;
+    const sauce =
+      document.querySelector(
+        '#sauce'
+      )?.value;
+    const drink =
+      document.querySelector(
+        '#drink'
+      )?.value;
+    if (meat1) {
+      options.meat =
+        meat1;
+    }
+    if (meat2) {
+      options.meat2 =
+        meat2;
+    }
+    if (meat3) {
+      options.meat3 =
+        meat3;
+    }
+    if (meat2 || meat3) {
+      options.meats = [
+        meat1,
+        meat2,
+        meat3
+      ].filter(Boolean);
+    }
+    if (sauce) {
+      options.sauce =
+        sauce;
+    }
+    if (drink) {
+      options.drink =
+        drink;
+    }
+    cart = addItem(
+      cart,
+      {
         ...item,
         quantity,
         options
-      });
-
-      document
-        .querySelector('#product-modal')
-        .classList.add('hidden');
-
-      render();
-      openCart();
-    };
+      }
+    );
+    document
+      .querySelector(
+        '#product-modal'
+      )
+      .classList.add(
+        'hidden'
+      );
+    render();
+    openCart();
+  };
 }
-
+/* ============================================================
+ * OPTIONS VIANDE
+ * ========================================================== */
 function buildMeatField(item) {
-  if (!item.meat) return '';
-
+  if (!item.meat) {
+    return '';
+  }
   if (item.tripleMeat) {
     return `
       <label>
         VIANDE 1
         <select id="meat-1">
-          ${optionsHtml(MEATS)}
+          ${optionsHtml(
+            MEATS
+          )}
         </select>
       </label>
-
       <label>
         VIANDE 2
         <select id="meat-2">
-          ${optionsHtml(MEATS)}
+          ${optionsHtml(
+            MEATS
+          )}
         </select>
       </label>
-
       <label>
         VIANDE 3
         <select id="meat-3">
-          ${optionsHtml(MEATS)}
+          ${optionsHtml(
+            MEATS
+          )}
         </select>
       </label>
     `;
   }
-
   if (item.multipleMeat) {
     return `
       <label>
         VIANDE 1
         <select id="meat-1">
-          ${optionsHtml(MEATS)}
+          ${optionsHtml(
+            MEATS
+          )}
         </select>
       </label>
-
       <label>
         VIANDE 2
         <select id="meat-2">
-          ${optionsHtml(MEATS)}
+          ${optionsHtml(
+            MEATS
+          )}
         </select>
       </label>
     `;
   }
-
   return `
     <label>
       VIANDE
       <select id="meat-1">
-        ${optionsHtml(MEATS)}
+        ${optionsHtml(
+          MEATS
+        )}
       </select>
     </label>
   `;
 }
-
+/* ============================================================
+ * OPTIONS SAUCE
+ * ========================================================== */
 function buildSauceField(item) {
-  if (!item.sauce) return '';
-
+  if (!item.sauce) {
+    return '';
+  }
   return `
     <label>
       SAUCE
       <select id="sauce">
-        ${optionsHtml(SAUCES)}
+        ${optionsHtml(
+          SAUCES
+        )}
       </select>
     </label>
   `;
 }
-
+/* ============================================================
+ * OPTIONS BOISSON
+ * ========================================================== */
 function buildDrinkField(item) {
-  if (!item.drink) return '';
-
+  if (!item.drink) {
+    return '';
+  }
   return `
     <label>
       BOISSON
       <select id="drink">
-        ${optionsHtml(DRINKS)}
+        ${optionsHtml(
+          DRINKS
+        )}
       </select>
     </label>
   `;
 }
-
 function optionsHtml(options) {
-  return options
+  return (options || [])
     .map(
       option =>
-        `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`
+        `<option value="${escapeHtml(
+          option
+        )}">${escapeHtml(
+          option
+        )}</option>`
     )
     .join('');
 }
-
+/* ============================================================
+ * PANIER
+ * ========================================================== */
 function openCart() {
   document
-    .querySelector('#drawer')
-    .classList.add('open');
-
+    .querySelector(
+      '#drawer'
+    )
+    .classList.add(
+      'open'
+    );
   document
-    .querySelector('#backdrop')
-    .classList.remove('hidden');
-
+    .querySelector(
+      '#backdrop'
+    )
+    .classList.remove(
+      'hidden'
+    );
   renderCart();
 }
-
 function closeCart() {
   document
-    .querySelector('#drawer')
-    .classList.remove('open');
-
+    .querySelector(
+      '#drawer'
+    )
+    .classList.remove(
+      'open'
+    );
   document
-    .querySelector('#backdrop')
-    .classList.add('hidden');
+    .querySelector(
+      '#backdrop'
+    )
+    .classList.add(
+      'hidden'
+    );
 }
-
 function renderCart() {
   const element =
-    document.querySelector('#cart-content');
-
-  if (!element) return;
-
+    document.querySelector(
+      '#cart-content'
+    );
+  if (!element) {
+    return;
+  }
+  const name =
+    getRestaurantName();
+  const address =
+    getRestaurantAddress();
+  const settings =
+    getRestaurantSettings();
+  const paymentLabel =
+    settings.payment_label ||
+    settings.paymentLabel ||
+    'Paiement au restaurant';
   if (!cart.length) {
     element.innerHTML = `
       <div class="empty-ticket">
-
         <div class="empty-ticket-mark">
           +
         </div>
-
         <h3>
           Ton ticket est vide.
         </h3>
-
         <p>
           Choisis quelque chose dans la carte.
           On s'occupe du reste.
         </p>
-
         <button
           class="primary full"
           id="back-menu"
@@ -747,65 +1125,70 @@ function renderCart() {
         >
           Voir la carte
         </button>
-
       </div>
     `;
-
-    element.querySelector('#back-menu').onclick =
+    element.querySelector(
+      '#back-menu'
+    ).onclick =
       closeCart;
-
     return;
   }
-
   element.innerHTML = `
     <div class="ticket-paper">
-
       <div class="ticket-header">
-        <span>CAZ FOOD</span>
-        <span>COMMANDE</span>
+        <span>
+          ${escapeHtml(name)}
+        </span>
+        <span>
+          COMMANDE
+        </span>
       </div>
-
       <div class="ticket-items">
         ${cart
           .map(
             (item, index) =>
-              ticketItem(item, index)
+              ticketItem(
+                item,
+                index
+              )
           )
           .join('')}
       </div>
-
       <div class="ticket-total">
-        <span>TOTAL</span>
+        <span>
+          TOTAL
+        </span>
         <strong>
-          ${euro(calculateTotal(cart))}
+          ${euro(
+            calculateTotal(
+              cart
+            )
+          )}
         </strong>
       </div>
-
       <div class="ticket-note">
         <strong>
           RETRAIT SUR PLACE
         </strong>
-
         <span>
-          17 Av. Pasteur · Cazères
+          ${escapeHtml(
+            address
+          )}
         </span>
-
         <small>
-          Paiement au restaurant
+          ${escapeHtml(
+            paymentLabel
+          )}
         </small>
       </div>
-
     </div>
-
     <form
       id="order-form"
       class="order-form"
     >
-
       <p class="eyebrow">
         DERNIÈRE ÉTAPE
       </p>
-
       <label>
         TON NOM
         <input
@@ -815,7 +1198,6 @@ function renderCart() {
           autocomplete="name"
         >
       </label>
-
       <label>
         TON TÉLÉPHONE
         <input
@@ -826,7 +1208,6 @@ function renderCart() {
           autocomplete="tel"
         >
       </label>
-
       <label>
         HEURE SOUHAITÉE
         <input
@@ -835,79 +1216,112 @@ function renderCart() {
           required
         >
       </label>
-
       <button
         class="primary full"
         type="submit"
       >
         Envoyer ma commande →
       </button>
-
       <small>
         ${
           remoteStore
-            ? 'Commande transmise directement à l’espace Caz Food.'
+            ? `Commande transmise directement à l’espace ${escapeHtml(
+                name
+              )}.`
             : 'Mode démo : aucune commande réelle n’est envoyée.'
         }
       </small>
-
     </form>
   `;
-
   element
-    .querySelectorAll('[data-remove]')
+    .querySelectorAll(
+      '[data-remove]'
+    )
     .forEach(button => {
       button.onclick = () => {
         cart.splice(
-          Number(button.dataset.remove),
+          Number(
+            button.dataset.remove
+          ),
           1
         );
-
         renderCart();
       };
     });
-
-  element.querySelector('#order-form').onsubmit =
+  element.querySelector(
+    '#order-form'
+  ).onsubmit =
     async event => {
       event.preventDefault();
-
       const formData =
         Object.fromEntries(
-          new FormData(event.currentTarget)
+          new FormData(
+            event.currentTarget
+          )
         );
-
-      const order = createOrder(
-        cart,
-        formData
+      /*
+       * On ajoute explicitement le contexte tenant
+       * à la commande.
+       *
+       * Le store Supabase devra également utiliser
+       * restaurant_id côté serveur/RLS.
+       */
+      const order =
+        createOrder(
+          cart,
+          {
+            ...formData,
+            restaurant_id:
+              restaurantContext
+                ?.restaurant_id,
+            restaurantId:
+              restaurantContext
+                ?.restaurant_id
+          }
+        );
+      await submitOrder(
+        order
       );
-
-      await submitOrder(order);
     };
 }
-
-function ticketItem(item, index) {
-  const options = formatOptions(item.options);
-
+/* ============================================================
+ * TICKET ITEM
+ * ========================================================== */
+function ticketItem(
+  item,
+  index
+) {
+  const options =
+    formatOptions(
+      item.options
+    );
   return `
     <div class="ticket-item">
-
       <div>
         <strong>
           ${item.quantity} ×
-          ${escapeHtml(item.name)}
+          ${escapeHtml(
+            item.name
+          )}
         </strong>
-
         ${
           options
-            ? `<span>${escapeHtml(options)}</span>`
+            ? `
+              <span>
+                ${escapeHtml(
+                  options
+                )}
+              </span>
+            `
             : ''
         }
       </div>
-
       <b>
-        ${euro(item.price * item.quantity)}
+        ${euro(
+          item.price *
+          item.quantity
+        )}
       </b>
-
       <button
         data-remove="${index}"
         type="button"
@@ -915,121 +1329,151 @@ function ticketItem(item, index) {
       >
         ×
       </button>
-
     </div>
   `;
 }
-
-function formatOptions(options = {}) {
-  if (!options || typeof options !== 'object') {
+/* ============================================================
+ * FORMAT OPTIONS
+ * ========================================================== */
+function formatOptions(
+  options = {}
+) {
+  if (
+    !options ||
+    typeof options !== 'object'
+  ) {
     return '';
   }
-
   const parts = [];
-
-  if (Array.isArray(options.meats)) {
+  if (
+    Array.isArray(
+      options.meats
+    )
+  ) {
     parts.push(
-      `Viandes : ${options.meats.join(', ')}`
+      `Viandes : ${options.meats.join(
+        ', '
+      )}`
     );
-  } else if (options.meat) {
+  } else if (
+    options.meat
+  ) {
     parts.push(
       `Viande : ${options.meat}`
     );
   }
-
-  if (options.sauce) {
+  if (
+    options.sauce
+  ) {
     parts.push(
       `Sauce : ${options.sauce}`
     );
   }
-
-  if (options.drink) {
+  if (
+    options.drink
+  ) {
     parts.push(
       `Boisson : ${options.drink}`
     );
   }
-
-  return parts.join(' · ');
+  return parts.join(
+    ' · '
+  );
 }
-
-async function submitOrder(order) {
+/* ============================================================
+ * ENVOI COMMANDE
+ * ========================================================== */
+async function submitOrder(
+  order
+) {
   try {
     let saved;
-
     if (remoteStore) {
+      /*
+       * Le store actuel reste utilisé.
+       *
+       * Il faudra ensuite le verrouiller côté Supabase
+       * pour que restaurant_id soit imposé par le backend.
+       */
       saved =
-        await remoteStore.createOrder(order);
+        await remoteStore.createOrder(
+          order
+        );
     } else {
       const existing =
         JSON.parse(
           localStorage.getItem(
-            'caz-food-orders'
+            'foodatoi-orders'
           ) || '[]'
         );
-
       saved =
         appendOrder(
           existing,
           order
         ).at(-1);
-
       localStorage.setItem(
-        'caz-food-orders',
+        'foodatoi-orders',
         JSON.stringify([
           ...existing,
           saved
         ])
       );
     }
-
     cart = [];
-
-    showConfirmation(saved);
+    showConfirmation(
+      saved
+    );
   } catch (error) {
     console.error(
-      'Erreur création commande :',
+      '[FOODATOI] Erreur création commande:',
       error
     );
-
     alert(
       'Impossible d’envoyer la commande pour le moment.'
     );
   }
 }
-
-function showConfirmation(order) {
+/* ============================================================
+ * CONFIRMATION
+ * ========================================================== */
+function showConfirmation(
+  order
+) {
   const ticket =
-    buildTicketModel(order);
-
+    buildTicketModel(
+      order
+    );
   closeCart();
-
   document.querySelector(
     '#modal-content'
   ).innerHTML = `
     <div class="confirmation">
-
       <div class="confirmed-stamp">
         ✓
       </div>
-
       <p class="eyebrow">
         COMMANDE ENREGISTRÉE
       </p>
-
       <h2>
-        ${escapeHtml(ticket.number)}
+        ${escapeHtml(
+          ticket.number
+        )}
       </h2>
-
       <p>
-        Ton ticket est parti chez Caz Food.
+        Ton ticket est parti chez
+        <strong>
+          ${escapeHtml(
+            getRestaurantName()
+          )}
+        </strong>.
         Retrait souhaité à
         <strong>
-          ${escapeHtml(ticket.pickup)}
+          ${escapeHtml(
+            ticket.pickup
+          )}
         </strong>.
       </p>
-
       <div class="ticket-paper compact">
-
         <div class="ticket-items">
           ${ticket.items
             .map(
@@ -1038,11 +1482,15 @@ function showConfirmation(order) {
                   <div>
                     <strong>
                       ${item.quantity} ×
-                      ${escapeHtml(item.name)}
+                      ${escapeHtml(
+                        item.name
+                      )}
                     </strong>
-
                     <span>
-                      ${escapeHtml(item.options || '')}
+                      ${escapeHtml(
+                        item.options ||
+                        ''
+                      )}
                     </span>
                   </div>
                 </div>
@@ -1050,17 +1498,17 @@ function showConfirmation(order) {
             )
             .join('')}
         </div>
-
         <div class="ticket-total">
-          <span>TOTAL</span>
-
+          <span>
+            TOTAL
+          </span>
           <strong>
-            ${escapeHtml(ticket.totalLabel)}
+            ${escapeHtml(
+              ticket.totalLabel
+            )}
           </strong>
         </div>
-
       </div>
-
       <button
         class="primary full"
         id="done"
@@ -1068,31 +1516,94 @@ function showConfirmation(order) {
       >
         Terminé
       </button>
-
     </div>
   `;
-
   document
-    .querySelector('#product-modal')
-    .classList.remove('hidden');
-
-  document.querySelector('#done').onclick =
-    () => {
-      document
-        .querySelector('#product-modal')
-        .classList.add('hidden');
-
-      render();
-    };
+    .querySelector(
+      '#product-modal'
+    )
+    .classList.remove(
+      'hidden'
+    );
+  document.querySelector(
+    '#done'
+  ).onclick = () => {
+    document
+      .querySelector(
+        '#product-modal'
+      )
+      .classList.add(
+        'hidden'
+      );
+    render();
+  };
 }
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+/* ============================================================
+ * BOOTSTRAP
+ * ========================================================== */
+async function bootstrap() {
+  try {
+    /*
+     * 1. Trouver le tenant.
+     */
+    await loadRestaurant();
+    /*
+     * 2. Charger sa configuration.
+     */
+    loadTenantConfiguration();
+    /*
+     * 3. Charger uniquement son catalogue.
+     */
+    await loadMenu();
+    /*
+     * 4. Appliquer son identité.
+     */
+    applyRestaurantBranding();
+    /*
+     * 5. Afficher l'application.
+     */
+    render();
+  } catch (error) {
+    console.error(
+      '[FOODATOI] Bootstrap failed:',
+      error
+    );
+    renderTenantError(
+      error
+    );
+  }
 }
-
-render();
+/* ============================================================
+ * ERREUR TENANT
+ * ========================================================== */
+function renderTenantError(
+  error
+) {
+  const message =
+    error?.message ||
+    'Cet établissement n’est pas disponible.';
+  app.innerHTML = `
+    <div class="app-frame">
+      <main class="tenant-error">
+        <p class="eyebrow">
+          FOODATOI
+        </p>
+        <h1>
+          Établissement indisponible
+        </h1>
+        <p>
+          ${escapeHtml(
+            message
+          )}
+        </p>
+      </main>
+    </div>
+  `;
+}
+/* ============================================================
+ * DÉMARRAGE
+ * ========================================================== */
+document.addEventListener(
+  'DOMContentLoaded',
+  bootstrap
+);
