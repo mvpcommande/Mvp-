@@ -26,21 +26,30 @@ import './styles.css';
  * FOODATOI
  * Frontend multi-restaurant.
  *
- * Flux :
+ * Architecture :
  *
- * hostname
- *   ↓
- * resolve_restaurant(hostname)
- *   ↓
- * restaurant
- *   ↓
+ * https://www.foodatoi.fr/caz-food
+ *              ↓
+ *        slug = "caz-food"
+ *              ↓
+ *      Supabase RPC
+ * resolve_restaurant("caz-food.foodatoi.fr")
+ *              ↓
+ *          restaurant
+ *              ↓
  * products.restaurant_id
- *   ↓
- * menu dynamique
- *   ↓
- * commande avec restaurant_id
+ *              ↓
+ *            menu
  *
- * Aucun menu Caz Food n'est codé en dur.
+ * Aucun domaine du restaurant n'est nécessaire.
+ *
+ * Le domaine principal FOODATOI reste :
+ *
+ * https://www.foodatoi.fr
+ *
+ * Chaque restaurant est accessible par :
+ *
+ * https://www.foodatoi.fr/<slug>
  */
 
 let restaurant = null;
@@ -48,18 +57,7 @@ let menu = [];
 let cart = [];
 let activeCategory = 'Tous';
 
-/**
- * Store Supabase créé APRÈS résolution
- * du restaurant.
- *
- * Le restaurant_id est obligatoire pour
- * rattacher chaque commande au bon tenant.
- */
 let remoteStore = null;
-
-/* -------------------------------------------------------------------------- */
-/* Fallback options                                                           */
-/* -------------------------------------------------------------------------- */
 
 const MEATS = [
   'Kebab',
@@ -135,6 +133,98 @@ function getHostname() {
     .replace(/^www\./, '');
 }
 
+/**
+ * Retourne le slug restaurant présent
+ * dans l'URL FOODATOI.
+ *
+ * Exemple :
+ *
+ * /caz-food
+ * → caz-food
+ *
+ * /caz-food/
+ * → caz-food
+ *
+ * /
+ * → null
+ */
+function getRestaurantSlugFromPath() {
+  const pathname =
+    window.location.pathname
+      .trim()
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, '');
+
+  if (!pathname) {
+    return null;
+  }
+
+  const segments =
+    pathname
+      .split('/')
+      .filter(Boolean);
+
+  if (!segments.length) {
+    return null;
+  }
+
+  const slug =
+    decodeURIComponent(
+      segments[0]
+    )
+      .trim()
+      .toLowerCase();
+
+  if (!slug) {
+    return null;
+  }
+
+  /**
+   * Protection contre les chemins
+   * qui ne doivent pas être considérés
+   * comme des restaurants.
+   */
+  const reservedRoutes = [
+    'favicon.ico',
+    'robots.txt',
+    'sitemap.xml',
+    'assets'
+  ];
+
+  if (
+    reservedRoutes.includes(slug)
+  ) {
+    return null;
+  }
+
+  return slug;
+}
+
+/**
+ * Construit le hostname virtuel attendu
+ * par la fonction Supabase.
+ *
+ * Exemple :
+ *
+ * slug = caz-food
+ *
+ * → caz-food.foodatoi.fr
+ *
+ * La fonction SQL existante de Supabase
+ * sait déjà résoudre ce format à partir
+ * du slug restaurant.
+ */
+function getRestaurantResolverHost() {
+  const slug =
+    getRestaurantSlugFromPath();
+
+  if (slug) {
+    return `${slug}.foodatoi.fr`;
+  }
+
+  return getHostname();
+}
+
 function getRestaurantDisplayName() {
   return (
     restaurant?.name ||
@@ -190,21 +280,56 @@ async function resolveRestaurant() {
     );
   }
 
-  const hostname =
+  const realHostname =
     getHostname();
 
+  const resolverHost =
+    getRestaurantResolverHost();
+
+  const slug =
+    getRestaurantSlugFromPath();
+
   console.info(
-    '[FOODATOI] Résolution restaurant:',
-    hostname
+    '[FOODATOI] Hostname réel:',
+    realHostname
   );
 
+  console.info(
+    '[FOODATOI] Slug URL:',
+    slug
+  );
+
+  console.info(
+    '[FOODATOI] Hostname utilisé pour résolution:',
+    resolverHost
+  );
+
+  /**
+   * La fonction Supabase existante :
+   *
+   * resolve_restaurant(hostname text)
+   *
+   * sait déjà résoudre :
+   *
+   * <slug>.foodatoi.fr
+   *
+   * On lui transmet donc :
+   *
+   * caz-food.foodatoi.fr
+   *
+   * même si l'utilisateur est réellement
+   * sur :
+   *
+   * www.foodatoi.fr/caz-food
+   */
   const {
     data,
     error
   } = await supabase.rpc(
     'resolve_restaurant',
     {
-      hostname
+      hostname:
+        resolverHost
     }
   );
 
@@ -224,7 +349,7 @@ async function resolveRestaurant() {
 
   if (!resolved?.id) {
     throw new Error(
-      `Aucun restaurant FOODATOI configuré pour ${hostname}.`
+      `Aucun restaurant FOODATOI configuré pour "${slug || realHostname}".`
     );
   }
 
@@ -243,27 +368,20 @@ async function resolveRestaurant() {
     restaurant
   );
 
-  /*
-   * IMPORTANT :
+  applyRestaurantBranding();
+
+  /**
+   * Maintenant seulement que le tenant
+   * est connu, on crée le store Supabase.
    *
-   * Le store Supabase est créé ici,
-   * APRÈS avoir récupéré restaurant.id.
-   *
-   * Cela garantit que les commandes
-   * sont envoyées avec le bon tenant.
+   * Le restaurant_id sera transmis
+   * dans chaque commande.
    */
   remoteStore =
     createSupabaseOrderStore(
       supabase,
       restaurant.id
     );
-
-  console.info(
-    '[FOODATOI] Store Supabase initialisé pour:',
-    restaurant.id
-  );
-
-  applyRestaurantBranding();
 
   return restaurant;
 }
@@ -302,7 +420,8 @@ function normalizeProduct(product) {
     100;
 
   return {
-    id: product.id,
+    id:
+      product.id,
 
     category:
       product.category ||
@@ -437,10 +556,11 @@ async function loadMenu() {
         normalizeProduct
       );
 
-  activeCategory = 'Tous';
+  activeCategory =
+    'Tous';
 
   console.info(
-    `[FOODATOI] ${menu.length} produit(s) chargé(s).`
+    `[FOODATOI] ${menu.length} produit(s) chargé(s) pour ${getRestaurantDisplayName()}.`
   );
 
   return menu;
@@ -532,7 +652,7 @@ function renderError(error) {
             <div class="pickup-line">
 
               <span>
-                Vérifie le domaine ou réessaie plus tard.
+                Vérifie l'URL ou réessaie plus tard.
               </span>
 
             </div>
@@ -619,8 +739,13 @@ function render() {
           id="open-cart"
           type="button"
         >
-          <span>Ma commande</span>
-          <b>${itemCount()}</b>
+          <span>
+            Ma commande
+          </span>
+
+          <b>
+            ${itemCount()}
+          </b>
         </button>
 
       </header>
@@ -751,12 +876,15 @@ function render() {
             </div>
 
             <span class="menu-count">
+
               ${menu.length}
+
               ${
                 menu.length > 1
                   ? 'produits'
                   : 'produit'
               }
+
             </span>
 
           </div>
@@ -927,10 +1055,12 @@ function render() {
       class="modal hidden"
       id="product-modal"
     >
+
       <div
         class="modal-card"
         id="modal-content"
       ></div>
+
     </div>
   `;
 
@@ -1002,8 +1132,13 @@ function card(item) {
             item.name
           )}"
         >
-          <span>+</span>
+
+          <span>
+            +
+          </span>
+
           Ajouter
+
         </button>
 
       </div>
@@ -1096,21 +1231,9 @@ function openProduct(id) {
   const drinkField =
     buildDrinkField(item);
 
-  const modal =
-    document.querySelector(
-      '#product-modal'
-    );
-
-  const modalContent =
-    document.querySelector(
-      '#modal-content'
-    );
-
-  if (!modal || !modalContent) {
-    return;
-  }
-
-  modalContent.innerHTML = `
+  document.querySelector(
+    '#modal-content'
+  ).innerHTML = `
 
     <button
       class="modal-close"
@@ -1185,16 +1308,24 @@ function openProduct(id) {
     </button>
   `;
 
-  modal.classList.remove(
-    'hidden'
-  );
+  document
+    .querySelector(
+      '#product-modal'
+    )
+    .classList.remove(
+      'hidden'
+    );
 
   document.querySelector(
     '#modal-close'
   ).onclick = () => {
-    modal.classList.add(
-      'hidden'
-    );
+    document
+      .querySelector(
+        '#product-modal'
+      )
+      .classList.add(
+        'hidden'
+      );
   };
 
   document.querySelector(
@@ -1208,7 +1339,7 @@ function openProduct(id) {
           Number(
             document.querySelector(
               '#qty'
-            )?.value || 1
+            ).value || 1
           )
         )
       );
@@ -1282,9 +1413,13 @@ function openProduct(id) {
       }
     );
 
-    modal.classList.add(
-      'hidden'
-    );
+    document
+      .querySelector(
+        '#product-modal'
+      )
+      .classList.add(
+        'hidden'
+      );
 
     render();
     openCart();
@@ -1478,53 +1613,41 @@ function optionsHtml(options) {
 /* -------------------------------------------------------------------------- */
 
 function openCart() {
-  const drawer =
-    document.querySelector(
+  document
+    .querySelector(
       '#drawer'
+    )
+    .classList.add(
+      'open'
     );
 
-  const backdrop =
-    document.querySelector(
+  document
+    .querySelector(
       '#backdrop'
+    )
+    .classList.remove(
+      'hidden'
     );
-
-  if (!drawer || !backdrop) {
-    return;
-  }
-
-  drawer.classList.add(
-    'open'
-  );
-
-  backdrop.classList.remove(
-    'hidden'
-  );
 
   renderCart();
 }
 
 function closeCart() {
-  const drawer =
-    document.querySelector(
+  document
+    .querySelector(
       '#drawer'
-    );
-
-  const backdrop =
-    document.querySelector(
-      '#backdrop'
-    );
-
-  if (drawer) {
-    drawer.classList.remove(
+    )
+    .classList.remove(
       'open'
     );
-  }
 
-  if (backdrop) {
-    backdrop.classList.add(
+  document
+    .querySelector(
+      '#backdrop'
+    )
+    .classList.add(
       'hidden'
     );
-  }
 }
 
 function renderCart() {
@@ -1872,39 +1995,55 @@ async function submitOrder(
   order
 ) {
   try {
-    if (!restaurant?.id) {
-      throw new Error(
-        'Restaurant FOODATOI introuvable.'
-      );
-    }
+    let saved;
 
-    if (!remoteStore) {
-      throw new Error(
-        'Store Supabase non initialisé.'
-      );
-    }
-
-    /*
-     * Le restaurant est explicitement
-     * attaché à la commande.
-     *
-     * Le store reçoit également le restaurant_id
-     * afin de garantir le bon tenant.
-     */
     const tenantOrder = {
       ...order,
 
       restaurant_id:
-        restaurant.id,
+        restaurant?.id ||
+        null,
 
       restaurantId:
-        restaurant.id
+        restaurant?.id ||
+        null
     };
 
-    const saved =
-      await remoteStore.createOrder(
-        tenantOrder
+    if (
+      !tenantOrder.restaurant_id
+    ) {
+      throw new Error(
+        'Restaurant FOODATOI introuvable pour cette commande.'
       );
+    }
+
+    if (remoteStore) {
+      saved =
+        await remoteStore.createOrder(
+          tenantOrder
+        );
+    } else {
+      const existing =
+        JSON.parse(
+          localStorage.getItem(
+            'foodatoi-orders'
+          ) || '[]'
+        );
+
+      saved =
+        appendOrder(
+          existing,
+          tenantOrder
+        ).at(-1);
+
+      localStorage.setItem(
+        'foodatoi-orders',
+        JSON.stringify([
+          ...existing,
+          saved
+        ])
+      );
+    }
 
     cart = [];
 
@@ -1937,21 +2076,9 @@ function showConfirmation(
 
   closeCart();
 
-  const modal =
-    document.querySelector(
-      '#product-modal'
-    );
-
-  const modalContent =
-    document.querySelector(
-      '#modal-content'
-    );
-
-  if (!modal || !modalContent) {
-    return;
-  }
-
-  modalContent.innerHTML = `
+  document.querySelector(
+    '#modal-content'
+  ).innerHTML = `
     <div class="confirmation">
 
       <div class="confirmed-stamp">
@@ -2002,17 +2129,12 @@ function showConfirmation(
                       )}
                     </strong>
 
-                    ${
-                      item.options
-                        ? `
-                          <span>
-                            ${escapeHtml(
-                              item.options
-                            )}
-                          </span>
-                        `
-                        : ''
-                    }
+                    <span>
+                      ${escapeHtml(
+                        item.options ||
+                          ''
+                      )}
+                    </span>
 
                   </div>
 
@@ -2050,16 +2172,24 @@ function showConfirmation(
     </div>
   `;
 
-  modal.classList.remove(
-    'hidden'
-  );
+  document
+    .querySelector(
+      '#product-modal'
+    )
+    .classList.remove(
+      'hidden'
+    );
 
   document.querySelector(
     '#done'
   ).onclick = () => {
-    modal.classList.add(
-      'hidden'
-    );
+    document
+      .querySelector(
+        '#product-modal'
+      )
+      .classList.add(
+        'hidden'
+      );
 
     render();
   };
@@ -2073,27 +2203,23 @@ async function bootstrap() {
   try {
     renderLoading();
 
+    /**
+     * 1. Résout /caz-food
+     *    vers le restaurant Caz Food.
+     */
     await resolveRestaurant();
 
+    /**
+     * 2. Charge uniquement les produits
+     *    du restaurant résolu.
+     */
     await loadMenu();
 
+    /**
+     * 3. Affiche la carte.
+     */
     render();
 
-    console.info(
-      '[FOODATOI] Application prête:',
-      {
-        hostname:
-          getHostname(),
-        restaurantId:
-          restaurant?.id,
-        restaurant:
-          getRestaurantDisplayName(),
-        products:
-          menu.length,
-        supabaseStore:
-          Boolean(remoteStore)
-      }
-    );
   } catch (error) {
     renderError(
       error
