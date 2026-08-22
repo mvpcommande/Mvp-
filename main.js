@@ -45,6 +45,28 @@ let menu = [];
 let cart = [];
 let activeCategory = 'Tous';
 
+/**
+ * Le store Supabase ne peut être créé qu'après
+ * la résolution du restaurant.
+ *
+ * Pourquoi ?
+ *
+ * orders.restaurant_id est obligatoire.
+ *
+ * Flux :
+ *
+ * hostname
+ *   ↓
+ * resolve_restaurant()
+ *   ↓
+ * restaurant.id
+ *   ↓
+ * createSupabaseOrderStore(supabase, restaurant.id)
+ *   ↓
+ * création des commandes dans le bon tenant
+ */
+let remoteStore = null;
+
 const MEATS = [
   'Kebab',
   'Poulet',
@@ -77,10 +99,6 @@ const DRINKS = [
 ];
 
 const app = document.querySelector('#root');
-
-const remoteStore = supabase
-  ? createSupabaseOrderStore(supabase)
-  : null;
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
