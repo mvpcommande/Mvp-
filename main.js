@@ -27,6 +27,7 @@ import './styles.css';
  * Frontend multi-restaurant.
  *
  * Flux :
+ *
  * hostname
  *   ↓
  * resolve_restaurant(hostname)
@@ -36,8 +37,10 @@ import './styles.css';
  * products.restaurant_id
  *   ↓
  * menu dynamique
+ *   ↓
+ * commande avec restaurant_id
  *
- * Aucun menu Caz Food n'est codé en dur ici.
+ * Aucun menu Caz Food n'est codé en dur.
  */
 
 let restaurant = null;
@@ -46,26 +49,17 @@ let cart = [];
 let activeCategory = 'Tous';
 
 /**
- * Le store Supabase ne peut être créé qu'après
- * la résolution du restaurant.
+ * Store Supabase créé APRÈS résolution
+ * du restaurant.
  *
- * Pourquoi ?
- *
- * orders.restaurant_id est obligatoire.
- *
- * Flux :
- *
- * hostname
- *   ↓
- * resolve_restaurant()
- *   ↓
- * restaurant.id
- *   ↓
- * createSupabaseOrderStore(supabase, restaurant.id)
- *   ↓
- * création des commandes dans le bon tenant
+ * Le restaurant_id est obligatoire pour
+ * rattacher chaque commande au bon tenant.
  */
 let remoteStore = null;
+
+/* -------------------------------------------------------------------------- */
+/* Fallback options                                                           */
+/* -------------------------------------------------------------------------- */
 
 const MEATS = [
   'Kebab',
@@ -245,8 +239,28 @@ async function resolveRestaurant() {
   };
 
   console.info(
-    '[FOODATOI] Restaurant:',
+    '[FOODATOI] Restaurant résolu:',
     restaurant
+  );
+
+  /*
+   * IMPORTANT :
+   *
+   * Le store Supabase est créé ici,
+   * APRÈS avoir récupéré restaurant.id.
+   *
+   * Cela garantit que les commandes
+   * sont envoyées avec le bon tenant.
+   */
+  remoteStore =
+    createSupabaseOrderStore(
+      supabase,
+      restaurant.id
+    );
+
+  console.info(
+    '[FOODATOI] Store Supabase initialisé pour:',
+    restaurant.id
   );
 
   applyRestaurantBranding();
@@ -289,29 +303,25 @@ function normalizeProduct(product) {
 
   return {
     id: product.id,
+
     category:
       product.category ||
       'Autres',
+
     name:
       product.name ||
       'Produit',
+
     description:
       product.description ||
       '',
+
     price,
+
     emoji:
       options.emoji ||
       options.icon ||
       '🍽️',
-
-    /*
-     * Les options sont désormais pilotées
-     * par Supabase.
-     *
-     * On accepte plusieurs formats afin de
-     * rester compatible avec les produits
-     * créés manuellement ou via les templates.
-     */
 
     options,
 
@@ -382,7 +392,8 @@ async function loadMenu() {
       options,
       is_active,
       sort_order,
-      restaurant_id
+      restaurant_id,
+      created_at
     `)
     .eq(
       'restaurant_id',
@@ -461,6 +472,7 @@ function renderLoading() {
     <div class="app-frame">
 
       <main>
+
         <section class="order-intro">
 
           <div class="intro-copy">
@@ -481,6 +493,7 @@ function renderLoading() {
           </div>
 
         </section>
+
       </main>
 
     </div>
@@ -517,9 +530,11 @@ function renderError(error) {
             </p>
 
             <div class="pickup-line">
+
               <span>
                 Vérifie le domaine ou réessaie plus tard.
               </span>
+
             </div>
 
           </div>
@@ -634,6 +649,7 @@ function render() {
             </p>
 
             <div class="pickup-line">
+
               <span class="live-dot"></span>
 
               <span>
@@ -647,6 +663,7 @@ function render() {
               <span>
                 Paiement au restaurant
               </span>
+
             </div>
 
           </div>
@@ -657,6 +674,7 @@ function render() {
           >
 
             <div class="receipt-top">
+
               <span>
                 ${escapeHtml(
                   displayName
@@ -666,6 +684,7 @@ function render() {
               <span>
                 AUJ.
               </span>
+
             </div>
 
             <div class="receipt-hole"></div>
@@ -696,6 +715,7 @@ function render() {
             </div>
 
             <div class="receipt-barcode">
+
               <i></i>
               <i></i>
               <i></i>
@@ -703,6 +723,7 @@ function render() {
               <i></i>
               <i></i>
               <i></i>
+
             </div>
 
             <div class="receipt-code">
@@ -792,6 +813,7 @@ function render() {
                     .join('')
                 : `
                   <div class="empty-ticket">
+
                     <div class="empty-ticket-mark">
                       +
                     </div>
@@ -804,6 +826,7 @@ function render() {
                       Ce restaurant n'a pas encore
                       publié de produits.
                     </p>
+
                   </div>
                 `
             }
@@ -1073,9 +1096,21 @@ function openProduct(id) {
   const drinkField =
     buildDrinkField(item);
 
-  document.querySelector(
-    '#modal-content'
-  ).innerHTML = `
+  const modal =
+    document.querySelector(
+      '#product-modal'
+    );
+
+  const modalContent =
+    document.querySelector(
+      '#modal-content'
+    );
+
+  if (!modal || !modalContent) {
+    return;
+  }
+
+  modalContent.innerHTML = `
 
     <button
       class="modal-close"
@@ -1150,40 +1185,33 @@ function openProduct(id) {
     </button>
   `;
 
-  document
-    .querySelector(
-      '#product-modal'
-    )
-    .classList.remove(
-      'hidden'
-    );
+  modal.classList.remove(
+    'hidden'
+  );
 
   document.querySelector(
     '#modal-close'
   ).onclick = () => {
-    document
-      .querySelector(
-        '#product-modal'
-      )
-      .classList.add(
-        'hidden'
-      );
+    modal.classList.add(
+      'hidden'
+    );
   };
 
   document.querySelector(
     '#confirm-add'
   ).onclick = () => {
-    const quantity = Math.max(
-      1,
-      Math.min(
-        20,
-        Number(
-          document.querySelector(
-            '#qty'
-          ).value || 1
+    const quantity =
+      Math.max(
+        1,
+        Math.min(
+          20,
+          Number(
+            document.querySelector(
+              '#qty'
+            )?.value || 1
+          )
         )
-      )
-    );
+      );
 
     const options = {};
 
@@ -1254,13 +1282,9 @@ function openProduct(id) {
       }
     );
 
-    document
-      .querySelector(
-        '#product-modal'
-      )
-      .classList.add(
-        'hidden'
-      );
+    modal.classList.add(
+      'hidden'
+    );
 
     render();
     openCart();
@@ -1454,41 +1478,53 @@ function optionsHtml(options) {
 /* -------------------------------------------------------------------------- */
 
 function openCart() {
-  document
-    .querySelector(
+  const drawer =
+    document.querySelector(
       '#drawer'
-    )
-    .classList.add(
-      'open'
     );
 
-  document
-    .querySelector(
+  const backdrop =
+    document.querySelector(
       '#backdrop'
-    )
-    .classList.remove(
-      'hidden'
     );
+
+  if (!drawer || !backdrop) {
+    return;
+  }
+
+  drawer.classList.add(
+    'open'
+  );
+
+  backdrop.classList.remove(
+    'hidden'
+  );
 
   renderCart();
 }
 
 function closeCart() {
-  document
-    .querySelector(
+  const drawer =
+    document.querySelector(
       '#drawer'
-    )
-    .classList.remove(
-      'open'
     );
 
-  document
-    .querySelector(
+  const backdrop =
+    document.querySelector(
       '#backdrop'
-    )
-    .classList.add(
+    );
+
+  if (drawer) {
+    drawer.classList.remove(
+      'open'
+    );
+  }
+
+  if (backdrop) {
+    backdrop.classList.add(
       'hidden'
     );
+  }
 }
 
 function renderCart() {
@@ -1836,62 +1872,39 @@ async function submitOrder(
   order
 ) {
   try {
-    let saved;
+    if (!restaurant?.id) {
+      throw new Error(
+        'Restaurant FOODATOI introuvable.'
+      );
+    }
+
+    if (!remoteStore) {
+      throw new Error(
+        'Store Supabase non initialisé.'
+      );
+    }
 
     /*
-     * Le nouveau supabaseStore.mjs
-     * doit récupérer le restaurant_id
-     * à partir du contexte restaurant.
+     * Le restaurant est explicitement
+     * attaché à la commande.
      *
-     * On transmet également le contexte
-     * explicitement dans l'objet order.
+     * Le store reçoit également le restaurant_id
+     * afin de garantir le bon tenant.
      */
-
     const tenantOrder = {
       ...order,
+
       restaurant_id:
-        restaurant?.id ||
-        null,
+        restaurant.id,
+
       restaurantId:
-        restaurant?.id ||
-        null
+        restaurant.id
     };
 
-    if (
-      !tenantOrder.restaurant_id
-    ) {
-      throw new Error(
-        'Restaurant FOODATOI introuvable pour cette commande.'
+    const saved =
+      await remoteStore.createOrder(
+        tenantOrder
       );
-    }
-
-    if (remoteStore) {
-      saved =
-        await remoteStore.createOrder(
-          tenantOrder
-        );
-    } else {
-      const existing =
-        JSON.parse(
-          localStorage.getItem(
-            'foodatoi-orders'
-          ) || '[]'
-        );
-
-      saved =
-        appendOrder(
-          existing,
-          tenantOrder
-        ).at(-1);
-
-      localStorage.setItem(
-        'foodatoi-orders',
-        JSON.stringify([
-          ...existing,
-          saved
-        ])
-      );
-    }
 
     cart = [];
 
@@ -1924,9 +1937,21 @@ function showConfirmation(
 
   closeCart();
 
-  document.querySelector(
-    '#modal-content'
-  ).innerHTML = `
+  const modal =
+    document.querySelector(
+      '#product-modal'
+    );
+
+  const modalContent =
+    document.querySelector(
+      '#modal-content'
+    );
+
+  if (!modal || !modalContent) {
+    return;
+  }
+
+  modalContent.innerHTML = `
     <div class="confirmation">
 
       <div class="confirmed-stamp">
@@ -1977,12 +2002,17 @@ function showConfirmation(
                       )}
                     </strong>
 
-                    <span>
-                      ${escapeHtml(
-                        item.options ||
-                          ''
-                      )}
-                    </span>
+                    ${
+                      item.options
+                        ? `
+                          <span>
+                            ${escapeHtml(
+                              item.options
+                            )}
+                          </span>
+                        `
+                        : ''
+                    }
 
                   </div>
 
@@ -2020,24 +2050,16 @@ function showConfirmation(
     </div>
   `;
 
-  document
-    .querySelector(
-      '#product-modal'
-    )
-    .classList.remove(
-      'hidden'
-    );
+  modal.classList.remove(
+    'hidden'
+  );
 
   document.querySelector(
     '#done'
   ).onclick = () => {
-    document
-      .querySelector(
-        '#product-modal'
-      )
-      .classList.add(
-        'hidden'
-      );
+    modal.classList.add(
+      'hidden'
+    );
 
     render();
   };
@@ -2056,6 +2078,22 @@ async function bootstrap() {
     await loadMenu();
 
     render();
+
+    console.info(
+      '[FOODATOI] Application prête:',
+      {
+        hostname:
+          getHostname(),
+        restaurantId:
+          restaurant?.id,
+        restaurant:
+          getRestaurantDisplayName(),
+        products:
+          menu.length,
+        supabaseStore:
+          Boolean(remoteStore)
+      }
+    );
   } catch (error) {
     renderError(
       error
