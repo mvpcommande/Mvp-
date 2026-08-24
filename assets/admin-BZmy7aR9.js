@@ -1,4 +1,4 @@
-import{a as e,i as t,l as n,o as r,r as i,t as a}from"./styles-DagaTrij.js";async function o(e,t,n){let{data:r,error:i}=await e.auth.signInWithPassword({email:t,password:n});if(i)throw i;return r.session}async function s(e){let{data:t,error:n}=await e.auth.getSession();if(n)throw n;return t.session}async function c(e){let{error:t}=await e.auth.signOut();if(t)throw t}function l(e){let t=new Map;for(let n of e??[]){let e=n.order_items??n.items??[];for(let n of e){let e=n.product_name??n.name??`Article`,r=n.options?.meat??``,i=n.options?.sauce??``,a=n.options?.drink??``,o=[e,r,i,a].join(`|`),s=Number(n.quantity??0),c=Math.round(n.line_total_cents??(n.price??0)*s*100),l=t.get(o);l?(l.quantity+=s,l.revenueCents+=c):t.set(o,{name:e,meat:r,sauce:i,drink:a,quantity:s,revenueCents:c})}}return[...t.values()].sort((e,t)=>t.quantity-e.quantity||e.name.localeCompare(t.name))}function u(e){let t=e=>{let t=String(e??``);return/[;"\n]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t},n=[`Article`,`Viande`,`Sauce`,`Boisson`,`Quantité`,`Total (€)`],r=(e??[]).map(e=>[e.name,e.meat,e.sauce,e.drink,e.quantity,(e.revenueCents/100).toFixed(2).replace(`.`,`,`)].map(t).join(`;`));return[n.join(`;`),...r].join(`
+import{a as e,i as t,r as n,s as r,t as i,u as a}from"./styles-Bn_ONc4a.js";async function o(e,t,n){let{data:r,error:i}=await e.auth.signInWithPassword({email:t,password:n});if(i)throw i;return r.session}async function s(e){let{data:t,error:n}=await e.auth.getSession();if(n)throw n;return t.session}async function c(e){let{error:t}=await e.auth.signOut();if(t)throw t}function l(e){let t=new Map;for(let n of e??[]){let e=n.order_items??n.items??[];for(let n of e){let e=n.product_name??n.name??`Article`,r=n.options?.meat??``,i=n.options?.sauce??``,a=n.options?.drink??``,o=[e,r,i,a].join(`|`),s=Number(n.quantity??0),c=Math.round(n.line_total_cents??(n.price??0)*s*100),l=t.get(o);l?(l.quantity+=s,l.revenueCents+=c):t.set(o,{name:e,meat:r,sauce:i,drink:a,quantity:s,revenueCents:c})}}return[...t.values()].sort((e,t)=>t.quantity-e.quantity||e.name.localeCompare(t.name))}function u(e){let t=e=>{let t=String(e??``);return/[;"\n]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t},n=[`Article`,`Viande`,`Sauce`,`Boisson`,`Quantité`,`Total (€)`],r=(e??[]).map(e=>[e.name,e.meat,e.sauce,e.drink,e.quantity,(e.revenueCents/100).toFixed(2).replace(`.`,`,`)].map(t).join(`;`));return[n.join(`;`),...r].join(`
 `)}function d(e,t={},n=(e=``,t=`_blank`)=>window.open(e,t)){let r=n(``,`_blank`);if(!r)return!1;let i=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,a=(e??[]).reduce((e,t)=>e+t.quantity,0),o=(e??[]).reduce((e,t)=>e+t.revenueCents,0),s=(e??[]).map(e=>`
         <tr>
           <td>${e.name}</td>
@@ -160,7 +160,7 @@ import{a as e,i as t,l as n,o as r,r as i,t as a}from"./styles-DagaTrij.js";asyn
         </div>
       </body>
     </html>
-  `),n.document.close(),n.focus(),n.print(),!0}var m=document.querySelector(`#admin-root`),h={NEW:`Nouvelle`,ACCEPTED:`Acceptée`,PREPARING:`En préparation`,READY:`Prête`,CANCELLED:`Annulée`},g=null,_=`local`,v=null,y=null,b=null;function x(){return JSON.parse(localStorage.getItem(`caz-food-orders`)||`[]`)}function S(e){localStorage.setItem(`caz-food-orders`,JSON.stringify(e))}function C(e){return`${Number(e).toFixed(2).replace(`.`,`,`)} €`}async function w(){if(!t){E();return}try{y=await s(t)}catch(e){console.error(`Erreur récupération session:`,e),O();return}if(y){try{b=await a(t)}catch(e){console.error(`Erreur résolution restaurant:`,e),D(e);return}g=e(t,b.id),_=`remote`,T(),await j();return}O()}function T(){v&&t&&t.removeChannel(v),t&&y?.access_token&&t.realtime.setAuth(y.access_token),v=f(t,()=>j(),e=>{(e===`CLOSED`||e===`TIMED_OUT`||e===`CHANNEL_ERROR`)&&_===`remote`&&(console.warn(`[Realtime] Reconnexion dans 3s...`),setTimeout(()=>{_===`remote`&&T()},3e3))})}function E(){m.innerHTML=`
+  `),n.document.close(),n.focus(),n.print(),!0}var m=document.querySelector(`#admin-root`),h={NEW:`Nouvelle`,ACCEPTED:`Acceptée`,PREPARING:`En préparation`,READY:`Prête`,CANCELLED:`Annulée`},g=null,_=`local`,v=null,y=null,b=null;function x(){return JSON.parse(localStorage.getItem(`caz-food-orders`)||`[]`)}function S(e){localStorage.setItem(`caz-food-orders`,JSON.stringify(e))}function C(e){return`${Number(e).toFixed(2).replace(`.`,`,`)} €`}async function w(){if(!t){E();return}try{y=await s(t)}catch(e){console.error(`Erreur récupération session:`,e),O();return}if(y){try{b=await i(t)}catch(e){console.error(`Erreur résolution restaurant:`,e),D(e);return}g=e(t,b.id),_=`remote`,T(),await j();return}O()}function T(){v&&t&&t.removeChannel(v),t&&y?.access_token&&t.realtime.setAuth(y.access_token),v=f(t,()=>j(),e=>{(e===`CLOSED`||e===`TIMED_OUT`||e===`CHANNEL_ERROR`)&&_===`remote`&&(console.warn(`[Realtime] Reconnexion dans 3s...`),setTimeout(()=>{_===`remote`&&T()},3e3))})}function E(){m.innerHTML=`
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
@@ -271,7 +271,7 @@ import{a as e,i as t,l as n,o as r,r as i,t as a}from"./styles-DagaTrij.js";asyn
         </a>
       </div>
     </main>
-  `;let r=m.querySelector(`#login-form`);r.onsubmit=async n=>{n.preventDefault();let r=new FormData(n.currentTarget),i=n.currentTarget.querySelector(`button`);i.disabled=!0,i.textContent=`CONNEXION…`;try{y=await o(t,r.get(`email`),r.get(`password`))}catch(e){console.error(`Erreur connexion admin:`,e),O(`Email ou mot de passe incorrect.`);return}try{b=await a(t),g=e(t,b.id),_=`remote`,T(),await j()}catch(e){console.error(`Erreur résolution restaurant:`,e),D(e)}}}async function k(){if(_===`remote`)try{return await g.listOrders()}catch(e){return console.error(`Erreur récupération commandes:`,e),[]}return x()}async function A(e){let t={NEW:`ACCEPTED`,ACCEPTED:`PREPARING`,PREPARING:`READY`}[e.status];if(t)try{_===`remote`?await g.updateStatus(e.id,t):S(n(x(),e.id,t)),await j()}catch(e){console.error(`Erreur changement statut:`,e),alert(`Impossible de modifier le statut de la commande.`)}}async function j(){if(!y&&_===`remote`){O();return}let e=(await k()).slice().sort((e,t)=>new Date(t.created_at??t.createdAt)-new Date(e.created_at??e.createdAt)),n=e.reduce((e,t)=>e+Number(t.total??(t.total_cents??0)/100),0);m.innerHTML=`
+  `;let r=m.querySelector(`#login-form`);r.onsubmit=async n=>{n.preventDefault();let r=new FormData(n.currentTarget),a=n.currentTarget.querySelector(`button`);a.disabled=!0,a.textContent=`CONNEXION…`;try{y=await o(t,r.get(`email`),r.get(`password`))}catch(e){console.error(`Erreur connexion admin:`,e),O(`Email ou mot de passe incorrect.`);return}try{b=await i(t),g=e(t,b.id),_=`remote`,T(),await j()}catch(e){console.error(`Erreur résolution restaurant:`,e),D(e)}}}async function k(){if(_===`remote`)try{return await g.listOrders()}catch(e){return console.error(`Erreur récupération commandes:`,e),[]}return x()}async function A(e){let t={NEW:`ACCEPTED`,ACCEPTED:`PREPARING`,PREPARING:`READY`}[e.status];if(t)try{_===`remote`?await g.updateStatus(e.id,t):S(a(x(),e.id,t)),await j()}catch(e){console.error(`Erreur changement statut:`,e),alert(`Impossible de modifier le statut de la commande.`)}}async function j(){if(!y&&_===`remote`){O();return}let e=(await k()).slice().sort((e,t)=>new Date(t.created_at??t.createdAt)-new Date(e.created_at??e.createdAt)),n=e.reduce((e,t)=>e+Number(t.total??(t.total_cents??0)/100),0);m.innerHTML=`
     <main class="admin-shell">
       <header class="admin-header">
         <div>
@@ -460,7 +460,7 @@ import{a as e,i as t,l as n,o as r,r as i,t as a}from"./styles-DagaTrij.js";asyn
                 Aucun changement de statut encore.
               </p>
             `}
-      `}catch(e){console.error(`Erreur historique commande:`,e);let t=i.querySelector(`.detail-timeline-loading`);t&&(t.textContent=`Historique indisponible.`)}}function F(e){let t=e.status,n=e.items??e.order_items??[],a={...e.customer??{},name:e.customer?.name??e.customer_name??`Client`,phone:e.customer?.phone??e.customer_phone??`—`,pickupTime:r(e.pickup_time)},o=e.number??e.order_number??`—`,s=e.total??(e.total_cents??0)/100,c=i(t),l=c?`
+      `}catch(e){console.error(`Erreur historique commande:`,e);let t=i.querySelector(`.detail-timeline-loading`);t&&(t.textContent=`Historique indisponible.`)}}function F(e){let t=e.status,i=e.items??e.order_items??[],a={...e.customer??{},name:e.customer?.name??e.customer_name??`Client`,phone:e.customer?.phone??e.customer_phone??`—`,pickupTime:r(e.pickup_time)},o=e.number??e.order_number??`—`,s=e.total??(e.total_cents??0)/100,c=n(t),l=c?`
         <button
           class="primary"
           data-next
@@ -498,9 +498,9 @@ import{a as e,i as t,l as n,o as r,r as i,t as a}from"./styles-DagaTrij.js";asyn
           ${a.phone}
         </span>
       </div>
-      ${n.length?`
+      ${i.length?`
             <ul>
-              ${n.map(e=>`
+              ${i.map(e=>`
                     <li>
                       <strong>
                         ${e.quantity}×
