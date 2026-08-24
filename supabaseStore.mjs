@@ -464,6 +464,48 @@ export function createSupabaseOrderStore(
       }
 
       return data;
+    },
+
+    /**
+     * Historique des changements de statut d'une commande,
+     * du plus ancien au plus récent, pour l'affichage détail.
+     *
+     * Le join sur orders (via la policy RLS de order_events)
+     * garantit qu'on ne peut lire que l'historique d'une
+     * commande appartenant à ce restaurant.
+     */
+    async getOrderEvents(orderId) {
+      if (!isUuid(orderId)) {
+        throw new Error(
+          'orderId invalide.'
+        );
+      }
+
+      const {
+        data,
+        error
+      } = await client
+        .from('order_events')
+        .select('*')
+        .eq(
+          'order_id',
+          orderId
+        )
+        .order(
+          'created_at',
+          { ascending: true }
+        );
+
+      if (error) {
+        console.error(
+          'Erreur historique commande FOODATOI:',
+          error
+        );
+
+        throw error;
+      }
+
+      return data ?? [];
     }
   };
 }

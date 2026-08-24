@@ -1,3 +1,167 @@
+/**
+ * Agrège les articles de plusieurs commandes par
+ * combinaison produit + viande + sauce + boisson,
+ * pour un usage gestion des stocks.
+ *
+ * Fonction pure, testable indépendamment du DOM.
+ */
+export function aggregateOrderItems(orders) {
+  const groups = new Map();
+
+  for (const order of orders ?? []) {
+    const items = order.order_items ?? order.items ?? [];
+
+    for (const item of items) {
+      const name = item.product_name ?? item.name ?? 'Article';
+      const meat = item.options?.meat ?? '';
+      const sauce = item.options?.sauce ?? '';
+      const drink = item.options?.drink ?? '';
+      const key = [name, meat, sauce, drink].join('|');
+
+      const quantity = Number(item.quantity ?? 0);
+
+      const lineTotalCents = Math.round(
+        item.line_total_cents ??
+          (item.price ?? 0) * quantity * 100
+      );
+
+      const existing = groups.get(key);
+
+      if (existing) {
+        existing.quantity += quantity;
+        existing.revenueCents += lineTotalCents;
+      } else {
+        groups.set(key, {
+          name,
+          meat,
+          sauce,
+          drink,
+          quantity,
+          revenueCents: lineTotalCents
+        });
+      }
+    }
+  }
+
+  return [...groups.values()].sort(
+    (a, b) => b.quantity - a.quantity || a.name.localeCompare(b.name)
+  );
+}
+
+/**
+ * Construit un CSV (texte brut) à partir des lignes
+ * agrégées. Séparateur point-virgule pour un import
+ * direct dans Excel/LibreOffice en français.
+ */
+export function buildStockSummaryCsv(rows) {
+  const escape = (value) => {
+    const text = String(value ?? '');
+    return /[;"\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+
+  const header = ['Article', 'Viande', 'Sauce', 'Boisson', 'Quantité', 'Total (€)'];
+
+  const lines = (rows ?? []).map((row) =>
+    [
+      row.name,
+      row.meat,
+      row.sauce,
+      row.drink,
+      row.quantity,
+      (row.revenueCents / 100).toFixed(2).replace('.', ',')
+    ]
+      .map(escape)
+      .join(';')
+  );
+
+  return [header.join(';'), ...lines].join('\n');
+}
+
+export function printStockSummary(
+  rows,
+  meta = {},
+  openWindow = (url = '', target = '_blank') => window.open(url, target)
+) {
+  const win = openWindow('', '_blank');
+
+  if (!win) return false;
+
+  const money = (cents) =>
+    `${(Number(cents || 0) / 100).toFixed(2).replace('.', ',')} €`;
+
+  const totalQuantity = (rows ?? []).reduce((sum, row) => sum + row.quantity, 0);
+  const totalRevenue = (rows ?? []).reduce((sum, row) => sum + row.revenueCents, 0);
+
+  const body = (rows ?? [])
+    .map(
+      (row) => `
+        <tr>
+          <td>${row.name}</td>
+          <td>${[row.meat, row.sauce, row.drink].filter(Boolean).join(' · ') || '—'}</td>
+          <td class="num">${row.quantity}</td>
+          <td class="num">${money(row.revenueCents)}</td>
+        </tr>
+      `
+    )
+    .join('');
+
+  win.document.write(`
+    <!doctype html>
+    <html lang="fr">
+      <head>
+        <meta charset="utf-8">
+        <title>Résumé stock — Caz Food</title>
+
+        <style>
+          body { font: 13px/1.4 sans-serif; margin: 0; padding: 24px; color: #111; }
+          h1 { font-size: 18px; margin: 0 0 2px; }
+          p.meta { color: #666; margin: 0 0 20px; font-size: 12px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid #ddd; }
+          th { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: #666; }
+          td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+          tfoot td { font-weight: bold; border-top: 2px solid #111; border-bottom: none; }
+        </style>
+      </head>
+
+      <body>
+        <h1>Résumé stock — Caz Food</h1>
+        <p class="meta">
+          ${meta.rangeLabel ?? 'Toutes les commandes affichées'} ·
+          généré le ${new Date().toLocaleString('fr-FR')}
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Article</th>
+              <th>Options</th>
+              <th class="num">Qté</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${body || '<tr><td colspan="4">Aucun article</td></tr>'}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2">Total</td>
+              <td class="num">${totalQuantity}</td>
+              <td class="num">${money(totalRevenue)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </body>
+    </html>
+  `);
+
+  win.document.close();
+  win.focus();
+  win.print();
+
+  return true;
+}
+
 export function subscribeToOrderChanges(client, callback) {
   if (!client) return null;
 
