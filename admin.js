@@ -3,7 +3,13 @@ import { createSupabaseOrderStore } from './supabaseStore.mjs';
 import { supabase } from './supabaseClient.js';
 import { getNextStatusLabel } from './uiModel.mjs';
 import { getAdminSession, signInAdmin, signOutAdmin } from './adminAuth.mjs';
-import { printOrder, subscribeToOrderChanges } from './adminFeatures.mjs';
+import {
+  printOrder,
+  subscribeToOrderChanges,
+  aggregateOrderItems,
+  buildStockSummaryCsv,
+  printStockSummary
+} from './adminFeatures.mjs';
 import { resolveRestaurant } from './restaurantResolver.mjs';
 import './styles.css';
 const root = document.querySelector('#admin-root');
@@ -414,6 +420,18 @@ async function render() {
         <div class="admin-actions">
           <button
             class="secondary"
+            id="export-stock"
+          >
+            Exporter (CSV)
+          </button>
+          <button
+            class="secondary"
+            id="print-stock"
+          >
+            Imprimer le résumé
+          </button>
+          <button
+            class="secondary"
             id="logout"
           >
             Quitter
@@ -585,6 +603,323 @@ async function render() {
           }
         };
     });
+  const exportButton =
+    root.querySelector(
+      '#export-stock'
+    );
+  if (exportButton) {
+    exportButton.onclick =
+      () => downloadStockSummaryCsv(data);
+  }
+  const printStockButton =
+    root.querySelector(
+      '#print-stock'
+    );
+  if (printStockButton) {
+    printStockButton.onclick =
+      () =>
+        printStockSummary(
+          aggregateOrderItems(data),
+          {
+            rangeLabel: `${data.length} commande${data.length > 1 ? 's' : ''} affichée${data.length > 1 ? 's' : ''}`
+          }
+        );
+  }
+  root
+    .querySelectorAll(
+      '.order-card'
+    )
+    .forEach(card => {
+      card.onclick =
+        (event) => {
+          if (
+            event.target.closest(
+              'button'
+            )
+          ) {
+            return;
+          }
+          const order =
+            data.find(
+              item =>
+                String(
+                  item.id ?? ''
+                ) ===
+                String(
+                  card.dataset.order
+                )
+            );
+          if (order) {
+            renderOrderDetail(
+              order
+            );
+          }
+        };
+    });
+}
+function downloadStockSummaryCsv(orders) {
+  const csv = buildStockSummaryCsv(
+    aggregateOrderItems(orders)
+  );
+  const blob = new Blob(
+    [
+      '\uFEFF' + csv
+    ],
+    { type: 'text/csv;charset=utf-8;' }
+  );
+  const url =
+    URL.createObjectURL(blob);
+  const link =
+    document.createElement('a');
+  link.href = url;
+  link.download = `caz-food-stock-${new Date()
+    .toISOString()
+    .slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+function closeOrderDetail() {
+  const overlay =
+    document.querySelector(
+      '#order-detail-overlay'
+    );
+  if (overlay) {
+    overlay.remove();
+  }
+}
+async function renderOrderDetail(order) {
+  const items =
+    order.items ??
+    order.order_items ??
+    [];
+  const total =
+    order.total ??
+    (order.total_cents ?? 0) /
+      100;
+  const overlay =
+    document.createElement(
+      'div'
+    );
+  overlay.id =
+    'order-detail-overlay';
+  overlay.className = 'modal';
+  overlay.innerHTML = `
+    <div class="modal-card order-detail-card">
+      <button
+        class="modal-close"
+        id="close-order-detail"
+      >
+        ×
+      </button>
+      <p class="eyebrow">
+        ${
+          order.number ??
+          order.order_number ??
+          '—'
+        }
+        ·
+        ${
+          labels[order.status] ??
+          order.status
+        }
+      </p>
+      <h2>
+        ${
+          order.customer?.name ??
+          order.customer_name ??
+          'Client'
+        }
+      </h2>
+      <p>
+        ${
+          order.customer?.phone ??
+          order.customer_phone ??
+          '—'
+        }
+        · retrait
+        ${
+          formatPickupTime(
+            order.pickup_time
+          ) || '—'
+        }
+      </p>
+      <table class="detail-items">
+        <tbody>
+          ${items
+            .map(
+              item => `
+                <tr>
+                  <td>
+                    <strong>
+                      ${item.quantity}×
+                      ${
+                        item.name ??
+                        item.product_name ??
+                        'Article'
+                      }
+                    </strong>
+                    <br>
+                    <small>
+                      ${
+                        [
+                          item.options?.meat,
+                          item.options?.sauce,
+                          item.options?.drink
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || '—'
+                      }
+                    </small>
+                  </td>
+                  <td class="num">
+                    ${euro(
+                      (item.line_total_cents ??
+                        (item.price ?? 0) *
+                          item.quantity *
+                          100) / 100
+                    )}
+                  </td>
+                </tr>
+              `
+            )
+            .join('')}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td class="num">
+              ${euro(total)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+      ${
+        order.notes
+          ? `
+            <p class="detail-notes">
+              <strong>Note :</strong>
+              ${order.notes}
+            </p>
+          `
+          : ''
+      }
+      <div id="detail-timeline">
+        <p class="eyebrow">
+          Historique
+        </p>
+        <p class="detail-timeline-loading">
+          ${
+            mode === 'remote'
+              ? 'Chargement…'
+              : 'Non disponible en mode local.'
+          }
+        </p>
+      </div>
+      <button
+        class="secondary full"
+        id="print-from-detail"
+      >
+        ⌁ Imprimer le ticket
+      </button>
+    </div>
+  `;
+  document.body.appendChild(
+    overlay
+  );
+  overlay.onclick =
+    (event) => {
+      if (event.target === overlay) {
+        closeOrderDetail();
+      }
+    };
+  overlay
+    .querySelector(
+      '#close-order-detail'
+    ).onclick = closeOrderDetail;
+  overlay
+    .querySelector(
+      '#print-from-detail'
+    ).onclick = () =>
+    printOrder(order);
+  if (
+    mode === 'remote' &&
+    remote?.getOrderEvents
+  ) {
+    try {
+      const events =
+        await remote.getOrderEvents(
+          order.id
+        );
+      const timelineEl =
+        overlay.querySelector(
+          '#detail-timeline'
+        );
+      if (!timelineEl) return;
+      timelineEl.innerHTML = `
+        <p class="eyebrow">
+          Historique
+        </p>
+        ${
+          events.length
+            ? `
+              <ul class="detail-timeline-list">
+                ${events
+                  .map(
+                    (event) => `
+                      <li>
+                        <span>
+                          ${new Date(
+                            event.created_at
+                          ).toLocaleTimeString(
+                            'fr-FR',
+                            {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }
+                          )}
+                        </span>
+                        ${
+                          labels[
+                            event.from_status
+                          ] ??
+                          event.from_status ??
+                          '—'
+                        }
+                        →
+                        ${
+                          labels[
+                            event.to_status
+                          ] ??
+                          event.to_status
+                        }
+                      </li>
+                    `
+                  )
+                  .join('')}
+              </ul>
+            `
+            : `
+              <p class="detail-timeline-loading">
+                Aucun changement de statut encore.
+              </p>
+            `
+        }
+      `;
+    } catch (error) {
+      console.error(
+        'Erreur historique commande:',
+        error
+      );
+      const timelineEl =
+        overlay.querySelector(
+          '.detail-timeline-loading'
+        );
+      if (timelineEl) {
+        timelineEl.textContent =
+          'Historique indisponible.';
+      }
+    }
+  }
 }
 function orderCard(order) {
   const status =
