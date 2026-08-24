@@ -1,4 +1,4 @@
-import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-C-2D9egY.js";function s(e,t){return[...e,{...t,quantity:t.quantity??1}]}function c(e){return Number(e.reduce((e,t)=>e+t.price*t.quantity,0).toFixed(2))}function l(e,t,n=()=>Date.now()){return{number:`#${n()}`,type:`PICKUP`,status:`NEW`,items:e,customer:t,total:c(e),createdAt:new Date().toISOString()}}var u=null,d=[],f=[],p=`Tous`,m=null,h=[`Kebab`,`Poulet`,`Steak`,`Merguez`],g=[`Algérienne`,`Biggy`,`Blanche`,`Barbecue`,`Curry`,`Ketchup`,`Mayonnaise`,`Samouraï`],_=[`Coca-Cola`,`Coca-Cola Zéro`,`Coca-Cola Cherry`,`Fanta Orange`,`Fanta Citron`,`Sprite`,`Oasis Tropical`,`Oasis Pomme Cassis`,`Ice Tea`,`Eau`],v=document.querySelector(`#root`),y=e=>`${Number(e??0).toFixed(2).replace(`.`,`,`)} €`,b=()=>f.reduce((e,t)=>e+Number(t.quantity??0),0);function x(e){return String(e??``).replaceAll(`&`,`&amp;`).replaceAll(`<`,`&lt;`).replaceAll(`>`,`&gt;`).replaceAll(`"`,`&quot;`).replaceAll(`'`,`&#039;`)}function S(){return u?.name||`FOODATOI`}function C(){return u?.phone||``}function w(){let e=u?.address;return e?typeof e==`string`?e:typeof e==`object`?[e.street,e.postal_code||e.postalCode,e.city].filter(Boolean).join(` · `):``:``}function T(){return u?.primary_color||`#111111`}async function E(){return u=await o(n),console.info(`[FOODATOI] Restaurant résolu:`,u),D(),m=e(n,u.id),u}function D(){u&&(document.documentElement.style.setProperty(`--restaurant-primary`,T()),document.title=`${S()} · FOODATOI`)}function O(e){if(!Array.isArray(e)||!e.length)return null;let t=[...e].sort((e,t)=>e.is_primary===t.is_primary?(e.sort_order??0)-(t.sort_order??0):e.is_primary?-1:1)[0]?.public_url;return t?/^https?:\/\//i.test(t)?t:`/Mvp-/${t.replace(/^\/+/,``)}`:null}function k(e){let t=e.options&&typeof e.options==`object`?e.options:{},n=Number(e.price_cents??0)/100;return{id:e.id,category:e.category||`Autres`,name:e.name||`Produit`,description:e.description||``,price:n,emoji:t.emoji||t.icon||`🍽️`,imageUrl:O(e.product_images),options:t,meat:!!(t.meat||t.meats||t.viande||t.viandes),sauce:!!(t.sauce||t.sauces),drink:!!(t.drink||t.drinks||t.boisson||t.boissons),multipleMeat:!!(t.multipleMeat||t.multiple_meat),tripleMeat:!!(t.tripleMeat||t.triple_meat)}}async function A(){if(!n)throw Error(`Supabase n’est pas configuré.`);if(!u?.id)throw Error(`Restaurant non résolu.`);let{data:e,error:t}=await n.from(`products`).select(`
+import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.js";function s(e,t){return[...e,{...t,quantity:t.quantity??1}]}function c(e){return Number(e.reduce((e,t)=>e+t.price*t.quantity,0).toFixed(2))}function l(e,t,n=()=>Date.now()){return{number:`#${n()}`,type:`PICKUP`,status:`NEW`,items:e,customer:t,total:c(e),createdAt:new Date().toISOString()}}var u=null,d=[],f=[],p=`Tous`,m=null,h=[`Kebab`,`Poulet`,`Steak`,`Merguez`],g=[`Algérienne`,`Biggy`,`Blanche`,`Barbecue`,`Curry`,`Ketchup`,`Mayonnaise`,`Samouraï`],_=[`Coca-Cola`,`Coca-Cola Zéro`,`Coca-Cola Cherry`,`Fanta Orange`,`Fanta Citron`,`Sprite`,`Oasis Tropical`,`Oasis Pomme Cassis`,`Ice Tea`,`Eau`],v=document.querySelector(`#root`),y=e=>`${Number(e??0).toFixed(2).replace(`.`,`,`)} €`,b=()=>f.reduce((e,t)=>e+Number(t.quantity??0),0);function x(e){return String(e??``).replaceAll(`&`,`&amp;`).replaceAll(`<`,`&lt;`).replaceAll(`>`,`&gt;`).replaceAll(`"`,`&quot;`).replaceAll(`'`,`&#039;`)}function S(){return u?.name||`FOODATOI`}function C(){return u?.phone||``}function w(){let e=u?.address;return e?typeof e==`string`?e:typeof e==`object`?[e.street,e.postal_code||e.postalCode,e.city].filter(Boolean).join(` · `):``:``}function T(){return u?.primary_color||`#111111`}async function E(){return u=await o(n),console.info(`[FOODATOI] Restaurant résolu:`,u),D(),m=e(n,u.id),u}function D(){u&&(document.documentElement.style.setProperty(`--restaurant-primary`,T()),document.title=`${S()} · FOODATOI`)}function O(e){if(!Array.isArray(e)||!e.length)return null;let t=[...e].sort((e,t)=>e.is_primary===t.is_primary?(e.sort_order??0)-(t.sort_order??0):e.is_primary?-1:1)[0]?.public_url;return t?/^https?:\/\//i.test(t)?t:`/Mvp-/${t.replace(/^\/+/,``)}`:null}function k(e){let t=e.options&&typeof e.options==`object`?e.options:{},n=Number(e.price_cents??0)/100;return{id:e.id,category:e.category||`Autres`,name:e.name||`Produit`,description:e.description||``,price:n,emoji:t.emoji||t.icon||`🍽️`,imageUrl:O(e.product_images),options:t,meat:!!(t.meat||t.meats||t.viande||t.viandes),sauce:!!(t.sauce||t.sauces),drink:!!(t.drink||t.drinks||t.boisson||t.boissons),multipleMeat:!!(t.multipleMeat||t.multiple_meat),tripleMeat:!!(t.tripleMeat||t.triple_meat)}}async function A(){if(!n)throw Error(`Supabase n’est pas configuré.`);if(!u?.id)throw Error(`Restaurant non résolu.`);let{data:e,error:t}=await n.from(`products`).select(`
       id,
       name,
       category,
@@ -438,25 +438,25 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-C-2D9egY.j
   `,I(),G()}function F(e){return`
     <article class="menu-card">
 
-      <div class="menu-card-top">
-
-        <span class="menu-icon">
-          ${e.imageUrl?`
-                <img
-                  src="${x(e.imageUrl)}"
-                  alt=""
-                  loading="lazy"
-                >
-              `:x(e.emoji)}
-        </span>
-
-        <span class="category-tag">
-          ${x(e.category)}
-        </span>
-
+      <div class="menu-card-media">
+        ${e.imageUrl?`
+              <img
+                src="${x(e.imageUrl)}"
+                alt=""
+                loading="lazy"
+              >
+            `:`
+              <span class="menu-card-media-fallback">
+                ${x(e.emoji)}
+              </span>
+            `}
       </div>
 
       <div class="menu-card-body">
+
+        <p class="eyebrow">
+          ${x(e.category)}
+        </p>
 
         <h3>
           ${x(e.name)}
@@ -505,9 +505,17 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-C-2D9egY.j
       ×
     </button>
 
-    <div class="product-mark">
-      ${x(t.emoji)}
-    </div>
+    ${t.imageUrl?`
+          <img
+            class="product-photo"
+            src="${x(t.imageUrl)}"
+            alt=""
+          >
+        `:`
+          <div class="product-mark">
+            ${x(t.emoji)}
+          </div>
+        `}
 
     <p class="eyebrow">
       ${x(t.category)}
