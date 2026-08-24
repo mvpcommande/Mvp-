@@ -20,6 +20,10 @@ import {
   buildTicketModel
 } from './uiModel.mjs';
 
+import {
+  resolveRestaurant as resolveRestaurantTenant
+} from './restaurantResolver.mjs';
+
 import './styles.css';
 
 /**
@@ -117,114 +121,6 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function isUuid(value) {
-  return (
-    typeof value === 'string' &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value
-    )
-  );
-}
-
-function getHostname() {
-  return window.location.hostname
-    .trim()
-    .toLowerCase()
-    .replace(/^www\./, '');
-}
-
-/**
- * Retourne le slug restaurant présent
- * dans l'URL FOODATOI.
- *
- * Exemple :
- *
- * /caz-food
- * → caz-food
- *
- * /caz-food/
- * → caz-food
- *
- * /
- * → null
- */
-function getRestaurantSlugFromPath() {
-  const pathname =
-    window.location.pathname
-      .trim()
-      .replace(/^\/+/, '')
-      .replace(/\/+$/, '');
-
-  if (!pathname) {
-    return null;
-  }
-
-  const segments =
-    pathname
-      .split('/')
-      .filter(Boolean);
-
-  if (!segments.length) {
-    return null;
-  }
-
-  const slug =
-    decodeURIComponent(
-      segments[0]
-    )
-      .trim()
-      .toLowerCase();
-
-  if (!slug) {
-    return null;
-  }
-
-  /**
-   * Protection contre les chemins
-   * qui ne doivent pas être considérés
-   * comme des restaurants.
-   */
-  const reservedRoutes = [
-    'favicon.ico',
-    'robots.txt',
-    'sitemap.xml',
-    'assets'
-  ];
-
-  if (
-    reservedRoutes.includes(slug)
-  ) {
-    return null;
-  }
-
-  return slug;
-}
-
-/**
- * Construit le hostname virtuel attendu
- * par la fonction Supabase.
- *
- * Exemple :
- *
- * slug = caz-food
- *
- * → caz-food.foodatoi.fr
- *
- * La fonction SQL existante de Supabase
- * sait déjà résoudre ce format à partir
- * du slug restaurant.
- */
-function getRestaurantResolverHost() {
-  const slug =
-    getRestaurantSlugFromPath();
-
-  if (slug) {
-    return `${slug}.foodatoi.fr`;
-  }
-
-  return getHostname();
-}
-
 function getRestaurantDisplayName() {
   return (
     restaurant?.name ||
@@ -274,94 +170,13 @@ function getRestaurantColor() {
 /* -------------------------------------------------------------------------- */
 
 async function resolveRestaurant() {
-  if (!supabase) {
-    throw new Error(
-      'Supabase n’est pas configuré.'
-    );
-  }
-
-  const realHostname =
-    getHostname();
-
-  const resolverHost =
-    getRestaurantResolverHost();
-
-  const slug =
-    getRestaurantSlugFromPath();
-
-  console.info(
-    '[FOODATOI] Hostname réel:',
-    realHostname
-  );
-
-  console.info(
-    '[FOODATOI] Slug URL:',
-    slug
-  );
-
-  console.info(
-    '[FOODATOI] Hostname utilisé pour résolution:',
-    resolverHost
-  );
-
-  /**
-   * La fonction Supabase existante :
-   *
-   * resolve_restaurant(hostname text)
-   *
-   * sait déjà résoudre :
-   *
-   * <slug>.foodatoi.fr
-   *
-   * On lui transmet donc :
-   *
-   * caz-food.foodatoi.fr
-   *
-   * même si l'utilisateur est réellement
-   * sur :
-   *
-   * www.foodatoi.fr/caz-food
+  /*
+   * La résolution elle-même (slug/hostname → restaurant) vit dans
+   * restaurantResolver.mjs, partagée avec admin.js. Ici on ne garde
+   * que ce qui est spécifique au frontend client : le branding et
+   * la création du store une fois le tenant connu.
    */
-  const {
-    data,
-    error
-  } = await supabase.rpc(
-    'resolve_restaurant',
-    {
-      hostname:
-        resolverHost
-    }
-  );
-
-  if (error) {
-    console.error(
-      '[FOODATOI] Erreur résolution restaurant:',
-      error
-    );
-
-    throw error;
-  }
-
-  const resolved =
-    Array.isArray(data)
-      ? data[0]
-      : data;
-
-  if (!resolved?.id) {
-    throw new Error(
-      `Aucun restaurant FOODATOI configuré pour "${slug || realHostname}".`
-    );
-  }
-
-  if (!isUuid(resolved.id)) {
-    throw new Error(
-      'Identifiant restaurant invalide.'
-    );
-  }
-
-  restaurant = {
-    ...resolved
-  };
+  restaurant = await resolveRestaurantTenant(supabase);
 
   console.info(
     '[FOODATOI] Restaurant résolu:',

@@ -4,6 +4,7 @@ import { supabase } from './supabaseClient.js';
 import { getNextStatusLabel } from './uiModel.mjs';
 import { getAdminSession, signInAdmin, signOutAdmin } from './adminAuth.mjs';
 import { printOrder, subscribeToOrderChanges } from './adminFeatures.mjs';
+import { resolveRestaurant } from './restaurantResolver.mjs';
 import './styles.css';
 const root = document.querySelector('#admin-root');
 const labels = {
@@ -17,6 +18,7 @@ let remote = null;
 let mode = 'local';
 let realtimeChannel = null;
 let session = null;
+let restaurant = null;
 function localOrders() {
   return JSON.parse(
     localStorage.getItem('caz-food-orders') || '[]'
@@ -93,7 +95,17 @@ async function init() {
     return;
   }
   if (session) {
-    remote = createSupabaseOrderStore(supabase);
+    try {
+      restaurant = await resolveRestaurant(supabase);
+    } catch (error) {
+      console.error(
+        'Erreur résolution restaurant:',
+        error
+      );
+      renderRestaurantError(error);
+      return;
+    }
+    remote = createSupabaseOrderStore(supabase, restaurant.id);
     mode = 'remote';
     subscribeRealtime();
     await render();
@@ -140,6 +152,42 @@ function renderSetup() {
       </div>
     </main>
   `;
+}
+function renderRestaurantError(error) {
+  root.innerHTML = `
+    <main class="admin-auth">
+      <div class="auth-card">
+        <div class="auth-mark">
+          CF
+        </div>
+        <p class="eyebrow">
+          CAZ FOOD · LE COMPTOIR
+        </p>
+        <h1>
+          Restaurant introuvable.
+        </h1>
+        <p>
+          ${
+            (error?.message || 'Impossible de résoudre ce restaurant FOODATOI.')
+          }
+        </p>
+        <button
+          class="primary full"
+          type="button"
+          id="retry-restaurant"
+        >
+          RÉESSAYER →
+        </button>
+        <a
+          class="secondary auth-back"
+          href="/"
+        >
+          ← Retour à la commande
+        </a>
+      </div>
+    </main>
+  `;
+  root.querySelector('#retry-restaurant').onclick = () => init();
 }
 function renderLogin(error = '') {
   root.innerHTML = `
@@ -231,13 +279,6 @@ function renderLogin(error = '') {
             formData.get('email'),
             formData.get('password')
           );
-        remote =
-          createSupabaseOrderStore(
-            supabase
-          );
-        mode = 'remote';
-        subscribeRealtime();
-        await render();
       } catch (error) {
         console.error(
           'Erreur connexion admin:',
@@ -246,6 +287,27 @@ function renderLogin(error = '') {
         renderLogin(
           'Email ou mot de passe incorrect.'
         );
+        return;
+      }
+      try {
+        restaurant =
+          await resolveRestaurant(
+            supabase
+          );
+        remote =
+          createSupabaseOrderStore(
+            supabase,
+            restaurant.id
+          );
+        mode = 'remote';
+        subscribeRealtime();
+        await render();
+      } catch (error) {
+        console.error(
+          'Erreur résolution restaurant:',
+          error
+        );
+        renderRestaurantError(error);
       }
     };
 }
@@ -471,6 +533,7 @@ async function render() {
           }
         } finally {
           session = null;
+          restaurant = null;
           remote = null;
           mode = 'local';
           realtimeChannel = null;
