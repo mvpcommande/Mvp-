@@ -24,6 +24,10 @@ import {
   resolveRestaurant as resolveRestaurantTenant
 } from './restaurantResolver.mjs';
 
+import {
+  isRestaurantOpen
+} from './timeFormat.mjs';
+
 import './styles.css';
 
 /**
@@ -1623,6 +1627,28 @@ function renderCart() {
 
     </div>
 
+    ${
+      !isRestaurantOpen(
+        restaurant?.settings
+          ?.opening_hours
+      )
+        ? `
+          <div class="closed-banner">
+            <p class="eyebrow">
+              FERMÉ ACTUELLEMENT
+            </p>
+            <p>
+              ${escapeHtml(
+                getRestaurantDisplayName()
+              )}
+              n'accepte pas de commande en dehors de ses horaires d'ouverture.
+              Reviens plus tard pour commander.
+            </p>
+          </div>
+        `
+        : ''
+    }
+
     <form
       id="order-form"
       class="order-form"
@@ -1668,6 +1694,14 @@ function renderCart() {
       <button
         class="primary full"
         type="submit"
+        ${
+          !isRestaurantOpen(
+            restaurant?.settings
+              ?.opening_hours
+          )
+            ? 'disabled'
+            : ''
+        }
       >
         Envoyer ma commande →
       </button>
@@ -1711,6 +1745,16 @@ function renderCart() {
     form.onsubmit =
       async event => {
         event.preventDefault();
+
+        if (
+          !isRestaurantOpen(
+            restaurant?.settings
+              ?.opening_hours
+          )
+        ) {
+          renderCart();
+          return;
+        }
 
         const formData =
           Object.fromEntries(
@@ -1908,7 +1952,11 @@ async function submitOrder(
     );
 
     alert(
-      'Impossible d’envoyer la commande pour le moment.'
+      String(error?.message || '').includes(
+        'RESTAURANT_CLOSED'
+      )
+        ? 'Le restaurant est fermé actuellement, la commande n’a pas pu être envoyée.'
+        : 'Impossible d’envoyer la commande pour le moment.'
     );
   }
 }

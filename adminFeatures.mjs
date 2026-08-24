@@ -240,6 +240,8 @@ export function subscribeToOrderChanges(client, callback, onStatusChange) {
   return channel;
 }
 
+import { formatPickupTime } from './timeFormat.mjs';
+
 export function printOrder(
   order,
   openWindow = (url = '', target = '_blank') => window.open(url, target)
@@ -253,12 +255,7 @@ export function printOrder(
   const money = (cents) =>
     `${(Number(cents || 0) / 100).toFixed(2).replace('.', ',')} €`;
 
-  const pickup = order.pickup_time
-    ? new Date(order.pickup_time).toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    : '—';
+  const pickup = formatPickupTime(order.pickup_time);
 
   const rows = items
     .map(

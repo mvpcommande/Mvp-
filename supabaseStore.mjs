@@ -1,3 +1,7 @@
+import {
+  parisTimeToIsoDate
+} from './timeFormat.mjs';
+
 function isUuid(value) {
   return (
     typeof value === 'string' &&
@@ -5,133 +9,6 @@ function isUuid(value) {
       value
     )
   );
-}
-
-/**
- * Convertit une heure HH:mm choisie par le client
- * en timestamp ISO correspondant à l'heure Europe/Paris.
- */
-function parisTimeToIsoDate(time) {
-  if (
-    !time ||
-    !/^\d{2}:\d{2}$/.test(String(time))
-  ) {
-    return null;
-  }
-
-  const [hours, minutes] = String(time)
-    .split(':')
-    .map(Number);
-
-  if (
-    hours < 0 ||
-    hours > 23 ||
-    minutes < 0 ||
-    minutes > 59
-  ) {
-    return null;
-  }
-
-  const now = new Date();
-
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const day = now.getDate();
-
-  /*
-   * On part d'une approximation UTC puis on calcule
-   * le décalage réel Europe/Paris à cette date.
-   */
-  const utcGuess = new Date(
-    Date.UTC(
-      year,
-      month,
-      day,
-      hours,
-      minutes,
-      0,
-      0
-    )
-  );
-
-  const parisFormatter =
-    new Intl.DateTimeFormat(
-      'en-US',
-      {
-        timeZone: 'Europe/Paris',
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23'
-      }
-    );
-
-  const parisParts =
-    parisFormatter.formatToParts(
-      utcGuess
-    );
-
-  const parisHour = Number(
-    parisParts.find(
-      part => part.type === 'hour'
-    )?.value ?? 0
-  );
-
-  const parisMinute = Number(
-    parisParts.find(
-      part => part.type === 'minute'
-    )?.value ?? 0
-  );
-
-  const requestedMinutes =
-    hours * 60 + minutes;
-
-  const guessedParisMinutes =
-    parisHour * 60 + parisMinute;
-
-  const offsetMinutes =
-    guessedParisMinutes -
-    requestedMinutes;
-
-  const utcDate = new Date(
-    utcGuess.getTime() -
-      offsetMinutes * 60 * 1000
-  );
-
-  return utcDate.toISOString();
-}
-
-/**
- * Convertit un timestamp Supabase
- * en heure locale Europe/Paris.
- */
-function formatPickupTime(value) {
-  if (!value) {
-    return '—';
-  }
-
-  const date = new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return '—';
-  }
-
-  return new Intl.DateTimeFormat(
-    'fr-FR',
-    {
-      timeZone:
-        'Europe/Paris',
-      hour:
-        '2-digit',
-      minute:
-        '2-digit',
-      hourCycle:
-        'h23'
-    }
-  ).format(date);
 }
 
 /**

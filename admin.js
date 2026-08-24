@@ -11,6 +11,7 @@ import {
   printStockSummary
 } from './adminFeatures.mjs';
 import { resolveRestaurant } from './restaurantResolver.mjs';
+import { formatPickupTime } from './timeFormat.mjs';
 import './styles.css';
 const root = document.querySelector('#admin-root');
 const labels = {
@@ -38,52 +39,6 @@ function saveLocal(value) {
 }
 function euro(value) {
   return `${Number(value).toFixed(2).replace('.', ',')} €`;
-}
-/*
- * IMPORTANT
- *
- * pickup_time vient de PostgreSQL/Supabase.
- *
- * Exemple :
- * 2026-08-21 22:15:00+00
- *
- * On ne fait volontairement PAS :
- *
- * new Date(value).toLocaleTimeString(...)
- *
- * car JavaScript convertit alors automatiquement
- * l'heure UTC vers le fuseau local.
- *
- * Ici, on affiche exactement l'heure choisie
- * par le client dans pickup_time.
- */
-function formatPickupTime(value) {
-  if (!value) return '—';
-  const text = String(value).trim();
-  /*
-   * PostgreSQL timestamp :
-   *
-   * 2026-08-21 22:15:00+00
-   * 2026-08-21T22:15:00+00:00
-   *
-   * Dans les deux cas, l'heure commence
-   * à l'index 11.
-   */
-  const match = text.match(
-    /^\d{4}-\d{2}-\d{2}[T ](\d{2}:\d{2})/
-  );
-  if (match) {
-    return match[1];
-  }
-  /*
-   * Si Supabase renvoie déjà HH:MM
-   */
-  const shortMatch =
-    text.match(/^(\d{2}):(\d{2})/);
-  if (shortMatch) {
-    return `${shortMatch[1]}:${shortMatch[2]}`;
-  }
-  return '—';
 }
 async function init() {
   if (!supabase) {
