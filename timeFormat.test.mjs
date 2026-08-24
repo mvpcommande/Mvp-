@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parisTimeToIsoDate, formatPickupTime, isRestaurantOpen } from './timeFormat.mjs';
+import { parisTimeToIsoDate, formatPickupTime, isRestaurantOpen, formatOpeningHours } from './timeFormat.mjs';
 
 test('parisTimeToIsoDate + formatPickupTime round-trip back to the same wall-clock time', () => {
   for (const time of ['00:15', '09:00', '12:30', '19:30', '21:30', '23:45']) {
@@ -47,4 +47,46 @@ test('isRestaurantOpen treats a missing/empty day as closed', () => {
   const hours = { mon: [['11:00', '22:00']] };
   // 2026-08-25 is a Tuesday, not in `hours` at all.
   assert.equal(isRestaurantOpen(hours, new Date('2026-08-25T12:00:00Z')), false);
+});
+
+test('formatOpeningHours merges consecutive identical days, matching real Caz Food hours', () => {
+  const hours = {
+    mon: [['11:30', '14:00'], ['18:30', '22:00']],
+    tue: [['11:30', '14:00'], ['18:30', '22:00']],
+    wed: [['11:30', '14:00'], ['18:30', '22:00']],
+    thu: [['11:30', '14:00'], ['18:30', '22:00']],
+    fri: [['18:30', '22:00']],
+    sat: [['12:00', '14:00'], ['18:30', '22:00']],
+    sun: [['18:30', '22:00']]
+  };
+
+  const lines = formatOpeningHours(hours);
+
+  assert.deepEqual(lines, [
+    { label: 'Lundi–Jeudi', hours: '11:30–14:00, 18:30–22:00' },
+    { label: 'Vendredi', hours: '18:30–22:00' },
+    { label: 'Samedi', hours: '12:00–14:00, 18:30–22:00' },
+    { label: 'Dimanche', hours: '18:30–22:00' }
+  ]);
+});
+
+test('formatOpeningHours returns an empty array when nothing is configured', () => {
+  assert.deepEqual(formatOpeningHours(null), []);
+});
+
+test('formatOpeningHours marks a day with no ranges as Fermé', () => {
+  const hours = {
+    mon: [],
+    tue: [['11:30', '14:00']],
+    wed: [['11:30', '14:00']],
+    thu: [['11:30', '14:00']],
+    fri: [['11:30', '14:00']],
+    sat: [['11:30', '14:00']],
+    sun: [['11:30', '14:00']]
+  };
+
+  assert.deepEqual(formatOpeningHours(hours), [
+    { label: 'Lundi', hours: 'Fermé' },
+    { label: 'Mardi–Dimanche', hours: '11:30–14:00' }
+  ]);
 });

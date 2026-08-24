@@ -70,6 +70,64 @@ export function isRestaurantOpen(openingHours, now = new Date()) {
   });
 }
 
+const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+const DAY_LABELS = {
+  mon: 'Lundi',
+  tue: 'Mardi',
+  wed: 'Mercredi',
+  thu: 'Jeudi',
+  fri: 'Vendredi',
+  sat: 'Samedi',
+  sun: 'Dimanche'
+};
+
+function formatRanges(ranges) {
+  if (!Array.isArray(ranges) || !ranges.length) {
+    return 'Fermé';
+  }
+  return ranges.map(([start, end]) => `${start}–${end}`).join(', ');
+}
+
+/**
+ * Transforme l'objet opening_hours en lignes affichables,
+ * en regroupant les jours CONSÉCUTIFS ayant exactement
+ * les mêmes horaires (ex: Lundi–Jeudi plutôt que 4 lignes
+ * identiques). Retourne [] si aucun horaire configuré.
+ */
+export function formatOpeningHours(openingHours) {
+  if (!openingHours) {
+    return [];
+  }
+
+  const lines = [];
+  let i = 0;
+
+  while (i < DAY_ORDER.length) {
+    const rangesText = formatRanges(openingHours[DAY_ORDER[i]]);
+    let j = i;
+
+    while (
+      j + 1 < DAY_ORDER.length &&
+      formatRanges(openingHours[DAY_ORDER[j + 1]]) === rangesText
+    ) {
+      j++;
+    }
+
+    lines.push({
+      label:
+        i === j
+          ? DAY_LABELS[DAY_ORDER[i]]
+          : `${DAY_LABELS[DAY_ORDER[i]]}–${DAY_LABELS[DAY_ORDER[j]]}`,
+      hours: rangesText
+    });
+
+    i = j + 1;
+  }
+
+  return lines;
+}
+
 /**
  * Convertit une heure HH:mm choisie par le client
  * (Europe/Paris, à la date du jour) en timestamp ISO UTC.

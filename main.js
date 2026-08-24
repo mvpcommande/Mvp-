@@ -25,7 +25,8 @@ import {
 } from './restaurantResolver.mjs';
 
 import {
-  isRestaurantOpen
+  isRestaurantOpen,
+  formatOpeningHours
 } from './timeFormat.mjs';
 
 import './styles.css';
@@ -845,20 +846,73 @@ function render() {
         </div>
 
         ${
-          phone
+          formatOpeningHours(
+            restaurant?.settings
+              ?.opening_hours
+          ).length
             ? `
-              <a
-                href="tel:${escapeHtml(
-                  phone
-                )}"
-              >
-                ${escapeHtml(
-                  phone
-                )}
-              </a>
+              <div class="footer-hours">
+                ${formatOpeningHours(
+                  restaurant?.settings
+                    ?.opening_hours
+                )
+                  .map(
+                    (line) => `
+                      <span>
+                        ${escapeHtml(
+                          line.label
+                        )}
+                        <b>
+                          ${escapeHtml(
+                            line.hours
+                          )}
+                        </b>
+                      </span>
+                    `
+                  )
+                  .join('')}
+              </div>
             `
             : ''
         }
+
+        <div>
+
+          ${
+            phone
+              ? `
+                <a
+                  href="tel:${escapeHtml(
+                    phone
+                  )}"
+                >
+                  ${escapeHtml(
+                    phone
+                  )}
+                </a>
+              `
+              : ''
+          }
+
+          ${
+            restaurant?.settings
+              ?.facebook_url
+              ? `
+                <a
+                  href="${escapeHtml(
+                    restaurant.settings
+                      .facebook_url
+                  )}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Facebook
+                </a>
+              `
+              : ''
+          }
+
+        </div>
 
       </footer>
 
