@@ -674,6 +674,42 @@ function render() {
 
         </section>
 
+        ${
+          restaurant?.settings?.delivery_redirect_url
+            ? `
+              <section class="delivery-banner">
+
+                <div>
+
+                  <p class="eyebrow">
+                    LIVRAISON À DOMICILE
+                  </p>
+
+                  <p>
+                    ${escapeHtml(
+                      displayName
+                    )}
+                    livre aussi à domicile via Uber Eats.
+                  </p>
+
+                </div>
+
+                <a
+                  class="secondary"
+                  href="${escapeHtml(
+                    restaurant.settings.delivery_redirect_url
+                  )}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Commander sur Uber Eats →
+                </a>
+
+              </section>
+            `
+            : ''
+        }
+
         <section class="menu-section">
 
           <div class="section-head">
