@@ -135,15 +135,6 @@ function formatPickupTime(value) {
 }
 
 /**
- * Génère un numéro de commande FOODATOI.
- */
-function generateOrderNumber() {
-  return `FA-${Date.now()
-    .toString()
-    .slice(-8)}`;
-}
-
-/**
  * Crée un store Supabase isolé sur un restaurant.
  *
  * IMPORTANT :
@@ -174,65 +165,85 @@ export function createSupabaseOrderStore(
 
     /**
      * Crée une commande pour le restaurant courant.
+     *
+     * IMPORTANT :
+     * les prix ne sont jamais envoyés au serveur. Seuls
+     * product_id / quantity / options le sont ; le prix réel
+     * est relu depuis products par la fonction create_order
+     * (SECURITY DEFINER), qui calcule aussi le total. Un
+     * client qui bidouille order.items[].price n'a donc
+     * aucun effet sur ce qui est réellement facturé.
      */
     async createOrder(order) {
-      const orderId =
-        crypto.randomUUID();
-
-      const orderNumber =
-        generateOrderNumber();
-
       const pickupTime =
         parisTimeToIsoDate(
           order.customer?.pickupTime
         );
 
-      const totalCents =
-        Math.round(
-          Number(
-            order.total ?? 0
-          ) * 100
-        );
+      const items =
+        Array.isArray(
+          order.items
+        )
+          ? order.items
+          : [];
+
+      const rpcItems =
+        items.map(item => {
+          if (!isUuid(item.id)) {
+            throw new Error(
+              `Article sans référence produit valide FOODATOI : ${item.name ?? 'inconnu'}`
+            );
+          }
+
+          return {
+            product_id:
+              item.id,
+
+            quantity:
+              Math.max(
+                1,
+                Number(
+                  item.quantity ?? 1
+                )
+              ),
+
+            options:
+              item.options &&
+              typeof item.options ===
+                'object'
+                ? item.options
+                : {}
+          };
+        });
 
       const {
         data: createdOrder,
         error: orderError
       } = await client
-        .from('orders')
-        .insert({
-          id:
-            orderId,
+        .rpc(
+          'create_order',
+          {
+            p_restaurant_id:
+              restaurantId,
 
-          restaurant_id:
-            restaurantId,
+            p_customer_name:
+              order.customer?.name ??
+              '',
 
-          order_number:
-            orderNumber,
+            p_customer_phone:
+              order.customer?.phone ??
+              '',
 
-          customer_name:
-            order.customer?.name ??
-            '',
+            p_pickup_time:
+              pickupTime,
 
-          customer_phone:
-            order.customer?.phone ??
-            '',
+            p_notes:
+              order.notes ?? null,
 
-          pickup_time:
-            pickupTime,
-
-          status:
-            'NEW',
-
-          payment_status:
-            'PAY_AT_STORE',
-
-          fulfillment_type:
-            'PICKUP',
-
-          total_cents:
-            totalCents
-        })
-        .select()
+            p_items:
+              rpcItems
+          }
+        )
         .single();
 
       if (orderError) {
@@ -244,112 +255,27 @@ export function createSupabaseOrderStore(
         throw orderError;
       }
 
-      const items =
-        Array.isArray(
-          order.items
-        )
-          ? order.items
-          : [];
-
-      if (items.length) {
-        const payload =
-          items.map(item => {
-            const quantity =
-              Math.max(
-                1,
-                Number(
-                  item.quantity ?? 1
-                )
-              );
-
-            const unitPriceCents =
-              Math.round(
-                Number(
-                  item.price ?? 0
-                ) * 100
-              );
-
-            return {
-              order_id:
-                orderId,
-
-              product_id:
-                isUuid(item.id)
-                  ? item.id
-                  : null,
-
-              product_name:
-                item.name ?? '',
-
-              quantity,
-
-              unit_price_cents:
-                unitPriceCents,
-
-              options:
-                item.options &&
-                typeof item.options ===
-                  'object'
-                  ? item.options
-                  : {},
-
-              line_total_cents:
-                unitPriceCents *
-                quantity
-            };
-          });
-
-        const {
-          error: itemsError
-        } = await client
-          .from('order_items')
-          .insert(payload);
-
-        if (itemsError) {
-          console.error(
-            'Erreur création articles FOODATOI:',
-            itemsError
-          );
-
-          /*
-           * Rollback logique.
-           */
-          await client
-            .from('orders')
-            .delete()
-            .eq(
-              'id',
-              orderId
-            )
-            .eq(
-              'restaurant_id',
-              restaurantId
-            );
-
-          throw itemsError;
-        }
-      }
-
       return {
         ...order,
 
         id:
-          createdOrder?.id ??
-          orderId,
+          createdOrder.id,
 
         number:
-          createdOrder?.order_number ??
-          orderNumber,
+          createdOrder.order_number,
 
         orderNumber:
-          createdOrder?.order_number ??
-          orderNumber,
+          createdOrder.order_number,
 
         restaurantId,
 
         status:
-          createdOrder?.status ??
-          'NEW'
+          createdOrder.status,
+
+        total:
+          Number(
+            createdOrder.total_cents ?? 0
+          ) / 100
       };
     },
 

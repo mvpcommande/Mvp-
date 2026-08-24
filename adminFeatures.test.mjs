@@ -12,11 +12,18 @@ test('realtime subscription listens to order changes', () => {
   const callback = () => {};
   const result = subscribeToOrderChanges(client, callback);
   assert.equal(result, channel);
-  assert.equal(calls[0][1], 'caz-food-orders');
-  assert.equal(calls[1][0], 'on');
-  assert.deepEqual(calls[1][1], 'postgres_changes');
-  assert.deepEqual(calls[1][2], { event: '*', schema: 'public', table: 'orders' });
-  assert.equal(calls[2][0], 'subscribe');
+  assert.match(calls[0][1], /^caz-food-orders-\d+$/);
+  const onCalls = calls.filter((call) => call[0] === 'on');
+  assert.deepEqual(
+    onCalls.map((call) => call[2].event).sort(),
+    ['DELETE', 'INSERT', 'UPDATE']
+  );
+  for (const call of onCalls) {
+    assert.equal(call[1], 'postgres_changes');
+    assert.equal(call[2].schema, 'public');
+    assert.equal(call[2].table, 'orders');
+  }
+  assert.equal(calls.at(-1)[0], 'subscribe');
 });
 
 test('printOrder opens a print window with ticket markup', () => {
