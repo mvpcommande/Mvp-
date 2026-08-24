@@ -1,4 +1,4 @@
-import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.js";function s(e,t){return[...e,{...t,quantity:t.quantity??1}]}function c(e){return Number(e.reduce((e,t)=>e+t.price*t.quantity,0).toFixed(2))}function l(e,t,n=()=>Date.now()){return{number:`#${n()}`,type:`PICKUP`,status:`NEW`,items:e,customer:t,total:c(e),createdAt:new Date().toISOString()}}var u=null,d=[],f=[],p=`Tous`,m=null,h=[`Kebab`,`Poulet`,`Steak`,`Merguez`],g=[`Algérienne`,`Biggy`,`Blanche`,`Barbecue`,`Curry`,`Ketchup`,`Mayonnaise`,`Samouraï`],_=[`Coca-Cola`,`Coca-Cola Zéro`,`Coca-Cola Cherry`,`Fanta Orange`,`Fanta Citron`,`Sprite`,`Oasis Tropical`,`Oasis Pomme Cassis`,`Ice Tea`,`Eau`],v=document.querySelector(`#root`),y=e=>`${Number(e??0).toFixed(2).replace(`.`,`,`)} €`,b=()=>f.reduce((e,t)=>e+Number(t.quantity??0),0);function x(e){return String(e??``).replaceAll(`&`,`&amp;`).replaceAll(`<`,`&lt;`).replaceAll(`>`,`&gt;`).replaceAll(`"`,`&quot;`).replaceAll(`'`,`&#039;`)}function S(){return u?.name||`FOODATOI`}function C(){return u?.phone||``}function w(){let e=u?.address;return e?typeof e==`string`?e:typeof e==`object`?[e.street,e.postal_code||e.postalCode,e.city].filter(Boolean).join(` · `):``:``}function T(){return u?.primary_color||`#111111`}async function E(){return u=await o(n),console.info(`[FOODATOI] Restaurant résolu:`,u),D(),m=e(n,u.id),u}function D(){u&&(document.documentElement.style.setProperty(`--restaurant-primary`,T()),document.title=`${S()} · FOODATOI`)}function O(e){if(!Array.isArray(e)||!e.length)return null;let t=[...e].sort((e,t)=>e.is_primary===t.is_primary?(e.sort_order??0)-(t.sort_order??0):e.is_primary?-1:1)[0]?.public_url;return t?/^https?:\/\//i.test(t)?t:`/Mvp-/${t.replace(/^\/+/,``)}`:null}function k(e){let t=e.options&&typeof e.options==`object`?e.options:{},n=Number(e.price_cents??0)/100;return{id:e.id,category:e.category||`Autres`,name:e.name||`Produit`,description:e.description||``,price:n,emoji:t.emoji||t.icon||`🍽️`,imageUrl:O(e.product_images),options:t,meat:!!(t.meat||t.meats||t.viande||t.viandes),sauce:!!(t.sauce||t.sauces),drink:!!(t.drink||t.drinks||t.boisson||t.boissons),multipleMeat:!!(t.multipleMeat||t.multiple_meat),tripleMeat:!!(t.tripleMeat||t.triple_meat)}}async function A(){if(!n)throw Error(`Supabase n’est pas configuré.`);if(!u?.id)throw Error(`Restaurant non résolu.`);let{data:e,error:t}=await n.from(`products`).select(`
+import{a as e,l as t,n,o as r,r as i,s as a,t as o,u as s}from"./styles-Dv28EytT.js";function c(e,t){return[...e,{...t,quantity:t.quantity??1}]}function l(e){return Number(e.reduce((e,t)=>e+t.price*t.quantity,0).toFixed(2))}function u(e,t,n=()=>Date.now()){return{number:`#${n()}`,type:`PICKUP`,status:`NEW`,items:e,customer:t,total:l(e),createdAt:new Date().toISOString()}}var d=null,f=[],p=[],m=`Tous`,h=null,g=[`Kebab`,`Poulet`,`Steak`,`Merguez`],_=[`Algérienne`,`Biggy`,`Blanche`,`Barbecue`,`Curry`,`Ketchup`,`Mayonnaise`,`Samouraï`],v=[`Coca-Cola`,`Coca-Cola Zéro`,`Coca-Cola Cherry`,`Fanta Orange`,`Fanta Citron`,`Sprite`,`Oasis Tropical`,`Oasis Pomme Cassis`,`Ice Tea`,`Eau`],y=document.querySelector(`#root`),b=e=>`${Number(e??0).toFixed(2).replace(`.`,`,`)} €`,x=()=>p.reduce((e,t)=>e+Number(t.quantity??0),0);function S(e){return String(e??``).replaceAll(`&`,`&amp;`).replaceAll(`<`,`&lt;`).replaceAll(`>`,`&gt;`).replaceAll(`"`,`&quot;`).replaceAll(`'`,`&#039;`)}function C(){return d?.name||`FOODATOI`}function w(){return d?.phone||``}function T(){let e=d?.address;return e?typeof e==`string`?e:typeof e==`object`?[e.street,e.postal_code||e.postalCode,e.city].filter(Boolean).join(` · `):``:``}function E(){return d?.primary_color||`#111111`}async function D(){return d=await n(e),console.info(`[FOODATOI] Restaurant résolu:`,d),O(),h=r(e,d.id),d}function O(){d&&(document.documentElement.style.setProperty(`--restaurant-primary`,E()),document.title=`${C()} · FOODATOI`)}function k(e){if(!Array.isArray(e)||!e.length)return null;let t=[...e].sort((e,t)=>e.is_primary===t.is_primary?(e.sort_order??0)-(t.sort_order??0):e.is_primary?-1:1)[0]?.public_url;return t?/^https?:\/\//i.test(t)?t:`/Mvp-/${t.replace(/^\/+/,``)}`:null}function A(e){let t=e.options&&typeof e.options==`object`?e.options:{},n=Number(e.price_cents??0)/100;return{id:e.id,category:e.category||`Autres`,name:e.name||`Produit`,description:e.description||``,price:n,emoji:t.emoji||t.icon||`🍽️`,imageUrl:k(e.product_images),options:t,meat:!!(t.meat||t.meats||t.viande||t.viandes),sauce:!!(t.sauce||t.sauces),drink:!!(t.drink||t.drinks||t.boisson||t.boissons),multipleMeat:!!(t.multipleMeat||t.multiple_meat),tripleMeat:!!(t.tripleMeat||t.triple_meat)}}async function j(){if(!e)throw Error(`Supabase n’est pas configuré.`);if(!d?.id)throw Error(`Restaurant non résolu.`);let{data:t,error:n}=await e.from(`products`).select(`
       id,
       name,
       category,
@@ -14,7 +14,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
         is_primary,
         sort_order
       )
-    `).eq(`restaurant_id`,u.id).eq(`is_active`,!0).order(`sort_order`,{ascending:!0,nullsFirst:!1}).order(`created_at`,{ascending:!0});if(t)throw console.error(`[FOODATOI] Erreur chargement catalogue:`,t),t;return d=(e??[]).filter(e=>e.restaurant_id===u.id).map(k),p=`Tous`,console.info(`[FOODATOI] ${d.length} produit(s) chargé(s) pour ${S()}.`),d}function j(){return[`Tous`,...new Set(d.map(e=>e.category).filter(Boolean))]}function M(){v.innerHTML=`
+    `).eq(`restaurant_id`,d.id).eq(`is_active`,!0).order(`sort_order`,{ascending:!0,nullsFirst:!1}).order(`created_at`,{ascending:!0});if(n)throw console.error(`[FOODATOI] Erreur chargement catalogue:`,n),n;return f=(t??[]).filter(e=>e.restaurant_id===d.id).map(A),m=`Tous`,console.info(`[FOODATOI] ${f.length} produit(s) chargé(s) pour ${C()}.`),f}function M(){return[`Tous`,...new Set(f.map(e=>e.category).filter(Boolean))]}function N(){y.innerHTML=`
     <div class="app-frame">
 
       <main>
@@ -43,7 +43,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       </main>
 
     </div>
-  `}function N(e){console.error(`[FOODATOI] Erreur application:`,e),v.innerHTML=`
+  `}function P(t){console.error(`[FOODATOI] Erreur application:`,t),o(e,{context:`main.init`,message:t?.message??String(t),page:`main`}),y.innerHTML=`
     <div class="app-frame">
 
       <main>
@@ -81,33 +81,33 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       </main>
 
     </div>
-  `}function P(){let e=j(),t=S(),n=w(),r=C();v.innerHTML=`
+  `}function F(){let e=M(),t=C(),n=T(),r=w();y.innerHTML=`
     <div class="app-frame">
 
       <header class="masthead">
 
         <div class="brand-lockup">
 
-          ${u?.logo_url?`
+          ${d?.logo_url?`
                 <img
                   class="brand-mark-image"
-                  src="${x(u.logo_url)}"
-                  alt="${x(t)}"
+                  src="${S(d.logo_url)}"
+                  alt="${S(t)}"
                 >
               `:`
                 <span class="brand-mark">
-                  ${x(t.slice(0,2).toUpperCase())}
+                  ${S(t.slice(0,2).toUpperCase())}
                 </span>
               `}
 
           <div>
 
             <strong>
-              ${x(t)}
+              ${S(t)}
             </strong>
 
             <span>
-              ${x(u?.sector||`RESTAURANT`)}
+              ${S(d?.sector||`RESTAURANT`)}
             </span>
 
           </div>
@@ -124,7 +124,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
           </span>
 
           <b>
-            ${b()}
+            ${x()}
           </b>
         </button>
 
@@ -147,7 +147,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
             <p class="intro-lede">
               Ton repas, directement chez
-              ${x(t)}.
+              ${S(t)}.
               Pas de détour, pas de plateforme.
             </p>
 
@@ -179,7 +179,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
             <div class="receipt-top">
 
               <span>
-                ${x(t)}
+                ${S(t)}
               </span>
 
               <span>
@@ -203,7 +203,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
               ${n?`
                     <span>
-                      ${x(n)}
+                      ${S(n)}
                     </span>
                   `:``}
 
@@ -229,7 +229,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
         </section>
 
-        ${u?.settings?.delivery_redirect_url?`
+        ${d?.settings?.delivery_redirect_url?`
               <section class="delivery-banner">
 
                 <div>
@@ -239,7 +239,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
                   </p>
 
                   <p>
-                    ${x(t)}
+                    ${S(t)}
                     livre aussi à domicile via Uber Eats.
                   </p>
 
@@ -247,7 +247,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
                 <a
                   class="secondary"
-                  href="${x(u.settings.delivery_redirect_url)}"
+                  href="${S(d.settings.delivery_redirect_url)}"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -275,9 +275,9 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
             <span class="menu-count">
 
-              ${d.length}
+              ${f.length}
 
-              ${d.length>1?`produits`:`produit`}
+              ${f.length>1?`produits`:`produit`}
 
             </span>
 
@@ -291,11 +291,11 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
                   ${e.map(e=>`
                         <button
-                          class="category ${e===p?`is-active`:``}"
-                          data-category="${x(e)}"
+                          class="category ${e===m?`is-active`:``}"
+                          data-category="${S(e)}"
                           type="button"
                         >
-                          ${x(e)}
+                          ${S(e)}
                         </button>
                       `).join(``)}
 
@@ -304,7 +304,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
           <div class="menu-grid">
 
-            ${d.length?d.filter(e=>p===`Tous`||e.category===p).map(F).join(``):`
+            ${f.length?f.filter(e=>m===`Tous`||e.category===m).map(I).join(``):`
                   <div class="empty-ticket">
 
                     <div class="empty-ticket-mark">
@@ -334,24 +334,24 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
         <div>
 
           <strong>
-            ${x(t)}
+            ${S(t)}
           </strong>
 
           ${n?`
                 <span>
-                  ${x(n)}
+                  ${S(n)}
                 </span>
               `:``}
 
         </div>
 
-        ${a(u?.settings?.opening_hours).length?`
+        ${a(d?.settings?.opening_hours).length?`
               <div class="footer-hours">
-                ${a(u?.settings?.opening_hours).map(e=>`
+                ${a(d?.settings?.opening_hours).map(e=>`
                       <span>
-                        ${x(e.label)}
+                        ${S(e.label)}
                         <b>
-                          ${x(e.hours)}
+                          ${S(e.hours)}
                         </b>
                       </span>
                     `).join(``)}
@@ -362,15 +362,15 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
           ${r?`
                 <a
-                  href="tel:${x(r)}"
+                  href="tel:${S(r)}"
                 >
-                  ${x(r)}
+                  ${S(r)}
                 </a>
               `:``}
 
-          ${u?.settings?.facebook_url?`
+          ${d?.settings?.facebook_url?`
                 <a
-                  href="${x(u.settings.facebook_url)}"
+                  href="${S(d.settings.facebook_url)}"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -400,7 +400,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
         <div>
 
           <p class="eyebrow">
-            ${x(t)}
+            ${S(t)}
           </p>
 
           <h2>
@@ -435,19 +435,19 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       ></div>
 
     </div>
-  `,I(),G()}function F(e){return`
+  `,L(),K()}function I(e){return`
     <article class="menu-card">
 
       <div class="menu-card-media">
         ${e.imageUrl?`
               <img
-                src="${x(e.imageUrl)}"
+                src="${S(e.imageUrl)}"
                 alt=""
                 loading="lazy"
               >
             `:`
               <span class="menu-card-media-fallback">
-                ${x(e.emoji)}
+                ${S(e.emoji)}
               </span>
             `}
       </div>
@@ -455,16 +455,16 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       <div class="menu-card-body">
 
         <p class="eyebrow">
-          ${x(e.category)}
+          ${S(e.category)}
         </p>
 
         <h3>
-          ${x(e.name)}
+          ${S(e.name)}
         </h3>
 
         ${e.description?`
               <p>
-                ${x(e.description)}
+                ${S(e.description)}
               </p>
             `:``}
 
@@ -473,14 +473,14 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       <div class="menu-card-bottom">
 
         <strong>
-          ${y(e.price)}
+          ${b(e.price)}
         </strong>
 
         <button
           class="add-button"
-          data-add="${x(e.id)}"
+          data-add="${S(e.id)}"
           type="button"
-          aria-label="Ajouter ${x(e.name)}"
+          aria-label="Ajouter ${S(e.name)}"
         >
 
           <span>
@@ -494,7 +494,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       </div>
 
     </article>
-  `}function I(){document.querySelectorAll(`[data-category]`).forEach(e=>{e.onclick=()=>{p=e.dataset.category,P()}}),document.querySelectorAll(`[data-add]`).forEach(e=>{e.onclick=()=>L(e.dataset.add)});let e=document.querySelector(`#open-cart`);e&&(e.onclick=U);let t=document.querySelector(`#close-cart`);t&&(t.onclick=W);let n=document.querySelector(`#backdrop`);n&&(n.onclick=W)}function L(e){let t=d.find(t=>t.id===e);if(!t)return;let n=z(t),r=B(t),i=V(t);document.querySelector(`#modal-content`).innerHTML=`
+  `}function L(){document.querySelectorAll(`[data-category]`).forEach(e=>{e.onclick=()=>{m=e.dataset.category,F()}}),document.querySelectorAll(`[data-add]`).forEach(e=>{e.onclick=()=>R(e.dataset.add)});let e=document.querySelector(`#open-cart`);e&&(e.onclick=W);let t=document.querySelector(`#close-cart`);t&&(t.onclick=G);let n=document.querySelector(`#backdrop`);n&&(n.onclick=G)}function R(e){let t=f.find(t=>t.id===e);if(!t)return;let n=B(t),r=V(t),i=H(t);document.querySelector(`#modal-content`).innerHTML=`
 
     <button
       class="modal-close"
@@ -508,26 +508,26 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
     ${t.imageUrl?`
           <img
             class="product-photo"
-            src="${x(t.imageUrl)}"
+            src="${S(t.imageUrl)}"
             alt=""
           >
         `:`
           <div class="product-mark">
-            ${x(t.emoji)}
+            ${S(t.emoji)}
           </div>
         `}
 
     <p class="eyebrow">
-      ${x(t.category)}
+      ${S(t.category)}
     </p>
 
     <h2>
-      ${x(t.name)}
+      ${S(t.name)}
     </h2>
 
     ${t.description?`
           <p>
-            ${x(t.description)}
+            ${S(t.description)}
           </p>
         `:``}
 
@@ -559,14 +559,14 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       id="confirm-add"
       type="button"
     >
-      Ajouter · ${y(t.price)}
+      Ajouter · ${b(t.price)}
     </button>
-  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#modal-close`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`)},document.querySelector(`#confirm-add`).onclick=()=>{let e=Math.max(1,Math.min(20,Number(document.querySelector(`#qty`).value||1))),n={},r=document.querySelector(`#meat-1`)?.value,i=document.querySelector(`#meat-2`)?.value,a=document.querySelector(`#meat-3`)?.value,o=document.querySelector(`#sauce`)?.value,c=document.querySelector(`#drink`)?.value;r&&(n.meat=r),i&&(n.meat2=i),a&&(n.meat3=a),(i||a)&&(n.meats=[r,i,a].filter(Boolean)),o&&(n.sauce=o),c&&(n.drink=c),f=s(f,{...t,quantity:e,options:n}),document.querySelector(`#product-modal`).classList.add(`hidden`),P(),U()}}function R(e,t,n){for(let n of t)if(Array.isArray(e?.[n])&&e[n].length)return e[n];return n}function z(e){if(!e.meat)return``;let t=R(e.options,[`meats`,`meat`,`viandes`,`viande`],h);return e.tripleMeat?`
+  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#modal-close`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`)},document.querySelector(`#confirm-add`).onclick=()=>{let e=Math.max(1,Math.min(20,Number(document.querySelector(`#qty`).value||1))),n={},r=document.querySelector(`#meat-1`)?.value,i=document.querySelector(`#meat-2`)?.value,a=document.querySelector(`#meat-3`)?.value,o=document.querySelector(`#sauce`)?.value,s=document.querySelector(`#drink`)?.value;r&&(n.meat=r),i&&(n.meat2=i),a&&(n.meat3=a),(i||a)&&(n.meats=[r,i,a].filter(Boolean)),o&&(n.sauce=o),s&&(n.drink=s),p=c(p,{...t,quantity:e,options:n}),document.querySelector(`#product-modal`).classList.add(`hidden`),F(),W()}}function z(e,t,n){for(let n of t)if(Array.isArray(e?.[n])&&e[n].length)return e[n];return n}function B(e){if(!e.meat)return``;let t=z(e.options,[`meats`,`meat`,`viandes`,`viande`],g);return e.tripleMeat?`
       <label>
         VIANDE 1
 
         <select id="meat-1">
-          ${H(t)}
+          ${U(t)}
         </select>
       </label>
 
@@ -574,7 +574,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
         VIANDE 2
 
         <select id="meat-2">
-          ${H(t)}
+          ${U(t)}
         </select>
       </label>
 
@@ -582,7 +582,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
         VIANDE 3
 
         <select id="meat-3">
-          ${H(t)}
+          ${U(t)}
         </select>
       </label>
     `:e.multipleMeat?`
@@ -590,7 +590,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
         VIANDE 1
 
         <select id="meat-1">
-          ${H(t)}
+          ${U(t)}
         </select>
       </label>
 
@@ -598,7 +598,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
         VIANDE 2
 
         <select id="meat-2">
-          ${H(t)}
+          ${U(t)}
         </select>
       </label>
     `:`
@@ -606,26 +606,26 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       VIANDE
 
       <select id="meat-1">
-        ${H(t)}
+        ${U(t)}
       </select>
     </label>
-  `}function B(e){return e.sauce?`
+  `}function V(e){return e.sauce?`
     <label>
       SAUCE
 
       <select id="sauce">
-        ${H(R(e.options,[`sauces`,`sauce`],g))}
+        ${U(z(e.options,[`sauces`,`sauce`],_))}
       </select>
     </label>
-  `:``}function V(e){return e.drink?`
+  `:``}function H(e){return e.drink?`
     <label>
       BOISSON
 
       <select id="drink">
-        ${H(R(e.options,[`drinks`,`drink`,`boissons`,`boisson`],_))}
+        ${U(z(e.options,[`drinks`,`drink`,`boissons`,`boisson`],v))}
       </select>
     </label>
-  `:``}function H(e){return e.map(e=>`<option value="${x(e)}">${x(e)}</option>`).join(``)}function U(){document.querySelector(`#drawer`).classList.add(`open`),document.querySelector(`#backdrop`).classList.remove(`hidden`),G()}function W(){document.querySelector(`#drawer`).classList.remove(`open`),document.querySelector(`#backdrop`).classList.add(`hidden`)}function G(){let e=document.querySelector(`#cart-content`);if(!e)return;if(!f.length){e.innerHTML=`
+  `:``}function U(e){return e.map(e=>`<option value="${S(e)}">${S(e)}</option>`).join(``)}function W(){document.querySelector(`#drawer`).classList.add(`open`),document.querySelector(`#backdrop`).classList.remove(`hidden`),K()}function G(){document.querySelector(`#drawer`).classList.remove(`open`),document.querySelector(`#backdrop`).classList.add(`hidden`)}function K(){let e=document.querySelector(`#cart-content`);if(!e)return;if(!p.length){e.innerHTML=`
       <div class="empty-ticket">
 
         <div class="empty-ticket-mark">
@@ -650,13 +650,13 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
         </button>
 
       </div>
-    `,e.querySelector(`#back-menu`).onclick=W;return}e.innerHTML=`
+    `,e.querySelector(`#back-menu`).onclick=G;return}e.innerHTML=`
     <div class="ticket-paper">
 
       <div class="ticket-header">
 
         <span>
-          ${x(S())}
+          ${S(C())}
         </span>
 
         <span>
@@ -667,7 +667,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
       <div class="ticket-items">
 
-        ${f.map((e,t)=>K(e,t)).join(``)}
+        ${p.map((e,t)=>q(e,t)).join(``)}
 
       </div>
 
@@ -678,7 +678,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
         </span>
 
         <strong>
-          ${y(c(f))}
+          ${b(l(p))}
         </strong>
 
       </div>
@@ -689,9 +689,9 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
           RETRAIT SUR PLACE
         </strong>
 
-        ${w()?`
+        ${T()?`
               <span>
-                ${x(w())}
+                ${S(T())}
               </span>
             `:``}
 
@@ -703,13 +703,13 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
     </div>
 
-    ${t(u?.settings?.opening_hours)?``:`
+    ${t(d?.settings?.opening_hours)?``:`
           <div class="closed-banner">
             <p class="eyebrow">
               FERMÉ ACTUELLEMENT
             </p>
             <p>
-              ${x(S())}
+              ${S(C())}
               n'accepte pas de commande en dehors de ses horaires d'ouverture.
               Reviens plus tard pour commander.
             </p>
@@ -761,36 +761,36 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       <button
         class="primary full"
         type="submit"
-        ${t(u?.settings?.opening_hours)?``:`disabled`}
+        ${t(d?.settings?.opening_hours)?``:`disabled`}
       >
         Envoyer ma commande →
       </button>
 
       <small>
-        ${m?`Commande transmise directement à l’espace ${x(S())}.`:`Mode démo : aucune commande réelle n’est envoyée.`}
+        ${h?`Commande transmise directement à l’espace ${S(C())}.`:`Mode démo : aucune commande réelle n’est envoyée.`}
       </small>
 
     </form>
-  `,e.querySelectorAll(`[data-remove]`).forEach(e=>{e.onclick=()=>{f.splice(Number(e.dataset.remove),1),G()}});let n=e.querySelector(`#order-form`);n&&(n.onsubmit=async e=>{if(e.preventDefault(),!t(u?.settings?.opening_hours)){G();return}let n=Object.fromEntries(new FormData(e.currentTarget));await J(l(f,n))})}function K(e,t){let n=q(e.options);return`
+  `,e.querySelectorAll(`[data-remove]`).forEach(e=>{e.onclick=()=>{p.splice(Number(e.dataset.remove),1),K()}});let n=e.querySelector(`#order-form`);n&&(n.onsubmit=async e=>{if(e.preventDefault(),!t(d?.settings?.opening_hours)){K();return}let n=Object.fromEntries(new FormData(e.currentTarget));await Y(u(p,n))})}function q(e,t){let n=J(e.options);return`
     <div class="ticket-item">
 
       <div>
 
         <strong>
           ${e.quantity} ×
-          ${x(e.name)}
+          ${S(e.name)}
         </strong>
 
         ${n?`
               <span>
-                ${x(n)}
+                ${S(n)}
               </span>
             `:``}
 
       </div>
 
       <b>
-        ${y(e.price*e.quantity)}
+        ${b(e.price*e.quantity)}
       </b>
 
       <button
@@ -802,7 +802,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       </button>
 
     </div>
-  `}function q(e={}){if(!e||typeof e!=`object`)return``;let t=[];return Array.isArray(e.meats)?t.push(`Viandes : ${e.meats.join(`, `)}`):e.meat&&t.push(`Viande : ${e.meat}`),e.sauce&&t.push(`Sauce : ${e.sauce}`),e.drink&&t.push(`Boisson : ${e.drink}`),t.join(` · `)}async function J(e){try{let t,n={...e,restaurant_id:u?.id||null,restaurantId:u?.id||null};if(!n.restaurant_id)throw Error(`Restaurant FOODATOI introuvable pour cette commande.`);if(m)t=await m.createOrder(n);else{let e=JSON.parse(localStorage.getItem(`foodatoi-orders`)||`[]`);t=r(e,n).at(-1),localStorage.setItem(`foodatoi-orders`,JSON.stringify([...e,t]))}f=[],Y(t)}catch(e){console.error(`[FOODATOI] Erreur création commande:`,e),alert(String(e?.message||``).includes(`RESTAURANT_CLOSED`)?`Le restaurant est fermé actuellement, la commande n’a pas pu être envoyée.`:`Impossible d’envoyer la commande pour le moment.`)}}function Y(e){let t=i(e);W(),document.querySelector(`#modal-content`).innerHTML=`
+  `}function J(e={}){if(!e||typeof e!=`object`)return``;let t=[];return Array.isArray(e.meats)?t.push(`Viandes : ${e.meats.join(`, `)}`):e.meat&&t.push(`Viande : ${e.meat}`),e.sauce&&t.push(`Sauce : ${e.sauce}`),e.drink&&t.push(`Boisson : ${e.drink}`),t.join(` · `)}async function Y(t){try{let e,n={...t,restaurant_id:d?.id||null,restaurantId:d?.id||null};if(!n.restaurant_id)throw Error(`Restaurant FOODATOI introuvable pour cette commande.`);if(h)e=await h.createOrder(n);else{let t=JSON.parse(localStorage.getItem(`foodatoi-orders`)||`[]`);e=s(t,n).at(-1),localStorage.setItem(`foodatoi-orders`,JSON.stringify([...t,e]))}p=[],X(e)}catch(t){console.error(`[FOODATOI] Erreur création commande:`,t),o(e,{restaurantId:d?.id,context:`main.createOrder`,message:t?.message??String(t),page:`main`}),alert(String(t?.message||``).includes(`RESTAURANT_CLOSED`)?`Le restaurant est fermé actuellement, la commande n’a pas pu être envoyée.`:`Impossible d’envoyer la commande pour le moment.`)}}function X(e){let t=i(e);G(),document.querySelector(`#modal-content`).innerHTML=`
     <div class="confirmation">
 
       <div class="confirmed-stamp">
@@ -814,18 +814,18 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       </p>
 
       <h2>
-        ${x(t.number)}
+        ${S(t.number)}
       </h2>
 
       <p>
         Ton ticket est parti chez
         <strong>
-          ${x(S())}
+          ${S(C())}
         </strong>.
 
         Retrait souhaité à
         <strong>
-          ${x(t.pickup)}
+          ${S(t.pickup)}
         </strong>.
       </p>
 
@@ -840,11 +840,11 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
 
                     <strong>
                       ${e.quantity} ×
-                      ${x(e.name)}
+                      ${S(e.name)}
                     </strong>
 
                     <span>
-                      ${x(e.options||``)}
+                      ${S(e.options||``)}
                     </span>
 
                   </div>
@@ -861,7 +861,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
           </span>
 
           <strong>
-            ${x(t.totalLabel)}
+            ${S(t.totalLabel)}
           </strong>
 
         </div>
@@ -877,4 +877,4 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-DKdK2-Rq.j
       </button>
 
     </div>
-  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#done`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`),P()}}async function X(){try{M(),await E(),await A(),P()}catch(e){N(e)}}X();
+  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#done`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`),F()}}async function Z(){try{N(),await D(),await j(),F()}catch(e){P(e)}}Z();
