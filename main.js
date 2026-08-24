@@ -228,6 +228,42 @@ function applyRestaurantBranding() {
 /* Product normalization                                                      */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Choisit l'image principale d'un produit (is_primary,
+ * puis sort_order) et la résout en URL absolue selon le
+ * déploiement courant : import.meta.env.BASE_URL vaut '/'
+ * sur Netlify et '/Mvp-/' sur GitHub Pages (défini au
+ * build), donc pas besoin de donnée différente par cible.
+ *
+ * public_url en base est stocké relatif (ex:
+ * "product-images/menu-burger.jpg"), pas comme chemin
+ * absolu, précisément pour rester portable entre les deux.
+ */
+function resolveProductImageUrl(images) {
+  if (!Array.isArray(images) || !images.length) {
+    return null;
+  }
+
+  const sorted = [...images].sort((a, b) => {
+    if (a.is_primary !== b.is_primary) {
+      return a.is_primary ? -1 : 1;
+    }
+    return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  });
+
+  const path = sorted[0]?.public_url;
+
+  if (!path) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  return `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`;
+}
+
 function normalizeProduct(product) {
   const options =
     product.options &&
@@ -261,6 +297,11 @@ function normalizeProduct(product) {
       options.emoji ||
       options.icon ||
       '🍽️',
+
+    imageUrl:
+      resolveProductImageUrl(
+        product.product_images
+      ),
 
     options,
 
@@ -332,7 +373,12 @@ async function loadMenu() {
       is_active,
       sort_order,
       restaurant_id,
-      created_at
+      created_at,
+      product_images (
+        public_url,
+        is_primary,
+        sort_order
+      )
     `)
     .eq(
       'restaurant_id',
@@ -988,9 +1034,21 @@ function card(item) {
       <div class="menu-card-top">
 
         <span class="menu-icon">
-          ${escapeHtml(
-            item.emoji
-          )}
+          ${
+            item.imageUrl
+              ? `
+                <img
+                  src="${escapeHtml(
+                    item.imageUrl
+                  )}"
+                  alt=""
+                  loading="lazy"
+                >
+              `
+              : escapeHtml(
+                  item.emoji
+                )
+          }
         </span>
 
         <span class="category-tag">
