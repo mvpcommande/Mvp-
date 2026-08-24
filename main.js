@@ -1031,35 +1031,35 @@ function card(item) {
   return `
     <article class="menu-card">
 
-      <div class="menu-card-top">
-
-        <span class="menu-icon">
-          ${
-            item.imageUrl
-              ? `
-                <img
-                  src="${escapeHtml(
-                    item.imageUrl
-                  )}"
-                  alt=""
-                  loading="lazy"
-                >
-              `
-              : escapeHtml(
+      <div class="menu-card-media">
+        ${
+          item.imageUrl
+            ? `
+              <img
+                src="${escapeHtml(
+                  item.imageUrl
+                )}"
+                alt=""
+                loading="lazy"
+              >
+            `
+            : `
+              <span class="menu-card-media-fallback">
+                ${escapeHtml(
                   item.emoji
-                )
-          }
-        </span>
-
-        <span class="category-tag">
-          ${escapeHtml(
-            item.category
-          )}
-        </span>
-
+                )}
+              </span>
+            `
+        }
       </div>
 
       <div class="menu-card-body">
+
+        <p class="eyebrow">
+          ${escapeHtml(
+            item.category
+          )}
+        </p>
 
         <h3>
           ${escapeHtml(
@@ -1211,11 +1211,25 @@ function openProduct(id) {
       ×
     </button>
 
-    <div class="product-mark">
-      ${escapeHtml(
-        item.emoji
-      )}
-    </div>
+    ${
+      item.imageUrl
+        ? `
+          <img
+            class="product-photo"
+            src="${escapeHtml(
+              item.imageUrl
+            )}"
+            alt=""
+          >
+        `
+        : `
+          <div class="product-mark">
+            ${escapeHtml(
+              item.emoji
+            )}
+          </div>
+        `
+    }
 
     <p class="eyebrow">
       ${escapeHtml(
