@@ -1,0 +1,66 @@
+name: Health check
+
+on:
+  schedule:
+    # Toutes les 2 heures. GitHub notifie automatiquement par email
+    # en cas d'échec d'un workflow programmé (aucune config requise).
+    - cron: '0 */2 * * *'
+  workflow_dispatch: {}
+
+env:
+  SITE_URL: https://mvpcommande.github.io/Mvp-/
+  ADMIN_URL: https://mvpcommande.github.io/Mvp-/admin.html
+  SUPABASE_URL: https://ffuykessameuonpnyiyc.supabase.co
+  # Clé publique (anon/publishable) : déjà visible par n'importe qui dans
+  # le bundle déployé, ce n'est pas un secret, elle ne donne accès qu'à
+  # ce que la RLS autorise déjà publiquement.
+  SUPABASE_PUBLISHABLE_KEY: sb_publishable_MIwz0MWTUF74o8FOsMGQmw_k0yxlvk7
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Le site client répond et sert le bon contenu
+        run: |
+          status=$(curl -s -o /tmp/index.html -w "%{http_code}" "$SITE_URL")
+          echo "HTTP $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Le site répond en $status au lieu de 200"
+            exit 1
+          fi
+          if ! grep -q "Caz Food" /tmp/index.html; then
+            echo "::error::Contenu attendu absent de la page d'accueil"
+            exit 1
+          fi
+
+      - name: Le comptoir (admin) répond
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" "$ADMIN_URL")
+          echo "HTTP $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::La page admin répond en $status au lieu de 200"
+            exit 1
+          fi
+
+      - name: Supabase résout bien Caz Food
+        run: |
+          response=$(curl -s -X POST "$SUPABASE_URL/rest/v1/rpc/resolve_restaurant" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"hostname":"mvp-.foodatoi.fr"}')
+          echo "Réponse: $response"
+          if ! echo "$response" | grep -q "Caz Food"; then
+            echo "::error::resolve_restaurant ne retourne pas Caz Food (réponse: $response)"
+            exit 1
+          fi
+
+      - name: La carte n'est pas vide
+        run: |
+          response=$(curl -s "$SUPABASE_URL/rest/v1/products?restaurant_id=eq.2043c98b-2b77-4ed8-a6ac-f3fdac62af71&is_active=eq.true&select=id" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY")
+          count=$(echo "$response" | grep -o '"id"' | wc -l)
+          echo "$count produit(s) actif(s)"
+          if [ "$count" -lt 1 ]; then
+            echo "::error::Aucun produit actif trouvé"
+            exit 1
+          fi

@@ -383,6 +383,39 @@ export function createSupabaseOrderStore(
       }
 
       return data ?? [];
+    },
+
+    /**
+     * Erreurs client récentes (résolution restaurant, realtime,
+     * création commande, changement de statut) pour ce restaurant,
+     * les plus récentes en premier.
+     */
+    async getRecentErrors(limit = 50) {
+      const {
+        data,
+        error
+      } = await client
+        .from('client_error_logs')
+        .select('*')
+        .or(
+          `restaurant_id.eq.${restaurantId},restaurant_id.is.null`
+        )
+        .order(
+          'created_at',
+          { ascending: false }
+        )
+        .limit(limit);
+
+      if (error) {
+        console.error(
+          'Erreur lecture logs FOODATOI:',
+          error
+        );
+
+        throw error;
+      }
+
+      return data ?? [];
     }
   };
 }

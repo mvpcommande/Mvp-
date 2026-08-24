@@ -29,6 +29,10 @@ import {
   formatOpeningHours
 } from './timeFormat.mjs';
 
+import {
+  logClientError
+} from './errorLog.mjs';
+
 import './styles.css';
 
 /**
@@ -491,6 +495,12 @@ function renderError(error) {
     '[FOODATOI] Erreur application:',
     error
   );
+
+  logClientError(supabase, {
+    context: 'main.init',
+    message: error?.message ?? String(error),
+    page: 'main'
+  });
 
   app.innerHTML = `
     <div class="app-frame">
@@ -2076,6 +2086,13 @@ async function submitOrder(
       '[FOODATOI] Erreur création commande:',
       error
     );
+
+    logClientError(supabase, {
+      restaurantId: restaurant?.id,
+      context: 'main.createOrder',
+      message: error?.message ?? String(error),
+      page: 'main'
+    });
 
     alert(
       String(error?.message || '').includes(

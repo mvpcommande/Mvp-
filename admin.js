@@ -12,6 +12,7 @@ import {
 } from './adminFeatures.mjs';
 import { resolveRestaurant } from './restaurantResolver.mjs';
 import { formatPickupTime } from './timeFormat.mjs';
+import { logClientError } from './errorLog.mjs';
 import './styles.css';
 const root = document.querySelector('#admin-root');
 const labels = {
@@ -63,6 +64,11 @@ async function init() {
         'Erreur résolution restaurant:',
         error
       );
+      logClientError(supabase, {
+        context: 'admin.resolveRestaurant',
+        message: error?.message ?? String(error),
+        page: 'admin'
+      });
       renderRestaurantError(error);
       return;
     }
@@ -120,6 +126,12 @@ function subscribeRealtime() {
           console.warn(
             '[Realtime] Reconnexion dans 3s...'
           );
+          logClientError(supabase, {
+            restaurantId: restaurant?.id,
+            context: 'admin.realtime',
+            message: `Canal realtime perdu (${status}), reconnexion dans 3s`,
+            page: 'admin'
+          });
           setTimeout(() => {
             if (mode === 'remote') {
               subscribeRealtime();
@@ -356,6 +368,17 @@ async function advance(order) {
       'Erreur changement statut:',
       error
     );
+    logClientError(supabase, {
+      restaurantId: restaurant?.id,
+      context: 'admin.updateStatus',
+      message: error?.message ?? String(error),
+      details: {
+        orderId: order.id,
+        from: order.status,
+        to: next
+      },
+      page: 'admin'
+    });
     alert(
       'Impossible de modifier le statut de la commande.'
     );
@@ -413,6 +436,12 @@ async function render() {
           </p>
         </div>
         <div class="admin-actions">
+          <button
+            class="secondary"
+            id="system-health"
+          >
+            État système
+          </button>
           <button
             class="secondary"
             id="export-stock"
@@ -605,6 +634,14 @@ async function render() {
   if (exportButton) {
     exportButton.onclick =
       () => downloadStockSummaryCsv(data);
+  }
+  const healthButton =
+    root.querySelector(
+      '#system-health'
+    );
+  if (healthButton) {
+    healthButton.onclick =
+      () => renderSystemHealth();
   }
   const printStockButton =
     root.querySelector(
@@ -913,6 +950,122 @@ async function renderOrderDetail(order) {
         timelineEl.textContent =
           'Historique indisponible.';
       }
+    }
+  }
+}
+async function renderSystemHealth() {
+  const overlay =
+    document.createElement(
+      'div'
+    );
+  overlay.id =
+    'system-health-overlay';
+  overlay.className = 'modal';
+  overlay.innerHTML = `
+    <div class="modal-card order-detail-card">
+      <button
+        class="modal-close"
+        id="close-system-health"
+      >
+        ×
+      </button>
+      <p class="eyebrow">
+        Diagnostic
+      </p>
+      <h2>
+        État système
+      </h2>
+      <p id="health-loading">
+        ${
+          mode === 'remote'
+            ? 'Chargement…'
+            : 'Non disponible en mode local.'
+        }
+      </p>
+    </div>
+  `;
+  document.body.appendChild(
+    overlay
+  );
+  overlay.onclick =
+    (event) => {
+      if (event.target === overlay) {
+        overlay.remove();
+      }
+    };
+  overlay
+    .querySelector(
+      '#close-system-health'
+    ).onclick = () =>
+    overlay.remove();
+  if (
+    mode !== 'remote' ||
+    !remote?.getRecentErrors
+  ) {
+    return;
+  }
+  try {
+    const errors =
+      await remote.getRecentErrors();
+    const loadingEl =
+      overlay.querySelector(
+        '#health-loading'
+      );
+    if (!loadingEl) return;
+    loadingEl.outerHTML = errors.length
+      ? `
+        <p>
+          ${errors.length} erreur${errors.length > 1 ? 's' : ''}
+          enregistrée${errors.length > 1 ? 's' : ''}, la plus récente en premier.
+        </p>
+        <ul class="detail-timeline-list health-list">
+          ${errors
+            .map(
+              (err) => `
+                <li>
+                  <span>
+                    ${new Date(
+                      err.created_at
+                    ).toLocaleString(
+                      'fr-FR',
+                      {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }
+                    )}
+                  </span>
+                  <div>
+                    <strong>
+                      ${err.context ?? '—'}
+                    </strong>
+                    <br>
+                    ${err.message ?? ''}
+                  </div>
+                </li>
+              `
+            )
+            .join('')}
+        </ul>
+      `
+      : `
+        <p>
+          Aucune erreur enregistrée récemment. Bon signe.
+        </p>
+      `;
+  } catch (error) {
+    console.error(
+      'Erreur chargement état système:',
+      error
+    );
+    const loadingEl =
+      overlay.querySelector(
+        '#health-loading'
+      );
+    if (loadingEl) {
+      loadingEl.textContent =
+        'Impossible de charger les logs.';
     }
   }
 }
