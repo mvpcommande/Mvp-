@@ -1,4 +1,4 @@
-import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.js";function s(e,t){return[...e,{...t,quantity:t.quantity??1}]}function c(e){return Number(e.reduce((e,t)=>e+t.price*t.quantity,0).toFixed(2))}function l(e,t,n=()=>Date.now()){return{number:`#${n()}`,type:`PICKUP`,status:`NEW`,items:e,customer:t,total:c(e),createdAt:new Date().toISOString()}}var u=null,d=[],f=[],p=`Tous`,m=null,h=[`Kebab`,`Poulet`,`Steak`,`Merguez`],g=[`Algérienne`,`Biggy`,`Blanche`,`Barbecue`,`Curry`,`Ketchup`,`Mayonnaise`,`Samouraï`],_=[`Coca-Cola`,`Coca-Cola Zéro`,`Coca-Cola Cherry`,`Fanta Orange`,`Fanta Citron`,`Sprite`,`Oasis Tropical`,`Oasis Pomme Cassis`,`Ice Tea`,`Eau`],v=document.querySelector(`#root`),y=e=>`${Number(e??0).toFixed(2).replace(`.`,`,`)} €`,b=()=>f.reduce((e,t)=>e+Number(t.quantity??0),0);function x(e){return String(e??``).replaceAll(`&`,`&amp;`).replaceAll(`<`,`&lt;`).replaceAll(`>`,`&gt;`).replaceAll(`"`,`&quot;`).replaceAll(`'`,`&#039;`)}function S(){return u?.name||`FOODATOI`}function C(){return u?.phone||``}function w(){let e=u?.address;return e?typeof e==`string`?e:typeof e==`object`?[e.street,e.postal_code||e.postalCode,e.city].filter(Boolean).join(` · `):``:``}function T(){return u?.primary_color||`#111111`}async function E(){return u=await o(n),console.info(`[FOODATOI] Restaurant résolu:`,u),D(),m=e(n,u.id),u}function D(){u&&(document.documentElement.style.setProperty(`--restaurant-primary`,T()),document.title=`${S()} · FOODATOI`)}function O(e){let t=e.options&&typeof e.options==`object`?e.options:{},n=Number(e.price_cents??0)/100;return{id:e.id,category:e.category||`Autres`,name:e.name||`Produit`,description:e.description||``,price:n,emoji:t.emoji||t.icon||`🍽️`,options:t,meat:!!(t.meat||t.meats||t.viande||t.viandes),sauce:!!(t.sauce||t.sauces),drink:!!(t.drink||t.drinks||t.boisson||t.boissons),multipleMeat:!!(t.multipleMeat||t.multiple_meat),tripleMeat:!!(t.tripleMeat||t.triple_meat)}}async function k(){if(!n)throw Error(`Supabase n’est pas configuré.`);if(!u?.id)throw Error(`Restaurant non résolu.`);let{data:e,error:t}=await n.from(`products`).select(`
+import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.js";function s(e,t){return[...e,{...t,quantity:t.quantity??1}]}function c(e){return Number(e.reduce((e,t)=>e+t.price*t.quantity,0).toFixed(2))}function l(e,t,n=()=>Date.now()){return{number:`#${n()}`,type:`PICKUP`,status:`NEW`,items:e,customer:t,total:c(e),createdAt:new Date().toISOString()}}var u=null,d=[],f=[],p=`Tous`,m=null,h=[`Kebab`,`Poulet`,`Steak`,`Merguez`],g=[`Algérienne`,`Biggy`,`Blanche`,`Barbecue`,`Curry`,`Ketchup`,`Mayonnaise`,`Samouraï`],_=[`Coca-Cola`,`Coca-Cola Zéro`,`Coca-Cola Cherry`,`Fanta Orange`,`Fanta Citron`,`Sprite`,`Oasis Tropical`,`Oasis Pomme Cassis`,`Ice Tea`,`Eau`],v=document.querySelector(`#root`),y=e=>`${Number(e??0).toFixed(2).replace(`.`,`,`)} €`,b=()=>f.reduce((e,t)=>e+Number(t.quantity??0),0);function x(e){return String(e??``).replaceAll(`&`,`&amp;`).replaceAll(`<`,`&lt;`).replaceAll(`>`,`&gt;`).replaceAll(`"`,`&quot;`).replaceAll(`'`,`&#039;`)}function S(){return u?.name||`FOODATOI`}function C(){return u?.phone||``}function w(){let e=u?.address;return e?typeof e==`string`?e:typeof e==`object`?[e.street,e.postal_code||e.postalCode,e.city].filter(Boolean).join(` · `):``:``}function T(){return u?.primary_color||`#111111`}async function E(){return u=await o(n),console.info(`[FOODATOI] Restaurant résolu:`,u),D(),m=e(n,u.id),u}function D(){u&&(document.documentElement.style.setProperty(`--restaurant-primary`,T()),document.title=`${S()} · FOODATOI`)}function O(e){if(!Array.isArray(e)||!e.length)return null;let t=[...e].sort((e,t)=>e.is_primary===t.is_primary?(e.sort_order??0)-(t.sort_order??0):e.is_primary?-1:1)[0]?.public_url;return t?/^https?:\/\//i.test(t)?t:`/Mvp-/${t.replace(/^\/+/,``)}`:null}function k(e){let t=e.options&&typeof e.options==`object`?e.options:{},n=Number(e.price_cents??0)/100;return{id:e.id,category:e.category||`Autres`,name:e.name||`Produit`,description:e.description||``,price:n,emoji:t.emoji||t.icon||`🍽️`,imageUrl:O(e.product_images),options:t,meat:!!(t.meat||t.meats||t.viande||t.viandes),sauce:!!(t.sauce||t.sauces),drink:!!(t.drink||t.drinks||t.boisson||t.boissons),multipleMeat:!!(t.multipleMeat||t.multiple_meat),tripleMeat:!!(t.tripleMeat||t.triple_meat)}}async function A(){if(!n)throw Error(`Supabase n’est pas configuré.`);if(!u?.id)throw Error(`Restaurant non résolu.`);let{data:e,error:t}=await n.from(`products`).select(`
       id,
       name,
       category,
@@ -8,8 +8,13 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
       is_active,
       sort_order,
       restaurant_id,
-      created_at
-    `).eq(`restaurant_id`,u.id).eq(`is_active`,!0).order(`sort_order`,{ascending:!0,nullsFirst:!1}).order(`created_at`,{ascending:!0});if(t)throw console.error(`[FOODATOI] Erreur chargement catalogue:`,t),t;return d=(e??[]).filter(e=>e.restaurant_id===u.id).map(O),p=`Tous`,console.info(`[FOODATOI] ${d.length} produit(s) chargé(s) pour ${S()}.`),d}function A(){return[`Tous`,...new Set(d.map(e=>e.category).filter(Boolean))]}function j(){v.innerHTML=`
+      created_at,
+      product_images (
+        public_url,
+        is_primary,
+        sort_order
+      )
+    `).eq(`restaurant_id`,u.id).eq(`is_active`,!0).order(`sort_order`,{ascending:!0,nullsFirst:!1}).order(`created_at`,{ascending:!0});if(t)throw console.error(`[FOODATOI] Erreur chargement catalogue:`,t),t;return d=(e??[]).filter(e=>e.restaurant_id===u.id).map(k),p=`Tous`,console.info(`[FOODATOI] ${d.length} produit(s) chargé(s) pour ${S()}.`),d}function j(){return[`Tous`,...new Set(d.map(e=>e.category).filter(Boolean))]}function M(){v.innerHTML=`
     <div class="app-frame">
 
       <main>
@@ -38,7 +43,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
       </main>
 
     </div>
-  `}function M(e){console.error(`[FOODATOI] Erreur application:`,e),v.innerHTML=`
+  `}function N(e){console.error(`[FOODATOI] Erreur application:`,e),v.innerHTML=`
     <div class="app-frame">
 
       <main>
@@ -76,7 +81,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
       </main>
 
     </div>
-  `}function N(){let e=A(),t=S(),n=w(),r=C();v.innerHTML=`
+  `}function P(){let e=j(),t=S(),n=w(),r=C();v.innerHTML=`
     <div class="app-frame">
 
       <header class="masthead">
@@ -299,7 +304,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
 
           <div class="menu-grid">
 
-            ${d.length?d.filter(e=>p===`Tous`||e.category===p).map(P).join(``):`
+            ${d.length?d.filter(e=>p===`Tous`||e.category===p).map(F).join(``):`
                   <div class="empty-ticket">
 
                     <div class="empty-ticket-mark">
@@ -430,13 +435,19 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
       ></div>
 
     </div>
-  `,F(),W()}function P(e){return`
+  `,I(),G()}function F(e){return`
     <article class="menu-card">
 
       <div class="menu-card-top">
 
         <span class="menu-icon">
-          ${x(e.emoji)}
+          ${e.imageUrl?`
+                <img
+                  src="${x(e.imageUrl)}"
+                  alt=""
+                  loading="lazy"
+                >
+              `:x(e.emoji)}
         </span>
 
         <span class="category-tag">
@@ -483,7 +494,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
       </div>
 
     </article>
-  `}function F(){document.querySelectorAll(`[data-category]`).forEach(e=>{e.onclick=()=>{p=e.dataset.category,N()}}),document.querySelectorAll(`[data-add]`).forEach(e=>{e.onclick=()=>I(e.dataset.add)});let e=document.querySelector(`#open-cart`);e&&(e.onclick=H);let t=document.querySelector(`#close-cart`);t&&(t.onclick=U);let n=document.querySelector(`#backdrop`);n&&(n.onclick=U)}function I(e){let t=d.find(t=>t.id===e);if(!t)return;let n=R(t),r=z(t),i=B(t);document.querySelector(`#modal-content`).innerHTML=`
+  `}function I(){document.querySelectorAll(`[data-category]`).forEach(e=>{e.onclick=()=>{p=e.dataset.category,P()}}),document.querySelectorAll(`[data-add]`).forEach(e=>{e.onclick=()=>L(e.dataset.add)});let e=document.querySelector(`#open-cart`);e&&(e.onclick=U);let t=document.querySelector(`#close-cart`);t&&(t.onclick=W);let n=document.querySelector(`#backdrop`);n&&(n.onclick=W)}function L(e){let t=d.find(t=>t.id===e);if(!t)return;let n=z(t),r=B(t),i=V(t);document.querySelector(`#modal-content`).innerHTML=`
 
     <button
       class="modal-close"
@@ -542,12 +553,12 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
     >
       Ajouter · ${y(t.price)}
     </button>
-  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#modal-close`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`)},document.querySelector(`#confirm-add`).onclick=()=>{let e=Math.max(1,Math.min(20,Number(document.querySelector(`#qty`).value||1))),n={},r=document.querySelector(`#meat-1`)?.value,i=document.querySelector(`#meat-2`)?.value,a=document.querySelector(`#meat-3`)?.value,o=document.querySelector(`#sauce`)?.value,c=document.querySelector(`#drink`)?.value;r&&(n.meat=r),i&&(n.meat2=i),a&&(n.meat3=a),(i||a)&&(n.meats=[r,i,a].filter(Boolean)),o&&(n.sauce=o),c&&(n.drink=c),f=s(f,{...t,quantity:e,options:n}),document.querySelector(`#product-modal`).classList.add(`hidden`),N(),H()}}function L(e,t,n){for(let n of t)if(Array.isArray(e?.[n])&&e[n].length)return e[n];return n}function R(e){if(!e.meat)return``;let t=L(e.options,[`meats`,`meat`,`viandes`,`viande`],h);return e.tripleMeat?`
+  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#modal-close`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`)},document.querySelector(`#confirm-add`).onclick=()=>{let e=Math.max(1,Math.min(20,Number(document.querySelector(`#qty`).value||1))),n={},r=document.querySelector(`#meat-1`)?.value,i=document.querySelector(`#meat-2`)?.value,a=document.querySelector(`#meat-3`)?.value,o=document.querySelector(`#sauce`)?.value,c=document.querySelector(`#drink`)?.value;r&&(n.meat=r),i&&(n.meat2=i),a&&(n.meat3=a),(i||a)&&(n.meats=[r,i,a].filter(Boolean)),o&&(n.sauce=o),c&&(n.drink=c),f=s(f,{...t,quantity:e,options:n}),document.querySelector(`#product-modal`).classList.add(`hidden`),P(),U()}}function R(e,t,n){for(let n of t)if(Array.isArray(e?.[n])&&e[n].length)return e[n];return n}function z(e){if(!e.meat)return``;let t=R(e.options,[`meats`,`meat`,`viandes`,`viande`],h);return e.tripleMeat?`
       <label>
         VIANDE 1
 
         <select id="meat-1">
-          ${V(t)}
+          ${H(t)}
         </select>
       </label>
 
@@ -555,7 +566,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
         VIANDE 2
 
         <select id="meat-2">
-          ${V(t)}
+          ${H(t)}
         </select>
       </label>
 
@@ -563,7 +574,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
         VIANDE 3
 
         <select id="meat-3">
-          ${V(t)}
+          ${H(t)}
         </select>
       </label>
     `:e.multipleMeat?`
@@ -571,7 +582,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
         VIANDE 1
 
         <select id="meat-1">
-          ${V(t)}
+          ${H(t)}
         </select>
       </label>
 
@@ -579,7 +590,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
         VIANDE 2
 
         <select id="meat-2">
-          ${V(t)}
+          ${H(t)}
         </select>
       </label>
     `:`
@@ -587,26 +598,26 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
       VIANDE
 
       <select id="meat-1">
-        ${V(t)}
+        ${H(t)}
       </select>
     </label>
-  `}function z(e){return e.sauce?`
+  `}function B(e){return e.sauce?`
     <label>
       SAUCE
 
       <select id="sauce">
-        ${V(L(e.options,[`sauces`,`sauce`],g))}
+        ${H(R(e.options,[`sauces`,`sauce`],g))}
       </select>
     </label>
-  `:``}function B(e){return e.drink?`
+  `:``}function V(e){return e.drink?`
     <label>
       BOISSON
 
       <select id="drink">
-        ${V(L(e.options,[`drinks`,`drink`,`boissons`,`boisson`],_))}
+        ${H(R(e.options,[`drinks`,`drink`,`boissons`,`boisson`],_))}
       </select>
     </label>
-  `:``}function V(e){return e.map(e=>`<option value="${x(e)}">${x(e)}</option>`).join(``)}function H(){document.querySelector(`#drawer`).classList.add(`open`),document.querySelector(`#backdrop`).classList.remove(`hidden`),W()}function U(){document.querySelector(`#drawer`).classList.remove(`open`),document.querySelector(`#backdrop`).classList.add(`hidden`)}function W(){let e=document.querySelector(`#cart-content`);if(!e)return;if(!f.length){e.innerHTML=`
+  `:``}function H(e){return e.map(e=>`<option value="${x(e)}">${x(e)}</option>`).join(``)}function U(){document.querySelector(`#drawer`).classList.add(`open`),document.querySelector(`#backdrop`).classList.remove(`hidden`),G()}function W(){document.querySelector(`#drawer`).classList.remove(`open`),document.querySelector(`#backdrop`).classList.add(`hidden`)}function G(){let e=document.querySelector(`#cart-content`);if(!e)return;if(!f.length){e.innerHTML=`
       <div class="empty-ticket">
 
         <div class="empty-ticket-mark">
@@ -631,7 +642,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
         </button>
 
       </div>
-    `,e.querySelector(`#back-menu`).onclick=U;return}e.innerHTML=`
+    `,e.querySelector(`#back-menu`).onclick=W;return}e.innerHTML=`
     <div class="ticket-paper">
 
       <div class="ticket-header">
@@ -648,7 +659,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
 
       <div class="ticket-items">
 
-        ${f.map((e,t)=>G(e,t)).join(``)}
+        ${f.map((e,t)=>K(e,t)).join(``)}
 
       </div>
 
@@ -752,7 +763,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
       </small>
 
     </form>
-  `,e.querySelectorAll(`[data-remove]`).forEach(e=>{e.onclick=()=>{f.splice(Number(e.dataset.remove),1),W()}});let n=e.querySelector(`#order-form`);n&&(n.onsubmit=async e=>{if(e.preventDefault(),!t(u?.settings?.opening_hours)){W();return}let n=Object.fromEntries(new FormData(e.currentTarget));await q(l(f,n))})}function G(e,t){let n=K(e.options);return`
+  `,e.querySelectorAll(`[data-remove]`).forEach(e=>{e.onclick=()=>{f.splice(Number(e.dataset.remove),1),G()}});let n=e.querySelector(`#order-form`);n&&(n.onsubmit=async e=>{if(e.preventDefault(),!t(u?.settings?.opening_hours)){G();return}let n=Object.fromEntries(new FormData(e.currentTarget));await J(l(f,n))})}function K(e,t){let n=q(e.options);return`
     <div class="ticket-item">
 
       <div>
@@ -783,7 +794,7 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
       </button>
 
     </div>
-  `}function K(e={}){if(!e||typeof e!=`object`)return``;let t=[];return Array.isArray(e.meats)?t.push(`Viandes : ${e.meats.join(`, `)}`):e.meat&&t.push(`Viande : ${e.meat}`),e.sauce&&t.push(`Sauce : ${e.sauce}`),e.drink&&t.push(`Boisson : ${e.drink}`),t.join(` · `)}async function q(e){try{let t,n={...e,restaurant_id:u?.id||null,restaurantId:u?.id||null};if(!n.restaurant_id)throw Error(`Restaurant FOODATOI introuvable pour cette commande.`);if(m)t=await m.createOrder(n);else{let e=JSON.parse(localStorage.getItem(`foodatoi-orders`)||`[]`);t=r(e,n).at(-1),localStorage.setItem(`foodatoi-orders`,JSON.stringify([...e,t]))}f=[],J(t)}catch(e){console.error(`[FOODATOI] Erreur création commande:`,e),alert(String(e?.message||``).includes(`RESTAURANT_CLOSED`)?`Le restaurant est fermé actuellement, la commande n’a pas pu être envoyée.`:`Impossible d’envoyer la commande pour le moment.`)}}function J(e){let t=i(e);U(),document.querySelector(`#modal-content`).innerHTML=`
+  `}function q(e={}){if(!e||typeof e!=`object`)return``;let t=[];return Array.isArray(e.meats)?t.push(`Viandes : ${e.meats.join(`, `)}`):e.meat&&t.push(`Viande : ${e.meat}`),e.sauce&&t.push(`Sauce : ${e.sauce}`),e.drink&&t.push(`Boisson : ${e.drink}`),t.join(` · `)}async function J(e){try{let t,n={...e,restaurant_id:u?.id||null,restaurantId:u?.id||null};if(!n.restaurant_id)throw Error(`Restaurant FOODATOI introuvable pour cette commande.`);if(m)t=await m.createOrder(n);else{let e=JSON.parse(localStorage.getItem(`foodatoi-orders`)||`[]`);t=r(e,n).at(-1),localStorage.setItem(`foodatoi-orders`,JSON.stringify([...e,t]))}f=[],Y(t)}catch(e){console.error(`[FOODATOI] Erreur création commande:`,e),alert(String(e?.message||``).includes(`RESTAURANT_CLOSED`)?`Le restaurant est fermé actuellement, la commande n’a pas pu être envoyée.`:`Impossible d’envoyer la commande pour le moment.`)}}function Y(e){let t=i(e);W(),document.querySelector(`#modal-content`).innerHTML=`
     <div class="confirmation">
 
       <div class="confirmed-stamp">
@@ -858,4 +869,4 @@ import{a as e,c as t,i as n,l as r,n as i,o as a,t as o}from"./styles-Bn_ONc4a.j
       </button>
 
     </div>
-  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#done`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`),N()}}async function Y(){try{j(),await E(),await k(),N()}catch(e){M(e)}}Y();
+  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#done`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`),P()}}async function X(){try{M(),await E(),await A(),P()}catch(e){N(e)}}X();
