@@ -1,5 +1,5 @@
-import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async function a(e,t,n){let{data:r,error:i}=await e.auth.signInWithPassword({email:t,password:n});if(i)throw i;return r.session}async function o(e){let{data:t,error:n}=await e.auth.getSession();if(n)throw n;return t.session}async function s(e){let{error:t}=await e.auth.signOut();if(t)throw t}function c(e){let t=new Map;for(let n of e??[]){let e=n.order_items??n.items??[];for(let n of e){let e=n.product_name??n.name??`Article`,r=n.options?.meat??``,i=n.options?.sauce??``,a=n.options?.drink??``,o=[e,r,i,a].join(`|`),s=Number(n.quantity??0),c=Math.round(n.line_total_cents??(n.price??0)*s*100),l=t.get(o);l?(l.quantity+=s,l.revenueCents+=c):t.set(o,{name:e,meat:r,sauce:i,drink:a,quantity:s,revenueCents:c})}}return[...t.values()].sort((e,t)=>t.quantity-e.quantity||e.name.localeCompare(t.name))}function l(e){let t=e=>{let t=String(e??``);return/[;"\n]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t},n=[`Article`,`Viande`,`Sauce`,`Boisson`,`Quantité`,`Total (€)`],r=(e??[]).map(e=>[e.name,e.meat,e.sauce,e.drink,e.quantity,(e.revenueCents/100).toFixed(2).replace(`.`,`,`)].map(t).join(`;`));return[n.join(`;`),...r].join(`
-`)}function u(e,t={},n=(e=``,t=`_blank`)=>window.open(e,t)){let r=n(``,`_blank`);if(!r)return!1;let i=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,a=(e??[]).reduce((e,t)=>e+t.quantity,0),o=(e??[]).reduce((e,t)=>e+t.revenueCents,0),s=(e??[]).map(e=>`
+import{a as e,i as t,l as n,o as r,r as i,t as a}from"./styles-DagaTrij.js";async function o(e,t,n){let{data:r,error:i}=await e.auth.signInWithPassword({email:t,password:n});if(i)throw i;return r.session}async function s(e){let{data:t,error:n}=await e.auth.getSession();if(n)throw n;return t.session}async function c(e){let{error:t}=await e.auth.signOut();if(t)throw t}function l(e){let t=new Map;for(let n of e??[]){let e=n.order_items??n.items??[];for(let n of e){let e=n.product_name??n.name??`Article`,r=n.options?.meat??``,i=n.options?.sauce??``,a=n.options?.drink??``,o=[e,r,i,a].join(`|`),s=Number(n.quantity??0),c=Math.round(n.line_total_cents??(n.price??0)*s*100),l=t.get(o);l?(l.quantity+=s,l.revenueCents+=c):t.set(o,{name:e,meat:r,sauce:i,drink:a,quantity:s,revenueCents:c})}}return[...t.values()].sort((e,t)=>t.quantity-e.quantity||e.name.localeCompare(t.name))}function u(e){let t=e=>{let t=String(e??``);return/[;"\n]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t},n=[`Article`,`Viande`,`Sauce`,`Boisson`,`Quantité`,`Total (€)`],r=(e??[]).map(e=>[e.name,e.meat,e.sauce,e.drink,e.quantity,(e.revenueCents/100).toFixed(2).replace(`.`,`,`)].map(t).join(`;`));return[n.join(`;`),...r].join(`
+`)}function d(e,t={},n=(e=``,t=`_blank`)=>window.open(e,t)){let r=n(``,`_blank`);if(!r)return!1;let i=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,a=(e??[]).reduce((e,t)=>e+t.quantity,0),o=(e??[]).reduce((e,t)=>e+t.revenueCents,0),s=(e??[]).map(e=>`
         <tr>
           <td>${e.name}</td>
           <td>${[e.meat,e.sauce,e.drink].filter(Boolean).join(` · `)||`—`}</td>
@@ -54,7 +54,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
         </table>
       </body>
     </html>
-  `),r.document.close(),r.focus(),r.print(),!0}function d(e,t,n){if(!e)return null;let r=`caz-food-orders-${Date.now()}`,i=e.channel(r,{config:{broadcast:{self:!1},presence:{key:``}}}).on(`postgres_changes`,{event:`INSERT`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Nouvelle commande reçue`,e),t(e)}).on(`postgres_changes`,{event:`UPDATE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande mise à jour`,e),t(e)}).on(`postgres_changes`,{event:`DELETE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande supprimée`,e),t(e)});return i.subscribe((e,t)=>{console.log(`[Realtime] Statut:`,e),t&&console.error(`[Realtime] Erreur:`,t),e===`SUBSCRIBED`&&console.log(`[Realtime] Abonnement actif pour public.orders`),e===`CHANNEL_ERROR`&&console.error(`[Realtime] CHANNEL_ERROR`,t),e===`TIMED_OUT`&&console.error(`[Realtime] TIMED_OUT`),e===`CLOSED`&&console.warn(`[Realtime] Canal fermé`),n?.(e,t)}),i}function f(e,t=(e=``,t=`_blank`)=>window.open(e,t)){let n=t(``,`_blank`);if(!n)return!1;let r=e.order_items??e.items??[],i=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,a=e.pickup_time?new Date(e.pickup_time).toLocaleTimeString(`fr-FR`,{hour:`2-digit`,minute:`2-digit`}):`—`,o=r.map(e=>`
+  `),r.document.close(),r.focus(),r.print(),!0}function f(e,t,n){if(!e)return null;let r=`caz-food-orders-${Date.now()}`,i=e.channel(r,{config:{broadcast:{self:!1},presence:{key:``}}}).on(`postgres_changes`,{event:`INSERT`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Nouvelle commande reçue`,e),t(e)}).on(`postgres_changes`,{event:`UPDATE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande mise à jour`,e),t(e)}).on(`postgres_changes`,{event:`DELETE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande supprimée`,e),t(e)});return i.subscribe((e,t)=>{console.log(`[Realtime] Statut:`,e),t&&console.error(`[Realtime] Erreur:`,t),e===`SUBSCRIBED`&&console.log(`[Realtime] Abonnement actif pour public.orders`),e===`CHANNEL_ERROR`&&console.error(`[Realtime] CHANNEL_ERROR`,t),e===`TIMED_OUT`&&console.error(`[Realtime] TIMED_OUT`),e===`CLOSED`&&console.warn(`[Realtime] Canal fermé`),n?.(e,t)}),i}function p(e,t=(e=``,t=`_blank`)=>window.open(e,t)){let n=t(``,`_blank`);if(!n)return!1;let i=e.order_items??e.items??[],a=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,o=r(e.pickup_time),s=i.map(e=>`
         <div class="row">
           <div>
             <strong>
@@ -67,7 +67,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
             </small>
           </div>
           <b>
-            ${i(e.line_total_cents??(e.price||0)*e.quantity*100)}
+            ${a(e.line_total_cents??(e.price||0)*e.quantity*100)}
           </b>
         </div>
       `).join(``);return n.document.write(`
@@ -129,7 +129,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
 
         <div class="line"></div>
 
-        ${o||`<div>Détail des articles indisponible</div>`}
+        ${s||`<div>Détail des articles indisponible</div>`}
 
         <div class="line"></div>
 
@@ -145,13 +145,13 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
 
         <div>
           RETRAIT :
-          ${a}
+          ${o}
         </div>
 
         <div class="total">
           <span>TOTAL</span>
           <span>
-            ${i(e.total_cents??Number(e.total||0)*100)}
+            ${a(e.total_cents??Number(e.total||0)*100)}
           </span>
         </div>
 
@@ -160,7 +160,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
         </div>
       </body>
     </html>
-  `),n.document.close(),n.focus(),n.print(),!0}var p=document.querySelector(`#admin-root`),m={NEW:`Nouvelle`,ACCEPTED:`Acceptée`,PREPARING:`En préparation`,READY:`Prête`,CANCELLED:`Annulée`},h=null,g=`local`,_=null,v=null,y=null;function b(){return JSON.parse(localStorage.getItem(`caz-food-orders`)||`[]`)}function x(e){localStorage.setItem(`caz-food-orders`,JSON.stringify(e))}function S(e){return`${Number(e).toFixed(2).replace(`.`,`,`)} €`}function C(e){if(!e)return`—`;let t=String(e).trim(),n=t.match(/^\d{4}-\d{2}-\d{2}[T ](\d{2}:\d{2})/);if(n)return n[1];let r=t.match(/^(\d{2}):(\d{2})/);return r?`${r[1]}:${r[2]}`:`—`}async function w(){if(!t){E();return}try{v=await o(t)}catch(e){console.error(`Erreur récupération session:`,e),O();return}if(v){try{y=await i(t)}catch(e){console.error(`Erreur résolution restaurant:`,e),D(e);return}h=e(t,y.id),g=`remote`,T(),await j();return}O()}function T(){_&&t&&t.removeChannel(_),t&&v?.access_token&&t.realtime.setAuth(v.access_token),_=d(t,()=>j(),e=>{(e===`CLOSED`||e===`TIMED_OUT`||e===`CHANNEL_ERROR`)&&g===`remote`&&(console.warn(`[Realtime] Reconnexion dans 3s...`),setTimeout(()=>{g===`remote`&&T()},3e3))})}function E(){p.innerHTML=`
+  `),n.document.close(),n.focus(),n.print(),!0}var m=document.querySelector(`#admin-root`),h={NEW:`Nouvelle`,ACCEPTED:`Acceptée`,PREPARING:`En préparation`,READY:`Prête`,CANCELLED:`Annulée`},g=null,_=`local`,v=null,y=null,b=null;function x(){return JSON.parse(localStorage.getItem(`caz-food-orders`)||`[]`)}function S(e){localStorage.setItem(`caz-food-orders`,JSON.stringify(e))}function C(e){return`${Number(e).toFixed(2).replace(`.`,`,`)} €`}async function w(){if(!t){E();return}try{y=await s(t)}catch(e){console.error(`Erreur récupération session:`,e),O();return}if(y){try{b=await a(t)}catch(e){console.error(`Erreur résolution restaurant:`,e),D(e);return}g=e(t,b.id),_=`remote`,T(),await j();return}O()}function T(){v&&t&&t.removeChannel(v),t&&y?.access_token&&t.realtime.setAuth(y.access_token),v=f(t,()=>j(),e=>{(e===`CLOSED`||e===`TIMED_OUT`||e===`CHANNEL_ERROR`)&&_===`remote`&&(console.warn(`[Realtime] Reconnexion dans 3s...`),setTimeout(()=>{_===`remote`&&T()},3e3))})}function E(){m.innerHTML=`
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
@@ -182,7 +182,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
         </p>
       </div>
     </main>
-  `}function D(e){p.innerHTML=`
+  `}function D(e){m.innerHTML=`
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
@@ -212,7 +212,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
         </a>
       </div>
     </main>
-  `,p.querySelector(`#retry-restaurant`).onclick=()=>w()}function O(n=``){p.innerHTML=`
+  `,m.querySelector(`#retry-restaurant`).onclick=()=>w()}function O(n=``){m.innerHTML=`
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
@@ -271,7 +271,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
         </a>
       </div>
     </main>
-  `;let r=p.querySelector(`#login-form`);r.onsubmit=async n=>{n.preventDefault();let r=new FormData(n.currentTarget),o=n.currentTarget.querySelector(`button`);o.disabled=!0,o.textContent=`CONNEXION…`;try{v=await a(t,r.get(`email`),r.get(`password`))}catch(e){console.error(`Erreur connexion admin:`,e),O(`Email ou mot de passe incorrect.`);return}try{y=await i(t),h=e(t,y.id),g=`remote`,T(),await j()}catch(e){console.error(`Erreur résolution restaurant:`,e),D(e)}}}async function k(){if(g===`remote`)try{return await h.listOrders()}catch(e){return console.error(`Erreur récupération commandes:`,e),[]}return b()}async function A(e){let t={NEW:`ACCEPTED`,ACCEPTED:`PREPARING`,PREPARING:`READY`}[e.status];if(t)try{g===`remote`?await h.updateStatus(e.id,t):x(r(b(),e.id,t)),await j()}catch(e){console.error(`Erreur changement statut:`,e),alert(`Impossible de modifier le statut de la commande.`)}}async function j(){if(!v&&g===`remote`){O();return}let e=(await k()).slice().sort((e,t)=>new Date(t.created_at??t.createdAt)-new Date(e.created_at??e.createdAt)),n=e.reduce((e,t)=>e+Number(t.total??(t.total_cents??0)/100),0);p.innerHTML=`
+  `;let r=m.querySelector(`#login-form`);r.onsubmit=async n=>{n.preventDefault();let r=new FormData(n.currentTarget),i=n.currentTarget.querySelector(`button`);i.disabled=!0,i.textContent=`CONNEXION…`;try{y=await o(t,r.get(`email`),r.get(`password`))}catch(e){console.error(`Erreur connexion admin:`,e),O(`Email ou mot de passe incorrect.`);return}try{b=await a(t),g=e(t,b.id),_=`remote`,T(),await j()}catch(e){console.error(`Erreur résolution restaurant:`,e),D(e)}}}async function k(){if(_===`remote`)try{return await g.listOrders()}catch(e){return console.error(`Erreur récupération commandes:`,e),[]}return x()}async function A(e){let t={NEW:`ACCEPTED`,ACCEPTED:`PREPARING`,PREPARING:`READY`}[e.status];if(t)try{_===`remote`?await g.updateStatus(e.id,t):S(n(x(),e.id,t)),await j()}catch(e){console.error(`Erreur changement statut:`,e),alert(`Impossible de modifier le statut de la commande.`)}}async function j(){if(!y&&_===`remote`){O();return}let e=(await k()).slice().sort((e,t)=>new Date(t.created_at??t.createdAt)-new Date(e.created_at??e.createdAt)),n=e.reduce((e,t)=>e+Number(t.total??(t.total_cents??0)/100),0);m.innerHTML=`
     <main class="admin-shell">
       <header class="admin-header">
         <div>
@@ -282,7 +282,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
             Le comptoir.
           </h1>
           <p>
-            ${g===`remote`?`Commandes en direct · Supabase Realtime`:`Mode démo local`}
+            ${_===`remote`?`Commandes en direct · Supabase Realtime`:`Mode démo local`}
           </p>
         </div>
         <div class="admin-actions">
@@ -342,7 +342,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
             Commandé
           </span>
           <strong>
-            ${S(n)}
+            ${C(n)}
           </strong>
         </div>
       </section>
@@ -364,10 +364,10 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
       </section>
       <p class="admin-note">
         ●
-        ${g===`remote`?`Temps réel actif. Les nouvelles commandes apparaissent automatiquement.`:`Mode démo local.`}
+        ${_===`remote`?`Temps réel actif. Les nouvelles commandes apparaissent automatiquement.`:`Mode démo local.`}
       </p>
     </main>
-  `;let r=p.querySelector(`#logout`);r&&(r.onclick=async()=>{try{_&&t&&await t.removeChannel(_),t&&await s(t)}finally{v=null,y=null,h=null,g=`local`,_=null,O()}}),p.querySelectorAll(`[data-next]`).forEach(t=>{t.onclick=()=>{let n=e.find(e=>String(e.id??``)===String(t.dataset.id));n&&A(n)}}),p.querySelectorAll(`[data-print]`).forEach(t=>{t.onclick=()=>{let n=e.find(e=>String(e.id??``)===String(t.dataset.id));n&&f(n)}});let i=p.querySelector(`#export-stock`);i&&(i.onclick=()=>M(e));let a=p.querySelector(`#print-stock`);a&&(a.onclick=()=>u(c(e),{rangeLabel:`${e.length} commande${e.length>1?`s`:``} affichée${e.length>1?`s`:``}`})),p.querySelectorAll(`.order-card`).forEach(t=>{t.onclick=n=>{if(n.target.closest(`button`))return;let r=e.find(e=>String(e.id??``)===String(t.dataset.order));r&&P(r)}})}function M(e){let t=l(c(e)),n=new Blob([`﻿`+t],{type:`text/csv;charset=utf-8;`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=`caz-food-stock-${new Date().toISOString().slice(0,10)}.csv`,i.click(),URL.revokeObjectURL(r)}function N(){let e=document.querySelector(`#order-detail-overlay`);e&&e.remove()}async function P(e){let t=e.items??e.order_items??[],n=e.total??(e.total_cents??0)/100,r=document.createElement(`div`);if(r.id=`order-detail-overlay`,r.className=`modal`,r.innerHTML=`
+  `;let r=m.querySelector(`#logout`);r&&(r.onclick=async()=>{try{v&&t&&await t.removeChannel(v),t&&await c(t)}finally{y=null,b=null,g=null,_=`local`,v=null,O()}}),m.querySelectorAll(`[data-next]`).forEach(t=>{t.onclick=()=>{let n=e.find(e=>String(e.id??``)===String(t.dataset.id));n&&A(n)}}),m.querySelectorAll(`[data-print]`).forEach(t=>{t.onclick=()=>{let n=e.find(e=>String(e.id??``)===String(t.dataset.id));n&&p(n)}});let i=m.querySelector(`#export-stock`);i&&(i.onclick=()=>M(e));let a=m.querySelector(`#print-stock`);a&&(a.onclick=()=>d(l(e),{rangeLabel:`${e.length} commande${e.length>1?`s`:``} affichée${e.length>1?`s`:``}`})),m.querySelectorAll(`.order-card`).forEach(t=>{t.onclick=n=>{if(n.target.closest(`button`))return;let r=e.find(e=>String(e.id??``)===String(t.dataset.order));r&&P(r)}})}function M(e){let t=u(l(e)),n=new Blob([`﻿`+t],{type:`text/csv;charset=utf-8;`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=`caz-food-stock-${new Date().toISOString().slice(0,10)}.csv`,i.click(),URL.revokeObjectURL(r)}function N(){let e=document.querySelector(`#order-detail-overlay`);e&&e.remove()}async function P(e){let t=e.items??e.order_items??[],n=e.total??(e.total_cents??0)/100,i=document.createElement(`div`);if(i.id=`order-detail-overlay`,i.className=`modal`,i.innerHTML=`
     <div class="modal-card order-detail-card">
       <button
         class="modal-close"
@@ -378,7 +378,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
       <p class="eyebrow">
         ${e.number??e.order_number??`—`}
         ·
-        ${m[e.status]??e.status}
+        ${h[e.status]??e.status}
       </p>
       <h2>
         ${e.customer?.name??e.customer_name??`Client`}
@@ -386,7 +386,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
       <p>
         ${e.customer?.phone??e.customer_phone??`—`}
         · retrait
-        ${C(e.pickup_time)||`—`}
+        ${r(e.pickup_time)||`—`}
       </p>
       <table class="detail-items">
         <tbody>
@@ -403,7 +403,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
                     </small>
                   </td>
                   <td class="num">
-                    ${S((e.line_total_cents??(e.price??0)*e.quantity*100)/100)}
+                    ${C((e.line_total_cents??(e.price??0)*e.quantity*100)/100)}
                   </td>
                 </tr>
               `).join(``)}
@@ -412,7 +412,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
           <tr>
             <td>Total</td>
             <td class="num">
-              ${S(n)}
+              ${C(n)}
             </td>
           </tr>
         </tfoot>
@@ -428,7 +428,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
           Historique
         </p>
         <p class="detail-timeline-loading">
-          ${g===`remote`?`Chargement…`:`Non disponible en mode local.`}
+          ${_===`remote`?`Chargement…`:`Non disponible en mode local.`}
         </p>
       </div>
       <button
@@ -438,7 +438,7 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
         ⌁ Imprimer le ticket
       </button>
     </div>
-  `,document.body.appendChild(r),r.onclick=e=>{e.target===r&&N()},r.querySelector(`#close-order-detail`).onclick=N,r.querySelector(`#print-from-detail`).onclick=()=>f(e),g===`remote`&&h?.getOrderEvents)try{let t=await h.getOrderEvents(e.id),n=r.querySelector(`#detail-timeline`);if(!n)return;n.innerHTML=`
+  `,document.body.appendChild(i),i.onclick=e=>{e.target===i&&N()},i.querySelector(`#close-order-detail`).onclick=N,i.querySelector(`#print-from-detail`).onclick=()=>p(e),_===`remote`&&g?.getOrderEvents)try{let t=await g.getOrderEvents(e.id),n=i.querySelector(`#detail-timeline`);if(!n)return;n.innerHTML=`
         <p class="eyebrow">
           Historique
         </p>
@@ -449,9 +449,9 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
                         <span>
                           ${new Date(e.created_at).toLocaleTimeString(`fr-FR`,{hour:`2-digit`,minute:`2-digit`})}
                         </span>
-                        ${m[e.from_status]??e.from_status??`—`}
+                        ${h[e.from_status]??e.from_status??`—`}
                         →
-                        ${m[e.to_status]??e.to_status}
+                        ${h[e.to_status]??e.to_status}
                       </li>
                     `).join(``)}
               </ul>
@@ -460,13 +460,13 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
                 Aucun changement de statut encore.
               </p>
             `}
-      `}catch(e){console.error(`Erreur historique commande:`,e);let t=r.querySelector(`.detail-timeline-loading`);t&&(t.textContent=`Historique indisponible.`)}}function F(e){let t=e.status,r=e.items??e.order_items??[],i={...e.customer??{},name:e.customer?.name??e.customer_name??`Client`,phone:e.customer?.phone??e.customer_phone??`—`,pickupTime:C(e.pickup_time)},a=e.number??e.order_number??`—`,o=e.total??(e.total_cents??0)/100,s=n(t),c=s?`
+      `}catch(e){console.error(`Erreur historique commande:`,e);let t=i.querySelector(`.detail-timeline-loading`);t&&(t.textContent=`Historique indisponible.`)}}function F(e){let t=e.status,n=e.items??e.order_items??[],a={...e.customer??{},name:e.customer?.name??e.customer_name??`Client`,phone:e.customer?.phone??e.customer_phone??`—`,pickupTime:r(e.pickup_time)},o=e.number??e.order_number??`—`,s=e.total??(e.total_cents??0)/100,c=i(t),l=c?`
         <button
           class="primary"
           data-next
           data-id="${e.id}"
         >
-          ${s} →
+          ${c} →
         </button>
       `:`
         <span class="ready-badge">
@@ -480,27 +480,27 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
       <header>
         <div>
           <span class="order-number">
-            ${a}
+            ${o}
           </span>
           <span class="status">
-            ${m[t]??t}
+            ${h[t]??t}
           </span>
         </div>
         <strong>
-          ${i.pickupTime||`—`}
+          ${a.pickupTime||`—`}
         </strong>
       </header>
       <div class="order-customer">
         <strong>
-          ${i.name}
+          ${a.name}
         </strong>
         <span>
-          ${i.phone}
+          ${a.phone}
         </span>
       </div>
-      ${r.length?`
+      ${n.length?`
             <ul>
-              ${r.map(e=>`
+              ${n.map(e=>`
                     <li>
                       <strong>
                         ${e.quantity}×
@@ -531,10 +531,10 @@ import{a as e,i as t,r as n,s as r,t as i}from"./styles-rPYQDQcW.js";async funct
           `}
       <footer>
         <strong>
-          ${S(o)}
+          ${C(s)}
         </strong>
         <div class="order-actions">
-          ${c}
+          ${l}
           <button
             class="print-button"
             data-print
