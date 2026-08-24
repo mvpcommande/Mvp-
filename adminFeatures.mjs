@@ -162,7 +162,7 @@ export function printStockSummary(
   return true;
 }
 
-export function subscribeToOrderChanges(client, callback) {
+export function subscribeToOrderChanges(client, callback, onStatusChange) {
   if (!client) return null;
 
   const channelName = `caz-food-orders-${Date.now()}`;
@@ -233,6 +233,8 @@ export function subscribeToOrderChanges(client, callback) {
     if (status === 'CLOSED') {
       console.warn('[Realtime] Canal fermé');
     }
+
+    onStatusChange?.(status, error);
   });
 
   return channel;

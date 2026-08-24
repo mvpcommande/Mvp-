@@ -128,10 +128,50 @@ function subscribeRealtime() {
       realtimeChannel
     );
   }
+  /*
+   * IMPORTANT :
+   *
+   * S'abonner tout de suite après signInAdmin()/
+   * getAdminSession() peut, selon le timing, créer
+   * le canal avant que le token soit propagé au
+   * client realtime, et donc s'abonner en tant
+   * qu'anon (aucun droit de lecture sur orders,
+   * donc aucun événement ne remonte, sans erreur).
+   *
+   * On force explicitement l'auth du client realtime
+   * avec le token de session avant de créer le canal.
+   */
+  if (
+    supabase &&
+    session?.access_token
+  ) {
+    supabase.realtime.setAuth(
+      session.access_token
+    );
+  }
   realtimeChannel =
     subscribeToOrderChanges(
       supabase,
-      () => render()
+      () => render(),
+      (status) => {
+        const dropped =
+          status === 'CLOSED' ||
+          status === 'TIMED_OUT' ||
+          status === 'CHANNEL_ERROR';
+        if (
+          dropped &&
+          mode === 'remote'
+        ) {
+          console.warn(
+            '[Realtime] Reconnexion dans 3s...'
+          );
+          setTimeout(() => {
+            if (mode === 'remote') {
+              subscribeRealtime();
+            }
+          }, 3000);
+        }
+      }
     );
 }
 function renderSetup() {

@@ -89,6 +89,20 @@ test('realtime subscription listens to order changes', () => {
   assert.equal(calls.at(-1)[0], 'subscribe');
 });
 
+test('realtime subscription reports channel status to onStatusChange', () => {
+  let subscribeCallback;
+  const channel = {
+    on: () => channel,
+    subscribe: (cb) => { subscribeCallback = cb; return channel; }
+  };
+  const client = { channel: () => channel };
+  const statuses = [];
+  subscribeToOrderChanges(client, () => {}, (status) => statuses.push(status));
+  subscribeCallback('SUBSCRIBED', null);
+  subscribeCallback('CHANNEL_ERROR', new Error('boom'));
+  assert.deepEqual(statuses, ['SUBSCRIBED', 'CHANNEL_ERROR']);
+});
+
 test('printOrder opens a print window with ticket markup', () => {
   let opened = null;
   const win = { document: { write: (html) => { opened = html; }, close: () => {}, title: '' }, focus: () => {}, print: () => {} };
