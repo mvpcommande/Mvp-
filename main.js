@@ -74,20 +74,29 @@ let remoteStore = null;
 
 const MEATS = [
   'Kebab',
-  'Poulet',
-  'Steak',
-  'Merguez'
+  'Poulet Paprika',
+  'Tenders',
+  'Kefta',
+  'Merguez',
+  'Nuggets',
+  'Steak Haché',
+  'Cordon Bleu',
+  'Veggy'
 ];
 
 const SAUCES = [
-  'Algérienne',
-  'Biggy',
-  'Blanche',
-  'Barbecue',
-  'Curry',
   'Ketchup',
-  'Mayonnaise',
-  'Samouraï'
+  'Biggy',
+  'Marocaine',
+  'Mayo',
+  'Blanche',
+  'Curry',
+  'Algérienne',
+  'Harissa',
+  'Andalouse',
+  'Brésilienne',
+  'Moutarde',
+  'Fromagère'
 ];
 
 const DRINKS = [
@@ -99,6 +108,8 @@ const DRINKS = [
   'Sprite',
   'Oasis Tropical',
   'Oasis Pomme Cassis',
+  'Capri-Sun',
+  'Redbull',
   'Ice Tea',
   'Eau'
 ];
