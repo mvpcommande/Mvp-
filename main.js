@@ -100,18 +100,12 @@ const SAUCES = [
 ];
 
 const DRINKS = [
-  'Coca-Cola',
-  'Coca-Cola Zéro',
-  'Coca-Cola Cherry',
-  'Fanta Orange',
-  'Fanta Citron',
-  'Sprite',
-  'Oasis Tropical',
-  'Oasis Pomme Cassis',
-  'Capri-Sun',
+  'Canette',
+  'Bouteille',
+  'Eau',
   'Redbull',
-  'Ice Tea',
-  'Eau'
+  'Compote',
+  'Capri-Sun'
 ];
 
 const app = document.querySelector('#root');
