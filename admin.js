@@ -540,11 +540,12 @@ async function render() {
               <p>
                 ${savings.orderCount}
                 commande${savings.orderCount > 1 ? 's' : ''}
-                prise${savings.orderCount > 1 ? 's' : ''} en direct
-                =
+                prise${savings.orderCount > 1 ? 's' : ''} en direct.
+                Au tarif standard Uber Eats (livraison, 30 %),
+                ça aurait coûté environ
                 <strong>${euro(savings.savingsCents / 100)}</strong>
-                de commission Uber Eats
-                évitée, gardée intégralement.
+                de commission. Avec FOODATOI, cette marge reste
+                intégralement chez vous.
               </p>
             </section>
           `;
