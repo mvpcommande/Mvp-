@@ -360,11 +360,12 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-D2oG3x2Q.j
               <p>
                 ${e.orderCount}
                 commande${e.orderCount>1?`s`:``}
-                prise${e.orderCount>1?`s`:``} en direct
-                =
+                prise${e.orderCount>1?`s`:``} en direct.
+                Au tarif standard Uber Eats (livraison, 30 %),
+                ça aurait coûté environ
                 <strong>${T(e.savingsCents/100)}</strong>
-                de commission Uber Eats
-                évitée, gardée intégralement.
+                de commission. Avec FOODATOI, cette marge reste
+                intégralement chez vous.
               </p>
             </section>
           `})()}
