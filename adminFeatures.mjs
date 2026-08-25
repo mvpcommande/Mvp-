@@ -162,6 +162,45 @@ export function printStockSummary(
   return true;
 }
 
+/**
+ * Calcule l'économie de commission Uber Eats représentée par des
+ * commandes prises directement via FOODATOI, à un taux de commission
+ * donné (variable réelle selon le contrat du restaurant, jamais
+ * supposée).
+ *
+ * Exclut les commandes annulées : l'argent n'a jamais été encaissé,
+ * donc aucune commission n'aurait de toute façon été due dessus.
+ *
+ * Retourne null si aucun taux n'est configuré : pas d'encart plutôt
+ * qu'un chiffre inventé.
+ */
+export function calculateUberEatsSavings(orders, commissionRate) {
+  if (!commissionRate || commissionRate <= 0) {
+    return null;
+  }
+
+  const counted = (orders ?? []).filter(
+    (order) => order.status !== 'CANCELLED'
+  );
+
+  const totalCents = counted.reduce(
+    (sum, order) =>
+      sum +
+      Math.round(
+        Number(
+          order.total ?? (order.total_cents ?? 0) / 100
+        ) * 100
+      ),
+    0
+  );
+
+  return {
+    orderCount: counted.length,
+    totalCents,
+    savingsCents: Math.round(totalCents * commissionRate)
+  };
+}
+
 export function subscribeToOrderChanges(client, callback, onStatusChange) {
   if (!client) return null;
 

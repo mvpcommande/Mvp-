@@ -1,16 +1,5 @@
 # Ajouter un nouveau restaurant à FOODATOI
 
-> **À vérifier avec Kevin avant utilisation** : en versionnant l'historique
-> complet des migrations, une deuxième fonction est apparue,
-> `onboard_restaurant()` (migration `20260824212023`), très proche de
-> `provision_restaurant()` mais pas écrite dans cette session-ci — donc
-> probablement par un autre outil/session touchant la même base. Les deux
-> font à peu près la même chose (créer le restaurant + poser
-> `app_metadata` du propriétaire) avec quelques différences (statut
-> `READY` vs `DRAFT`, pas de programme de fidélité créé, pas de
-> `phone`/`address`). À réconcilier plutôt qu'à laisser les deux vivre en
-> parallèle. Ce document décrit `provision_restaurant()`.
-
 Ce document couvre ce qui reste manuel après `provision_restaurant()`.
 La fonction gère la partie qui, si elle est oubliée, casse tout
 silencieusement (le lien entre le compte du propriétaire et l'accès

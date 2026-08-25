@@ -4,7 +4,8 @@ import {
   subscribeToOrderChanges,
   printOrder,
   aggregateOrderItems,
-  buildStockSummaryCsv
+  buildStockSummaryCsv,
+  calculateUberEatsSavings
 } from './adminFeatures.mjs';
 
 test('aggregateOrderItems groups identical product+options across orders and sums quantity/revenue', () => {
@@ -63,6 +64,25 @@ test('buildStockSummaryCsv quotes values containing the separator', () => {
   ]);
 
   assert.match(csv, /"Menu; spécial"/);
+});
+
+test('calculateUberEatsSavings returns null when no rate is configured (no invented number)', () => {
+  assert.equal(calculateUberEatsSavings([{ total: 10 }], null), null);
+  assert.equal(calculateUberEatsSavings([{ total: 10 }], 0), null);
+});
+
+test('calculateUberEatsSavings computes savings at the given rate, excluding cancelled orders', () => {
+  const orders = [
+    { total: 12.9, status: 'NEW' },
+    { total_cents: 1680, status: 'READY' },
+    { total: 999, status: 'CANCELLED' } // ne doit pas compter
+  ];
+
+  const result = calculateUberEatsSavings(orders, 0.3);
+
+  assert.equal(result.orderCount, 2);
+  assert.equal(result.totalCents, 2970); // 12,90€ + 16,80€
+  assert.equal(result.savingsCents, 891); // 30% de 29,70€
 });
 
 test('realtime subscription listens to order changes', () => {

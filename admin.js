@@ -8,7 +8,8 @@ import {
   subscribeToOrderChanges,
   aggregateOrderItems,
   buildStockSummaryCsv,
-  printStockSummary
+  printStockSummary,
+  calculateUberEatsSavings
 } from './adminFeatures.mjs';
 import { resolveRestaurant } from './restaurantResolver.mjs';
 import { formatPickupTime } from './timeFormat.mjs';
@@ -520,6 +521,35 @@ async function render() {
           </strong>
         </div>
       </section>
+      ${
+        (() => {
+          const savings =
+            calculateUberEatsSavings(
+              data,
+              restaurant?.settings
+                ?.uber_eats_commission_rate
+            );
+          if (!savings || !savings.orderCount) {
+            return '';
+          }
+          return `
+            <section class="roi-banner">
+              <p class="eyebrow">
+                VOTRE ÉCONOMIE FOODATOI
+              </p>
+              <p>
+                ${savings.orderCount}
+                commande${savings.orderCount > 1 ? 's' : ''}
+                prise${savings.orderCount > 1 ? 's' : ''} en direct
+                =
+                <strong>${euro(savings.savingsCents / 100)}</strong>
+                de commission Uber Eats
+                évitée, gardée intégralement.
+              </p>
+            </section>
+          `;
+        })()
+      }
       <section class="orders-grid">
         ${
           data.length
