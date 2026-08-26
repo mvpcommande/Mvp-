@@ -69,6 +69,7 @@ let restaurant = null;
 let menu = [];
 let cart = [];
 let activeCategory = 'Tous';
+let categoryObserver = null;
 
 let remoteStore = null;
 
@@ -458,6 +459,42 @@ function getCategories() {
   ];
 }
 
+/**
+ * Découpe le pseudo-libre "Tous" en tranches par
+ * catégorie, dans l'ordre où elles apparaissent dans
+ * le menu (déjà trié par sort_order). Chaque tranche
+ * garde un id d'ancre stable pour le défilement au
+ * clic sur une pastille.
+ */
+function slugifyCategory(category) {
+  return String(category)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+function groupByCategory(items) {
+  const order = [];
+  const groups = new Map();
+
+  items.forEach(item => {
+    const category = item.category || 'Autres';
+    if (!groups.has(category)) {
+      groups.set(category, []);
+      order.push(category);
+    }
+    groups.get(category).push(item);
+  });
+
+  return order.map(category => ({
+    category,
+    slug: slugifyCategory(category),
+    items: groups.get(category)
+  }));
+}
+
 /* -------------------------------------------------------------------------- */
 /* Loading / error UI                                                         */
 /* -------------------------------------------------------------------------- */
@@ -818,15 +855,19 @@ function render() {
                     .map(
                       category => `
                         <button
-                          class="category ${
-                            category ===
-                            activeCategory
-                              ? 'is-active'
-                              : ''
-                          }"
+                          class="category"
                           data-category="${escapeHtml(
                             category
                           )}"
+                          data-target="${
+                            category === 'Tous'
+                              ? 'top'
+                              : escapeHtml(
+                                  slugifyCategory(
+                                    category
+                                  )
+                                )
+                          }"
                           type="button"
                         >
                           ${escapeHtml(
@@ -842,41 +883,51 @@ function render() {
               : ''
           }
 
-          <div class="menu-grid">
+          ${
+            menu.length
+              ? groupByCategory(menu)
+                  .map(
+                    group => `
+                      <section
+                        class="menu-category-section"
+                        id="menu-cat-${group.slug}"
+                      >
 
-            ${
-              menu.length
-                ? menu
-                    .filter(
-                      item =>
-                        activeCategory ===
-                          'Tous' ||
-                        item.category ===
-                          activeCategory
-                    )
-                    .map(card)
-                    .join('')
-                : `
-                  <div class="empty-ticket">
+                        <h2 class="menu-category-heading">
+                          ${escapeHtml(
+                            group.category
+                          )}
+                        </h2>
 
-                    <div class="empty-ticket-mark">
-                      +
-                    </div>
+                        <div class="menu-grid">
+                          ${group.items
+                            .map(card)
+                            .join('')}
+                        </div>
 
-                    <h3>
-                      Carte en préparation.
-                    </h3>
+                      </section>
+                    `
+                  )
+                  .join('')
+              : `
+                <div class="empty-ticket">
 
-                    <p>
-                      Ce restaurant n'a pas encore
-                      publié de produits.
-                    </p>
-
+                  <div class="empty-ticket-mark">
+                    +
                   </div>
-                `
-            }
 
-          </div>
+                  <h3>
+                    Carte en préparation.
+                  </h3>
+
+                  <p>
+                    Ce restaurant n'a pas encore
+                    publié de produits.
+                  </p>
+
+                </div>
+              `
+          }
 
         </section>
 
@@ -1133,6 +1184,70 @@ function card(item) {
 /* Events                                                                     */
 /* -------------------------------------------------------------------------- */
 
+function setupCategorySpy() {
+  if (categoryObserver) {
+    categoryObserver.disconnect();
+  }
+
+  const sections =
+    document.querySelectorAll(
+      '.menu-category-section'
+    );
+
+  if (!sections.length) {
+    return;
+  }
+
+  const railHeight =
+    document
+      .querySelector(
+        '.category-rail'
+      )
+      ?.offsetHeight || 0;
+
+  categoryObserver =
+    new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (
+            entry.isIntersecting
+          ) {
+            const slug =
+              entry.target.id.replace(
+                'menu-cat-',
+                ''
+              );
+
+            document
+              .querySelectorAll(
+                '[data-category]'
+              )
+              .forEach(button => {
+                button.classList.toggle(
+                  'is-active',
+                  button.dataset
+                    .target ===
+                    slug
+                );
+              });
+          }
+        });
+      },
+      {
+        rootMargin: `-${
+          railHeight + 20
+        }px 0px -70% 0px`,
+        threshold: 0
+      }
+    );
+
+  sections.forEach(section =>
+    categoryObserver.observe(
+      section
+    )
+  );
+}
+
 function bind() {
   document
     .querySelectorAll(
@@ -1140,12 +1255,46 @@ function bind() {
     )
     .forEach(button => {
       button.onclick = () => {
-        activeCategory =
-          button.dataset.category;
+        const target =
+          button.dataset.target;
 
-        render();
+        if (target === 'top') {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+          return;
+        }
+
+        const section =
+          document.getElementById(
+            `menu-cat-${target}`
+          );
+
+        if (section) {
+          const railHeight =
+            document
+              .querySelector(
+                '.category-rail'
+              )
+              ?.offsetHeight || 0;
+
+          const top =
+            section.getBoundingClientRect()
+              .top +
+            window.scrollY -
+            railHeight -
+            12;
+
+          window.scrollTo({
+            top,
+            behavior: 'smooth'
+          });
+        }
       };
     });
+
+  setupCategorySpy();
 
   document
     .querySelectorAll(
