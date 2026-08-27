@@ -1,5 +1,5 @@
-import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.js";async function s(e,t,n){let{data:r,error:i}=await e.auth.signInWithPassword({email:t,password:n});if(i)throw i;return r.session}async function c(e){let{data:t,error:n}=await e.auth.getSession();if(n)throw n;return t.session}async function l(e){let{error:t}=await e.auth.signOut();if(t)throw t}function u(e){let t=new Map;for(let n of e??[]){let e=n.order_items??n.items??[];for(let n of e){let e=n.product_name??n.name??`Article`,r=n.options?.meat??``,i=n.options?.sauce??``,a=n.options?.drink??``,o=[e,r,i,a].join(`|`),s=Number(n.quantity??0),c=Math.round(n.line_total_cents??(n.price??0)*s*100),l=t.get(o);l?(l.quantity+=s,l.revenueCents+=c):t.set(o,{name:e,meat:r,sauce:i,drink:a,quantity:s,revenueCents:c})}}return[...t.values()].sort((e,t)=>t.quantity-e.quantity||e.name.localeCompare(t.name))}function d(e){let t=e=>{let t=String(e??``);return/[;"\n]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t},n=[`Article`,`Viande`,`Sauce`,`Boisson`,`Quantité`,`Total (€)`],r=(e??[]).map(e=>[e.name,e.meat,e.sauce,e.drink,e.quantity,(e.revenueCents/100).toFixed(2).replace(`.`,`,`)].map(t).join(`;`));return[n.join(`;`),...r].join(`
-`)}function f(e,t={},n=(e=``,t=`_blank`)=>window.open(e,t)){let r=n(``,`_blank`);if(!r)return!1;let i=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,a=(e??[]).reduce((e,t)=>e+t.quantity,0),o=(e??[]).reduce((e,t)=>e+t.revenueCents,0),s=(e??[]).map(e=>`
+import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99hEtAtt.js";async function c(e,t,n){let{data:r,error:i}=await e.auth.signInWithPassword({email:t,password:n});if(i)throw i;return r.session}async function l(e){let{data:t,error:n}=await e.auth.getSession();if(n)throw n;return t.session}async function u(e){let{error:t}=await e.auth.signOut();if(t)throw t}function d(e){let t=new Map;for(let n of e??[]){let e=n.order_items??n.items??[];for(let n of e){let e=n.product_name??n.name??`Article`,r=n.options?.meat??``,i=n.options?.sauce??``,a=n.options?.drink??``,o=[e,r,i,a].join(`|`),s=Number(n.quantity??0),c=Math.round(n.line_total_cents??(n.price??0)*s*100),l=t.get(o);l?(l.quantity+=s,l.revenueCents+=c):t.set(o,{name:e,meat:r,sauce:i,drink:a,quantity:s,revenueCents:c})}}return[...t.values()].sort((e,t)=>t.quantity-e.quantity||e.name.localeCompare(t.name))}function f(e){let t=e=>{let t=String(e??``);return/[;"\n]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t},n=[`Article`,`Viande`,`Sauce`,`Boisson`,`Quantité`,`Total (€)`],r=(e??[]).map(e=>[e.name,e.meat,e.sauce,e.drink,e.quantity,(e.revenueCents/100).toFixed(2).replace(`.`,`,`)].map(t).join(`;`));return[n.join(`;`),...r].join(`
+`)}function p(e,t={},n=(e=``,t=`_blank`)=>window.open(e,t)){let r=n(``,`_blank`);if(!r)return!1;let i=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,a=(e??[]).reduce((e,t)=>e+t.quantity,0),o=(e??[]).reduce((e,t)=>e+t.revenueCents,0),s=(e??[]).map(e=>`
         <tr>
           <td>${e.name}</td>
           <td>${[e.meat,e.sauce,e.drink].filter(Boolean).join(` · `)||`—`}</td>
@@ -54,7 +54,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         </table>
       </body>
     </html>
-  `),r.document.close(),r.focus(),r.print(),!0}function p(e,t){if(!t||t<=0)return null;let n=(e??[]).filter(e=>e.status!==`CANCELLED`),r=n.reduce((e,t)=>e+Math.round(Number(t.total??(t.total_cents??0)/100)*100),0);return{orderCount:n.length,totalCents:r,savingsCents:Math.round(r*t)}}function m(e,t,n){if(!e)return null;let r=`caz-food-orders-${Date.now()}`,i=e.channel(r,{config:{broadcast:{self:!1},presence:{key:``}}}).on(`postgres_changes`,{event:`INSERT`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Nouvelle commande reçue`,e),t(e)}).on(`postgres_changes`,{event:`UPDATE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande mise à jour`,e),t(e)}).on(`postgres_changes`,{event:`DELETE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande supprimée`,e),t(e)});return i.subscribe((e,t)=>{console.log(`[Realtime] Statut:`,e),t&&console.error(`[Realtime] Erreur:`,t),e===`SUBSCRIBED`&&console.log(`[Realtime] Abonnement actif pour public.orders`),e===`CHANNEL_ERROR`&&console.error(`[Realtime] CHANNEL_ERROR`,t),e===`TIMED_OUT`&&console.error(`[Realtime] TIMED_OUT`),e===`CLOSED`&&console.warn(`[Realtime] Canal fermé`),n?.(e,t)}),i}function h(e,n=(e=``,t=`_blank`)=>window.open(e,t)){let r=n(``,`_blank`);if(!r)return!1;let i=e.order_items??e.items??[],a=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,o=t(e.pickup_time),s=i.map(e=>`
+  `),r.document.close(),r.focus(),r.print(),!0}function m(e,t){if(!t||t<=0)return null;let n=(e??[]).filter(e=>e.status!==`CANCELLED`),r=n.reduce((e,t)=>e+Math.round(Number(t.total??(t.total_cents??0)/100)*100),0);return{orderCount:n.length,totalCents:r,savingsCents:Math.round(r*t)}}function h(e,t,n){if(!e)return null;let r=`caz-food-orders-${Date.now()}`,i=e.channel(r,{config:{broadcast:{self:!1},presence:{key:``}}}).on(`postgres_changes`,{event:`INSERT`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Nouvelle commande reçue`,e),t(e)}).on(`postgres_changes`,{event:`UPDATE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande mise à jour`,e),t(e)}).on(`postgres_changes`,{event:`DELETE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande supprimée`,e),t(e)});return i.subscribe((e,t)=>{console.log(`[Realtime] Statut:`,e),t&&console.error(`[Realtime] Erreur:`,t),e===`SUBSCRIBED`&&console.log(`[Realtime] Abonnement actif pour public.orders`),e===`CHANNEL_ERROR`&&console.error(`[Realtime] CHANNEL_ERROR`,t),e===`TIMED_OUT`&&console.error(`[Realtime] TIMED_OUT`),e===`CLOSED`&&console.warn(`[Realtime] Canal fermé`),n?.(e,t)}),i}function g(e,t=(e=``,t=`_blank`)=>window.open(e,t)){let r=t(``,`_blank`);if(!r)return!1;let i=e.order_items??e.items??[],a=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,o=n(e.pickup_time),c=i.map(e=>`
         <div class="row">
           <div>
             <strong>
@@ -129,24 +129,31 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
 
         <div class="line"></div>
 
-        ${s||`<div>Détail des articles indisponible</div>`}
+        ${c||`<div>Détail des articles indisponible</div>`}
 
         <div class="line"></div>
 
         <div>
           CLIENT :
-          ${e.customer_name??e.customer?.name??`—`}
+          ${s(e.customer_name??e.customer?.name??`—`)}
         </div>
 
         <div>
           TÉLÉPHONE :
-          ${e.customer_phone??e.customer?.phone??`—`}
+          ${s(e.customer_phone??e.customer?.phone??`—`)}
         </div>
 
         <div>
           RETRAIT :
           ${o}
         </div>
+
+        ${e.notes?`
+              <div class="line"></div>
+              <div style="border:1px solid #111;padding:6px;font-weight:bold">
+                NOTE : ${s(e.notes)}
+              </div>
+            `:``}
 
         <div class="total">
           <span>TOTAL</span>
@@ -160,7 +167,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         </div>
       </body>
     </html>
-  `),r.document.close(),r.focus(),r.print(),!0}var g=document.querySelector(`#admin-root`),_={NEW:`Nouvelle`,ACCEPTED:`Acceptée`,PREPARING:`En préparation`,READY:`Prête`,CANCELLED:`Annulée`},v=null,y=`local`,b=null,x=null,S=null;function C(){return JSON.parse(localStorage.getItem(`caz-food-orders`)||`[]`)}function w(e){localStorage.setItem(`caz-food-orders`,JSON.stringify(e))}function T(e){return`${Number(e).toFixed(2).replace(`.`,`,`)} €`}async function E(){if(!e){O();return}try{x=await c(e)}catch(e){console.error(`Erreur récupération session:`,e),A();return}if(x){try{S=await i(e)}catch(t){console.error(`Erreur résolution restaurant:`,t),o(e,{context:`admin.resolveRestaurant`,message:t?.message??String(t),page:`admin`}),k(t);return}v=a(e,S.id),y=`remote`,D(),await N();return}A()}function D(){b&&e&&e.removeChannel(b),e&&x?.access_token&&e.realtime.setAuth(x.access_token),b=m(e,()=>N(),t=>{(t===`CLOSED`||t===`TIMED_OUT`||t===`CHANNEL_ERROR`)&&y===`remote`&&(console.warn(`[Realtime] Reconnexion dans 3s...`),o(e,{restaurantId:S?.id,context:`admin.realtime`,message:`Canal realtime perdu (${t}), reconnexion dans 3s`,page:`admin`}),setTimeout(()=>{y===`remote`&&D()},3e3))})}function O(){g.innerHTML=`
+  `),r.document.close(),r.focus(),r.print(),!0}var _=document.querySelector(`#admin-root`),v={NEW:`Nouvelle`,ACCEPTED:`Acceptée`,PREPARING:`En préparation`,READY:`Prête`,CANCELLED:`Annulée`},y=null,b=`local`,x=null,S=null,C=null;function w(){return JSON.parse(localStorage.getItem(`caz-food-orders`)||`[]`)}function T(e){localStorage.setItem(`caz-food-orders`,JSON.stringify(e))}function E(e){return`${Number(e).toFixed(2).replace(`.`,`,`)} €`}async function D(){if(!i){k();return}try{S=await l(i)}catch(e){console.error(`Erreur récupération session:`,e),j();return}if(S){try{C=await a(i)}catch(e){console.error(`Erreur résolution restaurant:`,e),r(i,{context:`admin.resolveRestaurant`,message:e?.message??String(e),page:`admin`}),A(e);return}y=o(i,C.id),b=`remote`,O(),await P();return}j()}function O(){x&&i&&i.removeChannel(x),i&&S?.access_token&&i.realtime.setAuth(S.access_token),x=h(i,()=>P(),e=>{(e===`CLOSED`||e===`TIMED_OUT`||e===`CHANNEL_ERROR`)&&b===`remote`&&(console.warn(`[Realtime] Reconnexion dans 3s...`),r(i,{restaurantId:C?.id,context:`admin.realtime`,message:`Canal realtime perdu (${e}), reconnexion dans 3s`,page:`admin`}),setTimeout(()=>{b===`remote`&&O()},3e3))})}function k(){_.innerHTML=`
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
@@ -182,7 +189,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         </p>
       </div>
     </main>
-  `}function k(e){g.innerHTML=`
+  `}function A(e){_.innerHTML=`
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
@@ -212,7 +219,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         </a>
       </div>
     </main>
-  `,g.querySelector(`#retry-restaurant`).onclick=()=>E()}function A(t=``){g.innerHTML=`
+  `,_.querySelector(`#retry-restaurant`).onclick=()=>D()}function j(e=``){_.innerHTML=`
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
@@ -227,9 +234,9 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         <p>
           Connexion réservée à l'équipe Caz Food.
         </p>
-        ${t?`
+        ${e?`
               <div class="auth-error">
-                ${t}
+                ${e}
               </div>
             `:``}
         <form
@@ -271,7 +278,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         </a>
       </div>
     </main>
-  `;let n=g.querySelector(`#login-form`);n.onsubmit=async t=>{t.preventDefault();let n=new FormData(t.currentTarget),r=t.currentTarget.querySelector(`button`);r.disabled=!0,r.textContent=`CONNEXION…`;try{x=await s(e,n.get(`email`),n.get(`password`))}catch(e){console.error(`Erreur connexion admin:`,e),A(`Email ou mot de passe incorrect.`);return}try{S=await i(e),v=a(e,S.id),y=`remote`,D(),await N()}catch(e){console.error(`Erreur résolution restaurant:`,e),k(e)}}}async function j(){if(y===`remote`)try{return await v.listOrders()}catch(e){return console.error(`Erreur récupération commandes:`,e),[]}return C()}async function M(t){let r={NEW:`ACCEPTED`,ACCEPTED:`PREPARING`,PREPARING:`READY`}[t.status];if(r)try{y===`remote`?await v.updateStatus(t.id,r):w(n(C(),t.id,r)),await N()}catch(n){console.error(`Erreur changement statut:`,n),o(e,{restaurantId:S?.id,context:`admin.updateStatus`,message:n?.message??String(n),details:{orderId:t.id,from:t.status,to:r},page:`admin`}),alert(`Impossible de modifier le statut de la commande.`)}}async function N(){if(!x&&y===`remote`){A();return}let t=(await j()).slice().sort((e,t)=>new Date(t.created_at??t.createdAt)-new Date(e.created_at??e.createdAt)),n=t.reduce((e,t)=>e+Number(t.total??(t.total_cents??0)/100),0);g.innerHTML=`
+  `;let t=_.querySelector(`#login-form`);t.onsubmit=async e=>{e.preventDefault();let t=new FormData(e.currentTarget),n=e.currentTarget.querySelector(`button`);n.disabled=!0,n.textContent=`CONNEXION…`;try{S=await c(i,t.get(`email`),t.get(`password`))}catch(e){console.error(`Erreur connexion admin:`,e),j(`Email ou mot de passe incorrect.`);return}try{C=await a(i),y=o(i,C.id),b=`remote`,O(),await P()}catch(e){console.error(`Erreur résolution restaurant:`,e),A(e)}}}async function M(){if(b===`remote`)try{return await y.listOrders()}catch(e){return console.error(`Erreur récupération commandes:`,e),[]}return w()}async function N(e){let n={NEW:`ACCEPTED`,ACCEPTED:`PREPARING`,PREPARING:`READY`}[e.status];if(n)try{b===`remote`?await y.updateStatus(e.id,n):T(t(w(),e.id,n)),await P()}catch(t){console.error(`Erreur changement statut:`,t),r(i,{restaurantId:C?.id,context:`admin.updateStatus`,message:t?.message??String(t),details:{orderId:e.id,from:e.status,to:n},page:`admin`}),alert(`Impossible de modifier le statut de la commande.`)}}async function P(){if(!S&&b===`remote`){j();return}let e=(await M()).slice().sort((e,t)=>new Date(t.created_at??t.createdAt)-new Date(e.created_at??e.createdAt)),t=e.reduce((e,t)=>e+Number(t.total??(t.total_cents??0)/100),0);_.innerHTML=`
     <main class="admin-shell">
       <header class="admin-header">
         <div>
@@ -282,7 +289,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
             Le comptoir.
           </h1>
           <p>
-            ${y===`remote`?`Commandes en direct · Supabase Realtime`:`Mode démo local`}
+            ${b===`remote`?`Commandes en direct · Supabase Realtime`:`Mode démo local`}
           </p>
         </div>
         <div class="admin-actions">
@@ -324,7 +331,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
             À prendre en charge
           </span>
           <strong>
-            ${t.filter(e=>e.status===`NEW`).length}
+            ${e.filter(e=>e.status===`NEW`).length}
           </strong>
         </div>
         <div>
@@ -332,7 +339,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
             En préparation
           </span>
           <strong>
-            ${t.filter(e=>e.status===`PREPARING`).length}
+            ${e.filter(e=>e.status===`PREPARING`).length}
           </strong>
         </div>
         <div>
@@ -340,7 +347,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
             Prêtes
           </span>
           <strong>
-            ${t.filter(e=>e.status===`READY`).length}
+            ${e.filter(e=>e.status===`READY`).length}
           </strong>
         </div>
         <div>
@@ -348,29 +355,29 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
             Commandé
           </span>
           <strong>
-            ${T(n)}
+            ${E(t)}
           </strong>
         </div>
       </section>
-      ${(()=>{let e=p(t,S?.settings?.uber_eats_commission_rate);return!e||!e.orderCount?``:`
+      ${(()=>{let t=m(e,C?.settings?.uber_eats_commission_rate);return!t||!t.orderCount?``:`
             <section class="roi-banner">
               <p class="eyebrow">
                 VOTRE ÉCONOMIE FOODATOI
               </p>
               <p>
-                ${e.orderCount}
-                commande${e.orderCount>1?`s`:``}
-                prise${e.orderCount>1?`s`:``} en direct.
+                ${t.orderCount}
+                commande${t.orderCount>1?`s`:``}
+                prise${t.orderCount>1?`s`:``} en direct.
                 Au tarif standard Uber Eats (livraison, 30 %),
                 ça aurait coûté environ
-                <strong>${T(e.savingsCents/100)}</strong>
+                <strong>${E(t.savingsCents/100)}</strong>
                 de commission. Avec FOODATOI, cette marge reste
                 intégralement chez vous.
               </p>
             </section>
           `})()}
       <section class="orders-grid">
-        ${t.length?t.map(R).join(``):`
+        ${e.length?e.map(z).join(``):`
               <div class="empty-ticket admin-empty">
                 <div class="empty-ticket-mark">
                   +
@@ -387,10 +394,10 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
       </section>
       <p class="admin-note">
         ●
-        ${y===`remote`?`Temps réel actif. Les nouvelles commandes apparaissent automatiquement.`:`Mode démo local.`}
+        ${b===`remote`?`Temps réel actif. Les nouvelles commandes apparaissent automatiquement.`:`Mode démo local.`}
       </p>
     </main>
-  `;let r=g.querySelector(`#logout`);r&&(r.onclick=async()=>{try{b&&e&&await e.removeChannel(b),e&&await l(e)}finally{x=null,S=null,v=null,y=`local`,b=null,A()}}),g.querySelectorAll(`[data-next]`).forEach(e=>{e.onclick=()=>{let n=t.find(t=>String(t.id??``)===String(e.dataset.id));n&&M(n)}}),g.querySelectorAll(`[data-print]`).forEach(e=>{e.onclick=()=>{let n=t.find(t=>String(t.id??``)===String(e.dataset.id));n&&h(n)}});let i=g.querySelector(`#export-stock`);i&&(i.onclick=()=>P(t));let a=g.querySelector(`#system-health`);a&&(a.onclick=()=>L());let o=g.querySelector(`#print-stock`);o&&(o.onclick=()=>f(u(t),{rangeLabel:`${t.length} commande${t.length>1?`s`:``} affichée${t.length>1?`s`:``}`})),g.querySelectorAll(`.order-card`).forEach(e=>{e.onclick=n=>{if(n.target.closest(`button`))return;let r=t.find(t=>String(t.id??``)===String(e.dataset.order));r&&I(r)}})}function P(e){let t=d(u(e)),n=new Blob([`﻿`+t],{type:`text/csv;charset=utf-8;`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=`caz-food-stock-${new Date().toISOString().slice(0,10)}.csv`,i.click(),URL.revokeObjectURL(r)}function F(){let e=document.querySelector(`#order-detail-overlay`);e&&e.remove()}async function I(e){let n=e.items??e.order_items??[],r=e.total??(e.total_cents??0)/100,i=document.createElement(`div`);if(i.id=`order-detail-overlay`,i.className=`modal`,i.innerHTML=`
+  `;let n=_.querySelector(`#logout`);n&&(n.onclick=async()=>{try{x&&i&&await i.removeChannel(x),i&&await u(i)}finally{S=null,C=null,y=null,b=`local`,x=null,j()}}),_.querySelectorAll(`[data-next]`).forEach(t=>{t.onclick=()=>{let n=e.find(e=>String(e.id??``)===String(t.dataset.id));n&&N(n)}}),_.querySelectorAll(`[data-print]`).forEach(t=>{t.onclick=()=>{let n=e.find(e=>String(e.id??``)===String(t.dataset.id));n&&g(n)}});let r=_.querySelector(`#export-stock`);r&&(r.onclick=()=>F(e));let a=_.querySelector(`#system-health`);a&&(a.onclick=()=>R());let o=_.querySelector(`#print-stock`);o&&(o.onclick=()=>p(d(e),{rangeLabel:`${e.length} commande${e.length>1?`s`:``} affichée${e.length>1?`s`:``}`})),_.querySelectorAll(`.order-card`).forEach(t=>{t.onclick=n=>{if(n.target.closest(`button`))return;let r=e.find(e=>String(e.id??``)===String(t.dataset.order));r&&L(r)}})}function F(e){let t=f(d(e)),n=new Blob([`﻿`+t],{type:`text/csv;charset=utf-8;`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=`caz-food-stock-${new Date().toISOString().slice(0,10)}.csv`,i.click(),URL.revokeObjectURL(r)}function I(){let e=document.querySelector(`#order-detail-overlay`);e&&e.remove()}async function L(e){let t=e.items??e.order_items??[],r=e.total??(e.total_cents??0)/100,i=document.createElement(`div`);if(i.id=`order-detail-overlay`,i.className=`modal`,i.innerHTML=`
     <div class="modal-card order-detail-card">
       <button
         class="modal-close"
@@ -401,7 +408,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
       <p class="eyebrow">
         ${e.number??e.order_number??`—`}
         ·
-        ${_[e.status]??e.status}
+        ${v[e.status]??e.status}
       </p>
       <h2>
         ${e.customer?.name??e.customer_name??`Client`}
@@ -409,11 +416,11 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
       <p>
         ${e.customer?.phone??e.customer_phone??`—`}
         · retrait
-        ${t(e.pickup_time)||`—`}
+        ${n(e.pickup_time)||`—`}
       </p>
       <table class="detail-items">
         <tbody>
-          ${n.map(e=>`
+          ${t.map(e=>`
                 <tr>
                   <td>
                     <strong>
@@ -426,7 +433,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
                     </small>
                   </td>
                   <td class="num">
-                    ${T((e.line_total_cents??(e.price??0)*e.quantity*100)/100)}
+                    ${E((e.line_total_cents??(e.price??0)*e.quantity*100)/100)}
                   </td>
                 </tr>
               `).join(``)}
@@ -435,7 +442,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
           <tr>
             <td>Total</td>
             <td class="num">
-              ${T(r)}
+              ${E(r)}
             </td>
           </tr>
         </tfoot>
@@ -443,7 +450,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
       ${e.notes?`
             <p class="detail-notes">
               <strong>Note :</strong>
-              ${e.notes}
+              ${s(e.notes)}
             </p>
           `:``}
       <div id="detail-timeline">
@@ -451,7 +458,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
           Historique
         </p>
         <p class="detail-timeline-loading">
-          ${y===`remote`?`Chargement…`:`Non disponible en mode local.`}
+          ${b===`remote`?`Chargement…`:`Non disponible en mode local.`}
         </p>
       </div>
       <button
@@ -461,7 +468,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         ⌁ Imprimer le ticket
       </button>
     </div>
-  `,document.body.appendChild(i),i.onclick=e=>{e.target===i&&F()},i.querySelector(`#close-order-detail`).onclick=F,i.querySelector(`#print-from-detail`).onclick=()=>h(e),y===`remote`&&v?.getOrderEvents)try{let t=await v.getOrderEvents(e.id),n=i.querySelector(`#detail-timeline`);if(!n)return;n.innerHTML=`
+  `,document.body.appendChild(i),i.onclick=e=>{e.target===i&&I()},i.querySelector(`#close-order-detail`).onclick=I,i.querySelector(`#print-from-detail`).onclick=()=>g(e),b===`remote`&&y?.getOrderEvents)try{let t=await y.getOrderEvents(e.id),n=i.querySelector(`#detail-timeline`);if(!n)return;n.innerHTML=`
         <p class="eyebrow">
           Historique
         </p>
@@ -472,9 +479,9 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
                         <span>
                           ${new Date(e.created_at).toLocaleTimeString(`fr-FR`,{hour:`2-digit`,minute:`2-digit`})}
                         </span>
-                        ${_[e.from_status]??e.from_status??`—`}
+                        ${v[e.from_status]??e.from_status??`—`}
                         →
-                        ${_[e.to_status]??e.to_status}
+                        ${v[e.to_status]??e.to_status}
                       </li>
                     `).join(``)}
               </ul>
@@ -483,7 +490,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
                 Aucun changement de statut encore.
               </p>
             `}
-      `}catch(e){console.error(`Erreur historique commande:`,e);let t=i.querySelector(`.detail-timeline-loading`);t&&(t.textContent=`Historique indisponible.`)}}async function L(){let e=document.createElement(`div`);if(e.id=`system-health-overlay`,e.className=`modal`,e.innerHTML=`
+      `}catch(e){console.error(`Erreur historique commande:`,e);let t=i.querySelector(`.detail-timeline-loading`);t&&(t.textContent=`Historique indisponible.`)}}async function R(){let e=document.createElement(`div`);if(e.id=`system-health-overlay`,e.className=`modal`,e.innerHTML=`
     <div class="modal-card order-detail-card">
       <button
         class="modal-close"
@@ -498,10 +505,10 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         État système
       </h2>
       <p id="health-loading">
-        ${y===`remote`?`Chargement…`:`Non disponible en mode local.`}
+        ${b===`remote`?`Chargement…`:`Non disponible en mode local.`}
       </p>
     </div>
-  `,document.body.appendChild(e),e.onclick=t=>{t.target===e&&e.remove()},e.querySelector(`#close-system-health`).onclick=()=>e.remove(),!(y!==`remote`||!v?.getRecentErrors))try{let t=await v.getRecentErrors(),n=e.querySelector(`#health-loading`);if(!n)return;n.outerHTML=t.length?`
+  `,document.body.appendChild(e),e.onclick=t=>{t.target===e&&e.remove()},e.querySelector(`#close-system-health`).onclick=()=>e.remove(),!(b!==`remote`||!y?.getRecentErrors))try{let t=await y.getRecentErrors(),n=e.querySelector(`#health-loading`);if(!n)return;n.outerHTML=t.length?`
         <p>
           ${t.length} erreur${t.length>1?`s`:``}
           enregistrée${t.length>1?`s`:``}, la plus récente en premier.
@@ -526,11 +533,11 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         <p>
           Aucune erreur enregistrée récemment. Bon signe.
         </p>
-      `}catch(t){console.error(`Erreur chargement état système:`,t);let n=e.querySelector(`#health-loading`);n&&(n.textContent=`Impossible de charger les logs.`)}}function R(e){let n=e.status,i=e.items??e.order_items??[],a={...e.customer??{},name:e.customer?.name??e.customer_name??`Client`,phone:e.customer?.phone??e.customer_phone??`—`,pickupTime:t(e.pickup_time)},o=e.number??e.order_number??`—`,s=e.total??(e.total_cents??0)/100,c=r(n),l=c?`
+      `}catch(t){console.error(`Erreur chargement état système:`,t);let n=e.querySelector(`#health-loading`);n&&(n.textContent=`Impossible de charger les logs.`)}}function z(t){let r=t.status,i=t.items??t.order_items??[],a={...t.customer??{},name:t.customer?.name??t.customer_name??`Client`,phone:t.customer?.phone??t.customer_phone??`—`,pickupTime:n(t.pickup_time)},o=t.number??t.order_number??`—`,s=t.total??(t.total_cents??0)/100,c=e(r),l=c?`
         <button
           class="primary"
           data-next
-          data-id="${e.id}"
+          data-id="${t.id}"
         >
           ${c} →
         </button>
@@ -540,8 +547,8 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         </span>
       `;return`
     <article
-      class="order-card status-${String(n).toLowerCase()}"
-      data-order="${e.id}"
+      class="order-card status-${String(r).toLowerCase()}"
+      data-order="${t.id}"
     >
       <header>
         <div>
@@ -549,7 +556,7 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
             ${o}
           </span>
           <span class="status">
-            ${_[n]??n}
+            ${v[r]??r}
           </span>
         </div>
         <strong>
@@ -597,14 +604,14 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
           `}
       <footer>
         <strong>
-          ${T(s)}
+          ${E(s)}
         </strong>
         <div class="order-actions">
           ${l}
           <button
             class="print-button"
             data-print
-            data-id="${e.id}"
+            data-id="${t.id}"
             title="Imprimer le ticket"
           >
             ⌁ TICKET
@@ -612,4 +619,4 @@ import{a as e,c as t,d as n,i as r,n as i,o as a,t as o}from"./styles-TqDs7rv2.j
         </div>
       </footer>
     </article>
-  `}E();
+  `}D();
