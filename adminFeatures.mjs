@@ -1,3 +1,5 @@
+import { escapeHtml } from './htmlEscape.mjs';
+
 /**
  * Agrège les articles de plusieurs commandes par
  * combinaison produit + viande + sauce + boisson,
@@ -398,18 +400,33 @@ export function printOrder(
 
         <div>
           CLIENT :
-          ${order.customer_name ?? order.customer?.name ?? '—'}
+          ${escapeHtml(
+            order.customer_name ?? order.customer?.name ?? '—'
+          )}
         </div>
 
         <div>
           TÉLÉPHONE :
-          ${order.customer_phone ?? order.customer?.phone ?? '—'}
+          ${escapeHtml(
+            order.customer_phone ?? order.customer?.phone ?? '—'
+          )}
         </div>
 
         <div>
           RETRAIT :
           ${pickup}
         </div>
+
+        ${
+          order.notes
+            ? `
+              <div class="line"></div>
+              <div style="border:1px solid #111;padding:6px;font-weight:bold">
+                NOTE : ${escapeHtml(order.notes)}
+              </div>
+            `
+            : ''
+        }
 
         <div class="total">
           <span>TOTAL</span>

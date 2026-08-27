@@ -14,6 +14,7 @@ import {
 import { resolveRestaurant } from './restaurantResolver.mjs';
 import { formatPickupTime } from './timeFormat.mjs';
 import { logClientError } from './errorLog.mjs';
+import { escapeHtml } from './htmlEscape.mjs';
 import './styles.css';
 const root = document.querySelector('#admin-root');
 const labels = {
@@ -861,7 +862,9 @@ async function renderOrderDetail(order) {
           ? `
             <p class="detail-notes">
               <strong>Note :</strong>
-              ${order.notes}
+              ${escapeHtml(
+                order.notes
+              )}
             </p>
           `
           : ''

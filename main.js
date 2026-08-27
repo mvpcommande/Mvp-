@@ -33,6 +33,22 @@ import {
   logClientError
 } from './errorLog.mjs';
 
+import {
+  escapeHtml
+} from './htmlEscape.mjs';
+
+import {
+  isValidEmail,
+  signUpCustomer,
+  signInCustomer,
+  signOutCustomer,
+  getCustomerProfile,
+  getCustomerOrders,
+  getCustomerConsents,
+  setCustomerConsent,
+  deleteCustomerAccount
+} from './customerAccount.mjs';
+
 import './styles.css';
 
 /**
@@ -72,6 +88,14 @@ let activeCategory = 'Tous';
 let categoryObserver = null;
 
 let remoteStore = null;
+
+let accountView = 'login';
+let accountError = '';
+let accountLoading = false;
+let accountCustomer = null;
+let accountOrders = [];
+let accountConsents = [];
+let accountDeleteConfirming = false;
 
 const MEATS = [
   'Kebab',
@@ -126,15 +150,6 @@ const itemCount = () =>
       sum + Number(item.quantity ?? 0),
     0
   );
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
 
 function getRestaurantDisplayName() {
   return (
@@ -652,19 +667,31 @@ function render() {
 
         </div>
 
-        <button
-          class="order-pill"
-          id="open-cart"
-          type="button"
-        >
-          <span>
-            Ma commande
-          </span>
+        <div class="masthead-actions">
 
-          <b>
-            ${itemCount()}
-          </b>
-        </button>
+          <button
+            class="account-pill"
+            id="open-account"
+            type="button"
+          >
+            Compte
+          </button>
+
+          <button
+            class="order-pill"
+            id="open-cart"
+            type="button"
+          >
+            <span>
+              Ma commande
+            </span>
+
+            <b>
+              ${itemCount()}
+            </b>
+          </button>
+
+        </div>
 
       </header>
 
@@ -1317,6 +1344,16 @@ function bind() {
       openCart;
   }
 
+  const openAccountButton =
+    document.querySelector(
+      '#open-account'
+    );
+
+  if (openAccountButton) {
+    openAccountButton.onclick =
+      openAccountModal;
+  }
+
   const closeCartButton =
     document.querySelector(
       '#close-cart'
@@ -1795,6 +1832,456 @@ function closeCart() {
     );
 }
 
+/* -------------------------------------------------------------------------- */
+/* Compte client                                                             */
+/* -------------------------------------------------------------------------- */
+
+async function openAccountModal() {
+  let overlay = document.querySelector(
+    '#account-overlay'
+  );
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'account-overlay';
+    overlay.className = 'modal';
+    overlay.innerHTML = `
+      <div class="modal-card order-detail-card" id="account-content"></div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.onclick = event => {
+      if (event.target === overlay) {
+        overlay.remove();
+      }
+    };
+  }
+
+  accountError = '';
+  accountLoading = true;
+  renderAccountContent();
+
+  try {
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+
+    if (session) {
+      await loadAccountDashboard();
+    } else {
+      accountView = 'login';
+    }
+  } catch (error) {
+    console.error(
+      '[FOODATOI] Erreur ouverture compte:',
+      error
+    );
+
+    accountError =
+      'Impossible de charger ton compte pour le moment.';
+  }
+
+  accountLoading = false;
+  renderAccountContent();
+}
+
+async function loadAccountDashboard() {
+  accountCustomer = await getCustomerProfile(
+    supabase,
+    restaurant.id
+  );
+
+  if (!accountCustomer) {
+    accountView = 'login';
+    return;
+  }
+
+  const [orders, consents] = await Promise.all([
+    getCustomerOrders(supabase, accountCustomer.id),
+    getCustomerConsents(supabase, accountCustomer.id)
+  ]);
+
+  accountOrders = orders;
+  accountConsents = consents;
+  accountView = 'dashboard';
+}
+
+function consentValue(channel) {
+  return Boolean(
+    accountConsents.find(c => c.channel === channel)
+      ?.granted
+  );
+}
+
+function renderAccountContent() {
+  const element = document.querySelector(
+    '#account-content'
+  );
+
+  if (!element) {
+    return;
+  }
+
+  const errorBlock = accountError
+    ? `<p class="account-error">${escapeHtml(accountError)}</p>`
+    : '';
+
+  if (accountLoading) {
+    element.innerHTML = `
+      <p class="eyebrow">Mon compte</p>
+      <h2>Chargement…</h2>
+    `;
+    return;
+  }
+
+  if (accountView === 'dashboard' && accountCustomer) {
+    element.innerHTML = `
+      <button class="modal-close" id="account-close">×</button>
+
+      <p class="eyebrow">Mon compte</p>
+      <h2>${escapeHtml(accountCustomer.name || 'Bonjour')}</h2>
+      <p>${escapeHtml(accountCustomer.email || '')}</p>
+
+      ${errorBlock}
+
+      <div class="account-section">
+        <h3>Mes commandes</h3>
+        ${
+          accountOrders.length
+            ? `<ul class="account-orders">
+                ${accountOrders
+                  .map(
+                    order => `
+                      <li>
+                        <div>
+                          <strong>${escapeHtml(order.order_number)}</strong>
+                          <span>${new Date(order.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                        </div>
+                        <div>
+                          ${(order.order_items || [])
+                            .map(
+                              item =>
+                                `${item.quantity}× ${escapeHtml(item.product_name)}`
+                            )
+                            .join(', ')}
+                        </div>
+                        <strong>${euro((order.total_cents || 0) / 100)}</strong>
+                      </li>
+                    `
+                  )
+                  .join('')}
+              </ul>`
+            : `<p class="muted">Aucune commande pour le moment.</p>`
+        }
+      </div>
+
+      <div class="account-section">
+        <h3>Communications</h3>
+        <label class="account-toggle">
+          <input type="checkbox" id="consent-email" ${consentValue('EMAIL') ? 'checked' : ''}>
+          Recevoir des offres par email
+        </label>
+        <label class="account-toggle">
+          <input type="checkbox" id="consent-sms" ${consentValue('SMS') ? 'checked' : ''}>
+          Recevoir des offres par SMS
+        </label>
+      </div>
+
+      <div class="account-section">
+        <button class="secondary full" id="account-logout" type="button">
+          Se déconnecter
+        </button>
+
+        ${
+          accountDeleteConfirming
+            ? `
+              <p class="account-error">
+                Cette action supprime définitivement ton compte, tes coordonnées et tes préférences. Elle ne peut pas être annulée.
+              </p>
+              <button class="danger full" id="account-delete-confirm" type="button">
+                Confirmer la suppression définitive
+              </button>
+              <button class="secondary full" id="account-delete-cancel" type="button">
+                Annuler
+              </button>
+            `
+            : `
+              <button class="danger full" id="account-delete" type="button">
+                Supprimer mon compte et mes données
+              </button>
+            `
+        }
+      </div>
+    `;
+
+    bindAccountDashboardEvents();
+    return;
+  }
+
+  const isSignup = accountView === 'signup';
+
+  element.innerHTML = `
+    <button class="modal-close" id="account-close">×</button>
+
+    <p class="eyebrow">Mon compte</p>
+    <h2>${isSignup ? 'Créer un compte' : 'Se connecter'}</h2>
+
+    ${errorBlock}
+
+    <form id="account-form" class="order-form">
+      <label>
+        EMAIL
+        <input name="email" type="email" required autocomplete="email">
+      </label>
+
+      ${
+        isSignup
+          ? `
+            <label>
+              NOM
+              <input name="name" required autocomplete="name">
+            </label>
+            <label>
+              TÉLÉPHONE
+              <input name="phone" inputmode="tel" autocomplete="tel">
+            </label>
+          `
+          : ''
+      }
+
+      <label>
+        MOT DE PASSE
+        <input name="password" type="password" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6">
+      </label>
+
+      ${
+        isSignup
+          ? `
+            <label class="account-toggle">
+              <input type="checkbox" name="marketingEmail">
+              Je souhaite recevoir des offres par email
+            </label>
+            <label class="account-toggle">
+              <input type="checkbox" name="marketingSms">
+              Je souhaite recevoir des offres par SMS
+            </label>
+            <p class="account-legal">
+              Tes données servent uniquement à gérer ton compte et tes commandes chez ${escapeHtml(getRestaurantDisplayName())}. Tu peux les supprimer à tout moment depuis cet espace.
+            </p>
+          `
+          : ''
+      }
+
+      <button class="primary full" type="submit">
+        ${isSignup ? 'Créer mon compte →' : 'Se connecter →'}
+      </button>
+    </form>
+
+    <button class="secondary full" id="account-toggle-mode" type="button">
+      ${isSignup ? 'J’ai déjà un compte' : 'Créer un compte'}
+    </button>
+  `;
+
+  bindAccountAuthEvents();
+}
+
+function bindAccountAuthEvents() {
+  const closeButton = document.querySelector('#account-close');
+  if (closeButton) {
+    closeButton.onclick = () =>
+      document.querySelector('#account-overlay')?.remove();
+  }
+
+  const toggleButton = document.querySelector('#account-toggle-mode');
+  if (toggleButton) {
+    toggleButton.onclick = () => {
+      accountView = accountView === 'signup' ? 'login' : 'signup';
+      accountError = '';
+      renderAccountContent();
+    };
+  }
+
+  const form = document.querySelector('#account-form');
+  if (form) {
+    form.onsubmit = async event => {
+      event.preventDefault();
+
+      const formData = Object.fromEntries(
+        new FormData(event.currentTarget)
+      );
+
+      if (!isValidEmail(formData.email)) {
+        accountError = 'Adresse email invalide.';
+        renderAccountContent();
+        return;
+      }
+
+      accountLoading = true;
+      accountError = '';
+      renderAccountContent();
+
+      try {
+        if (accountView === 'signup') {
+          const result = await signUpCustomer(
+            supabase,
+            restaurant.id,
+            formData
+          );
+
+          if (result.pendingConfirmation) {
+            accountLoading = false;
+            accountError =
+              'Compte créé ! Vérifie tes emails pour confirmer ton adresse avant de te connecter.';
+            accountView = 'login';
+            renderAccountContent();
+            return;
+          }
+
+          await loadAccountDashboard();
+        } else {
+          await signInCustomer(supabase, formData);
+          await loadAccountDashboard();
+        }
+      } catch (error) {
+        console.error(
+          '[FOODATOI] Erreur compte client:',
+          error
+        );
+
+        logClientError(supabase, {
+          restaurantId: restaurant?.id,
+          context: 'main.customerAccount',
+          message: error?.message ?? String(error),
+          page: 'main'
+        });
+
+        accountError =
+          String(error?.message || '').includes(
+            'Invalid login credentials'
+          )
+            ? 'Email ou mot de passe incorrect.'
+            : String(error?.message || '').includes(
+                'already registered'
+              )
+            ? 'Un compte existe déjà avec cet email.'
+            : 'Impossible de traiter la demande pour le moment.';
+      }
+
+      accountLoading = false;
+      renderAccountContent();
+    };
+  }
+}
+
+function bindAccountDashboardEvents() {
+  const closeButton = document.querySelector('#account-close');
+  if (closeButton) {
+    closeButton.onclick = () =>
+      document.querySelector('#account-overlay')?.remove();
+  }
+
+  const logoutButton = document.querySelector('#account-logout');
+  if (logoutButton) {
+    logoutButton.onclick = async () => {
+      await signOutCustomer(supabase);
+      accountView = 'login';
+      accountCustomer = null;
+      accountOrders = [];
+      accountConsents = [];
+      accountDeleteConfirming = false;
+      renderAccountContent();
+    };
+  }
+
+  ['EMAIL', 'SMS'].forEach(channel => {
+    const input = document.querySelector(
+      `#consent-${channel.toLowerCase()}`
+    );
+
+    if (input) {
+      input.onchange = async () => {
+        try {
+          await setCustomerConsent(supabase, {
+            restaurantId: restaurant.id,
+            customerId: accountCustomer.id,
+            channel,
+            granted: input.checked
+          });
+
+          accountConsents = await getCustomerConsents(
+            supabase,
+            accountCustomer.id
+          );
+        } catch (error) {
+          console.error(
+            '[FOODATOI] Erreur consentement:',
+            error
+          );
+          input.checked = !input.checked;
+        }
+      };
+    }
+  });
+
+  const deleteButton = document.querySelector('#account-delete');
+  if (deleteButton) {
+    deleteButton.onclick = () => {
+      accountDeleteConfirming = true;
+      renderAccountContent();
+    };
+  }
+
+  const cancelButton = document.querySelector(
+    '#account-delete-cancel'
+  );
+  if (cancelButton) {
+    cancelButton.onclick = () => {
+      accountDeleteConfirming = false;
+      renderAccountContent();
+    };
+  }
+
+  const confirmButton = document.querySelector(
+    '#account-delete-confirm'
+  );
+  if (confirmButton) {
+    confirmButton.onclick = async () => {
+      accountLoading = true;
+      renderAccountContent();
+
+      try {
+        await deleteCustomerAccount(supabase);
+        accountView = 'login';
+        accountCustomer = null;
+        accountOrders = [];
+        accountConsents = [];
+        accountDeleteConfirming = false;
+        accountError =
+          'Ton compte et tes données ont été supprimés.';
+      } catch (error) {
+        console.error(
+          '[FOODATOI] Erreur suppression compte:',
+          error
+        );
+
+        logClientError(supabase, {
+          restaurantId: restaurant?.id,
+          context: 'main.deleteAccount',
+          message: error?.message ?? String(error),
+          page: 'main'
+        });
+
+        accountError =
+          'Impossible de supprimer le compte pour le moment.';
+        accountDeleteConfirming = false;
+      }
+
+      accountLoading = false;
+      renderAccountContent();
+    };
+  }
+}
+
 function renderCart() {
   const element =
     document.querySelector(
@@ -1981,6 +2468,17 @@ function renderCart() {
         >
       </label>
 
+      <label>
+        DEMANDE SPÉCIALE (facultatif)
+
+        <textarea
+          name="specialInstructions"
+          rows="2"
+          maxlength="280"
+          placeholder="Sans oignons, moins de sauce fromagère..."
+        ></textarea>
+      </label>
+
       <button
         class="primary full"
         type="submit"
@@ -2058,6 +2556,12 @@ function renderCart() {
             cart,
             formData
           );
+
+        order.notes =
+          String(
+            formData.specialInstructions ||
+              ''
+          ).trim() || null;
 
         await submitOrder(
           order
