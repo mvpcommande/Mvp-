@@ -43,6 +43,7 @@ export function getHostname(location = window.location) {
  */
 const RESERVED_ROUTES = [
   'admin',
+  'index',
   'favicon.ico',
   'robots.txt',
   'sitemap.xml',
@@ -65,7 +66,18 @@ export function getRestaurantSlugFromPath(location = window.location) {
     return null;
   }
 
-  const slug = decodeURIComponent(segments[0]).trim().toLowerCase();
+  /*
+   * Un déploiement statique sert admin.html/index.html tels
+   * quels : le premier segment de chemin est alors "admin.html",
+   * pas "admin", et RESERVED_ROUTES ne le reconnaît plus. C'est
+   * exactement ce qui a cassé /admin.html sur le domaine
+   * personnalisé (racine, donc plus de "/Mvp-/" pour masquer
+   * le problème comme sur l'ancienne URL GitHub Pages).
+   */
+  const slug = decodeURIComponent(segments[0])
+    .trim()
+    .toLowerCase()
+    .replace(/\.html$/, '');
 
   if (!slug || RESERVED_ROUTES.includes(slug)) {
     return null;

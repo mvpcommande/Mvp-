@@ -31,9 +31,24 @@ test('getRestaurantSlugFromPath never treats "admin" as a restaurant slug', () =
   assert.equal(getRestaurantSlugFromPath({ pathname: '/admin' }), null);
 });
 
+test('getRestaurantSlugFromPath strips a trailing .html so admin.html/index.html are also reserved', () => {
+  // Régression réelle : sur www.foodatoi.fr/admin.html (domaine
+  // personnalisé, servi depuis la racine), le premier segment est
+  // "admin.html", pas "admin" - sans le strip, ça finit en lookup
+  // pour "admin.html.foodatoi.fr", donc "Restaurant introuvable".
+  assert.equal(getRestaurantSlugFromPath({ pathname: '/admin.html' }), null);
+  assert.equal(getRestaurantSlugFromPath({ pathname: '/index.html' }), null);
+  assert.equal(getRestaurantSlugFromPath({ pathname: '/caz-food.html' }), 'caz-food');
+});
+
 test('getRestaurantResolverHost falls back to the real hostname when there is no slug', () => {
   const location = { pathname: '/admin', hostname: 'cazfood31.netlify.app' };
   assert.equal(getRestaurantResolverHost(location), 'cazfood31.netlify.app');
+});
+
+test('getRestaurantResolverHost resolves admin.html on a custom domain to the real hostname, not a slug', () => {
+  const location = { pathname: '/admin.html', hostname: 'www.foodatoi.fr' };
+  assert.equal(getRestaurantResolverHost(location), 'foodatoi.fr');
 });
 
 test('getRestaurantResolverHost builds a virtual *.foodatoi.fr host from a slug', () => {
