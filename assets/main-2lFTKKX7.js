@@ -402,6 +402,10 @@ import{n as e,t}from"./styles-BGoon_IL.js";import{a as n,c as r,d as i,i as a,n 
                 </a>
               `:``}
 
+          <a href="/legal.html">
+            Mentions légales
+          </a>
+
         </div>
 
       </footer>
