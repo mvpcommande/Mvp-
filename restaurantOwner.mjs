@@ -231,6 +231,45 @@ export async function addProduct(client, restaurantId, fields) {
   return data;
 }
 
+export async function updateRestaurantColor(client, restaurantId, color) {
+  const { error } = await client
+    .from('restaurants')
+    .update({ primary_color: color })
+    .eq('id', restaurantId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function uploadRestaurantLogo(client, restaurantId, file) {
+  const extension = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${restaurantId}/logo-${Date.now()}.${extension}`;
+
+  const { error: uploadError } = await client.storage
+    .from('restaurant-media')
+    .upload(path, file, { upsert: false });
+
+  if (uploadError) {
+    throw uploadError;
+  }
+
+  const {
+    data: { publicUrl }
+  } = client.storage.from('restaurant-media').getPublicUrl(path);
+
+  const { error: updateError } = await client
+    .from('restaurants')
+    .update({ logo_url: publicUrl })
+    .eq('id', restaurantId);
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  return publicUrl;
+}
+
 export async function toggleProductActive(client, productId, isActive) {
   const { error } = await client
     .from('products')

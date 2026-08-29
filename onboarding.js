@@ -14,8 +14,11 @@ import {
   addProduct,
   toggleProductActive,
   deleteProduct,
-  uploadProductPhoto
+  uploadProductPhoto,
+  updateRestaurantColor,
+  uploadRestaurantLogo
 } from './restaurantOwner.mjs';
+import { compressImage } from './imageCompression.mjs';
 
 const root = document.querySelector('#onboarding-root');
 
@@ -368,6 +371,27 @@ function renderDashboard() {
       </section>
 
       <section class="onboarding-section">
+        <h2>Identité visuelle</h2>
+        <div class="identity-row">
+          <div class="identity-logo-preview">
+            ${
+              restaurant.logo_url
+                ? `<img src="${escapeHtml(restaurant.logo_url)}" alt="">`
+                : `<span>${escapeHtml((restaurant.name || '?').slice(0, 2).toUpperCase())}</span>`
+            }
+          </div>
+          <label class="secondary" id="logo-upload-label">
+            ${restaurant.logo_url ? 'Changer le logo' : 'Ajouter un logo'}
+            <input type="file" id="logo-input" accept="image/jpeg,image/png,image/webp" hidden>
+          </label>
+        </div>
+        <label class="color-picker-row">
+          COULEUR PRINCIPALE
+          <input type="color" id="color-input" value="${escapeHtml(restaurant.primary_color || '#e84d27')}">
+        </label>
+      </section>
+
+      <section class="onboarding-section">
         <h2>Horaires d'ouverture</h2>
         <form id="hours-form">
           ${DAYS.map(([key, label]) => {
@@ -412,25 +436,27 @@ function renderDashboard() {
                   const hasPhoto = (p.product_images || []).length > 0;
                   return `
                     <div class="product-row">
-                      <div>
+                      <div class="product-row-main">
                         <strong>${escapeHtml(p.name)}</strong>
                         <span>${escapeHtml(p.category)} · ${(p.price_cents / 100).toFixed(2)} €</span>
                       </div>
-                      ${
-                        hasPhoto
-                          ? `<span class="photo-ok">Photo ✓</span>`
-                          : `
-                            <label class="photo-upload-btn">
-                              Ajouter une photo
-                              <input type="file" accept="image/jpeg,image/png,image/webp" class="photo-input" data-product="${p.id}" hidden>
-                            </label>
-                          `
-                      }
-                      <label class="account-toggle small">
-                        <input type="checkbox" class="product-active" data-id="${p.id}" ${p.is_active ? 'checked' : ''}>
-                        Actif
-                      </label>
-                      <button class="danger small" data-delete="${p.id}" type="button">Supprimer</button>
+                      <div class="product-row-actions">
+                        ${
+                          hasPhoto
+                            ? `<span class="photo-ok">Photo ✓</span>`
+                            : `
+                              <label class="photo-upload-btn">
+                                Ajouter une photo
+                                <input type="file" accept="image/jpeg,image/png,image/webp" class="photo-input" data-product="${p.id}" hidden>
+                              </label>
+                            `
+                        }
+                        <label class="account-toggle small">
+                          <input type="checkbox" class="product-active" data-id="${p.id}" ${p.is_active ? 'checked' : ''}>
+                          Actif
+                        </label>
+                        <button class="danger small" data-delete="${p.id}" type="button">Supprimer</button>
+                      </div>
                     </div>
                   `;
                 }).join('')
@@ -578,6 +604,37 @@ function bindDashboardEvents() {
     };
   });
 
+  document.querySelector('#color-input').onchange = async (event) => {
+    try {
+      await updateRestaurantColor(supabase, restaurant.id, event.target.value);
+      restaurant.primary_color = event.target.value;
+    } catch (err) {
+      console.error('[FOODATOI onboarding]', err);
+      alert('Impossible d’enregistrer la couleur pour le moment.');
+    }
+  };
+
+  document.querySelector('#logo-input').onchange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    const label = document.querySelector('#logo-upload-label');
+    const originalText = label.firstChild.textContent;
+    label.firstChild.textContent = 'Envoi…';
+
+    try {
+      const compressed = await compressImage(file, 'logo');
+      restaurant.logo_url = await uploadRestaurantLogo(supabase, restaurant.id, compressed);
+      render();
+    } catch (err) {
+      console.error('[FOODATOI onboarding]', err);
+      alert('Impossible d’envoyer le logo pour le moment.');
+      label.firstChild.textContent = originalText;
+    }
+  };
+
   document.querySelectorAll('.photo-input').forEach((input) => {
     input.onchange = async () => {
       const file = input.files[0];
@@ -589,7 +646,8 @@ function bindDashboardEvents() {
       label.textContent = 'Envoi…';
 
       try {
-        await uploadProductPhoto(supabase, restaurant.id, input.dataset.product, file);
+        const compressed = await compressImage(file, 'product');
+        await uploadProductPhoto(supabase, restaurant.id, input.dataset.product, compressed);
         products = await getOwnProducts(supabase, restaurant.id);
         render();
       } catch (err) {
@@ -610,7 +668,8 @@ function bindDashboardEvents() {
       const created = await addProduct(supabase, restaurant.id, fields);
 
       if (photoFile) {
-        await uploadProductPhoto(supabase, restaurant.id, created.id, photoFile);
+        const compressed = await compressImage(photoFile, 'product');
+        await uploadProductPhoto(supabase, restaurant.id, created.id, compressed);
       }
 
       products = await getOwnProducts(supabase, restaurant.id);
