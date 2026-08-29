@@ -149,7 +149,7 @@ export async function updateOpeningHours(client, restaurantId, openingHours) {
 export async function getOwnProducts(client, restaurantId) {
   const { data, error } = await client
     .from('products')
-    .select('*')
+    .select('*, product_images(id, public_url, is_primary)')
     .eq('restaurant_id', restaurantId)
     .order('sort_order', { ascending: true });
 
@@ -158,6 +158,47 @@ export async function getOwnProducts(client, restaurantId) {
   }
 
   return data ?? [];
+}
+
+/**
+ * Envoie une photo produit dans le stockage Supabase (bucket public
+ * en lecture, écriture réservée au restaurant propriétaire) plutôt
+ * que dans le dépôt git - aucune reconstruction ni redéploiement
+ * nécessaire, contrairement au procédé manuel utilisé jusqu'ici pour
+ * Caz Food.
+ */
+export async function uploadProductPhoto(client, restaurantId, productId, file) {
+  const extension = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${restaurantId}/${productId}-${Date.now()}.${extension}`;
+
+  const { error: uploadError } = await client.storage
+    .from('restaurant-media')
+    .upload(path, file, { upsert: false });
+
+  if (uploadError) {
+    throw uploadError;
+  }
+
+  const {
+    data: { publicUrl }
+  } = client.storage.from('restaurant-media').getPublicUrl(path);
+
+  const { error: insertError } = await client
+    .from('product_images')
+    .insert({
+      restaurant_id: restaurantId,
+      product_id: productId,
+      storage_path: path,
+      public_url: publicUrl,
+      is_primary: true,
+      sort_order: 0
+    });
+
+  if (insertError) {
+    throw insertError;
+  }
+
+  return publicUrl;
 }
 
 export async function addProduct(client, restaurantId, fields) {

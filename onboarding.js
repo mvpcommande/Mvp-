@@ -13,7 +13,8 @@ import {
   getOwnProducts,
   addProduct,
   toggleProductActive,
-  deleteProduct
+  deleteProduct,
+  uploadProductPhoto
 } from './restaurantOwner.mjs';
 
 const root = document.querySelector('#onboarding-root');
@@ -407,19 +408,32 @@ function renderDashboard() {
         <div class="product-list">
           ${
             products.length
-              ? products.map((p) => `
-                  <div class="product-row">
-                    <div>
-                      <strong>${escapeHtml(p.name)}</strong>
-                      <span>${escapeHtml(p.category)} · ${(p.price_cents / 100).toFixed(2)} €</span>
+              ? products.map((p) => {
+                  const hasPhoto = (p.product_images || []).length > 0;
+                  return `
+                    <div class="product-row">
+                      <div>
+                        <strong>${escapeHtml(p.name)}</strong>
+                        <span>${escapeHtml(p.category)} · ${(p.price_cents / 100).toFixed(2)} €</span>
+                      </div>
+                      ${
+                        hasPhoto
+                          ? `<span class="photo-ok">Photo ✓</span>`
+                          : `
+                            <label class="photo-upload-btn">
+                              Ajouter une photo
+                              <input type="file" accept="image/jpeg,image/png,image/webp" class="photo-input" data-product="${p.id}" hidden>
+                            </label>
+                          `
+                      }
+                      <label class="account-toggle small">
+                        <input type="checkbox" class="product-active" data-id="${p.id}" ${p.is_active ? 'checked' : ''}>
+                        Actif
+                      </label>
+                      <button class="danger small" data-delete="${p.id}" type="button">Supprimer</button>
                     </div>
-                    <label class="account-toggle small">
-                      <input type="checkbox" class="product-active" data-id="${p.id}" ${p.is_active ? 'checked' : ''}>
-                      Actif
-                    </label>
-                    <button class="danger small" data-delete="${p.id}" type="button">Supprimer</button>
-                  </div>
-                `).join('')
+                  `;
+                }).join('')
               : `<p class="muted">Aucun produit pour le moment.</p>`
           }
         </div>
@@ -443,6 +457,10 @@ function renderDashboard() {
           <label>
             DESCRIPTION (facultatif)
             <input name="description">
+          </label>
+          <label>
+            PHOTO (facultatif)
+            <input name="photo" type="file" accept="image/jpeg,image/png,image/webp">
           </label>
           <label class="account-toggle"><input type="checkbox" name="meat">Choix de viande</label>
           <label class="account-toggle"><input type="checkbox" name="sauce">Choix de sauce</label>
@@ -560,13 +578,42 @@ function bindDashboardEvents() {
     };
   });
 
+  document.querySelectorAll('.photo-input').forEach((input) => {
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) {
+        return;
+      }
+
+      const label = input.closest('.photo-upload-btn');
+      label.textContent = 'Envoi…';
+
+      try {
+        await uploadProductPhoto(supabase, restaurant.id, input.dataset.product, file);
+        products = await getOwnProducts(supabase, restaurant.id);
+        render();
+      } catch (err) {
+        console.error('[FOODATOI onboarding]', err);
+        alert('Impossible d’envoyer cette photo pour le moment.');
+        label.textContent = 'Ajouter une photo';
+      }
+    };
+  });
+
   document.querySelector('#product-form').onsubmit = async (event) => {
     event.preventDefault();
-    const fields = Object.fromEntries(new FormData(event.currentTarget));
+    const form = event.currentTarget;
+    const fields = Object.fromEntries(new FormData(form));
+    const photoFile = form.photo.files[0];
 
     try {
       const created = await addProduct(supabase, restaurant.id, fields);
-      products.push(created);
+
+      if (photoFile) {
+        await uploadProductPhoto(supabase, restaurant.id, created.id, photoFile);
+      }
+
+      products = await getOwnProducts(supabase, restaurant.id);
       render();
     } catch (err) {
       console.error('[FOODATOI onboarding]', err);
