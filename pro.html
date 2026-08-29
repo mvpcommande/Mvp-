@@ -145,6 +145,47 @@
         color: #fff;
       }
 
+      .showcase {
+        padding: 70px 0 20px;
+      }
+
+      .showcase h2 {
+        font-size: clamp(30px, 5vw, 44px);
+        letter-spacing: -0.03em;
+        margin: 0 0 40px;
+        max-width: 620px;
+      }
+
+      .showcase-item {
+        margin-bottom: 50px;
+      }
+
+      .showcase-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .showcase-item img {
+        display: block;
+        border: 1px solid var(--line);
+        box-shadow: 0 20px 60px rgba(25, 21, 15, 0.12);
+      }
+
+      .showcase-item .shot-phone {
+        width: 100%;
+        max-width: 340px;
+      }
+
+      .showcase-item .shot-wide {
+        width: 100%;
+      }
+
+      .showcase-item p {
+        margin: 16px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        max-width: 520px;
+      }
+
       .features {
         padding: 70px 0;
       }
@@ -260,6 +301,36 @@
             C'est la commission standard des plateformes de
             livraison sur une commande à emporter.
             <strong>Avec FOODATOI, vous la gardez.</strong>
+          </p>
+        </div>
+      </section>
+
+      <section class="showcase wrap">
+        <h2>Le produit, pas une promesse.</h2>
+
+        <div class="showcase-item">
+          <img
+            class="shot-phone"
+            src="marketing/screenshot-menu.png"
+            alt="Carte de commande FOODATOI avec vraies photos des plats"
+          />
+          <p>
+            Vos clients commandent sur une carte pensée pour
+            donner envie — vraies photos de vos plats, pas des
+            icônes génériques.
+          </p>
+        </div>
+
+        <div class="showcase-item">
+          <img
+            class="shot-wide"
+            src="marketing/screenshot-comptoir.png"
+            alt="Comptoir FOODATOI avec suivi des commandes en direct et économie de commission"
+          />
+          <p>
+            Votre comptoir reçoit les commandes en direct, et
+            affiche ce que vous économisez face aux plateformes —
+            en euros, pas en théorie.
           </p>
         </div>
       </section>
