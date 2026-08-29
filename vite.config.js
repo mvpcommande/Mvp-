@@ -7,6 +7,7 @@ export default defineConfig({
         main: 'index.html',
         admin: 'admin.html',
         pro: 'pro.html',
+        onboarding: 'onboarding.html',
       },
     },
   },

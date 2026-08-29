@@ -50,6 +50,23 @@ const RESERVED_ROUTES = [
   'assets'
 ];
 
+/**
+ * Le slug en chemin (/mon-resto) suppose qu'un vrai fichier existe
+ * à ce chemin - faux sur de l'hébergement statique (GitHub Pages)
+ * pour un restaurant qui vient d'être créé en libre-service, sans
+ * fichier dédié. Le paramètre de requête (?resto=mon-resto) marche
+ * toujours, sur n'importe quel chemin existant (/ ou /admin.html),
+ * sans setup DNS ni fichier par restaurant. Vérifié en priorité.
+ */
+export function getRestaurantSlugFromQuery(location = window.location) {
+  const params = new URLSearchParams(location.search || '');
+  const slug = (params.get('resto') || '')
+    .trim()
+    .toLowerCase();
+
+  return slug || null;
+}
+
 export function getRestaurantSlugFromPath(location = window.location) {
   const pathname = location.pathname
     .trim()
@@ -87,7 +104,9 @@ export function getRestaurantSlugFromPath(location = window.location) {
 }
 
 export function getRestaurantResolverHost(location = window.location) {
-  const slug = getRestaurantSlugFromPath(location);
+  const slug =
+    getRestaurantSlugFromQuery(location) ||
+    getRestaurantSlugFromPath(location);
 
   if (slug) {
     return `${slug}.foodatoi.fr`;
@@ -110,7 +129,9 @@ export async function resolveRestaurant(client, location = window.location) {
 
   const realHostname = getHostname(location);
   const resolverHost = getRestaurantResolverHost(location);
-  const slug = getRestaurantSlugFromPath(location);
+  const slug =
+    getRestaurantSlugFromQuery(location) ||
+    getRestaurantSlugFromPath(location);
 
   const { data, error } = await client.rpc('resolve_restaurant', {
     hostname: resolverHost
