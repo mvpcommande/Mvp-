@@ -9,6 +9,7 @@ export default defineConfig({
         pro: 'pro.html',
         onboarding: 'onboarding.html',
         platform: 'platform.html',
+        legal: 'legal.html',
       },
     },
   },

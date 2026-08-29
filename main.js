@@ -1053,6 +1053,10 @@ function render() {
               : ''
           }
 
+          <a href="/legal.html">
+            Mentions légales
+          </a>
+
         </div>
 
       </footer>
