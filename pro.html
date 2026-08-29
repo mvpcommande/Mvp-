@@ -186,6 +186,30 @@
         max-width: 520px;
       }
 
+      .hidden {
+        display: none;
+      }
+
+      .view-toggle {
+        display: flex;
+        gap: 8px;
+        padding-bottom: 20px;
+      }
+
+      .view-btn {
+        border: 1px solid var(--ink);
+        background: transparent;
+        color: var(--ink);
+        padding: 10px 18px;
+        font: 700 13px 'DM Sans', sans-serif;
+        cursor: pointer;
+      }
+
+      .view-btn.is-active {
+        background: var(--ink);
+        color: #fff;
+      }
+
       .features {
         padding: 70px 0;
       }
@@ -294,6 +318,24 @@
         </a>
       </section>
 
+      <div class="view-toggle wrap">
+        <button
+          class="view-btn is-active"
+          data-view="commercant"
+          type="button"
+        >
+          Vue commerçant
+        </button>
+        <button
+          class="view-btn"
+          data-view="technique"
+          type="button"
+        >
+          Vue technique
+        </button>
+      </div>
+
+      <div id="view-commercant">
       <section class="stat-band">
         <div class="wrap">
           <div class="stat-number">30%</div>
@@ -374,6 +416,77 @@
           </div>
         </div>
       </section>
+      </div>
+
+      <div id="view-technique" class="hidden">
+        <section class="features wrap">
+          <p class="eyebrow">CÔTÉ TECHNIQUE</p>
+          <h2>Comment c'est construit.</h2>
+
+          <div class="feature-grid">
+            <div class="feature-card">
+              <h3>Isolation stricte par établissement</h3>
+              <p>
+                Chaque restaurant est isolé au niveau de la base
+                de données (règles de sécurité PostgreSQL), pas
+                seulement dans l'application. Impossible qu'un
+                établissement voie les données d'un autre, même
+                en cas de bug côté interface.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <h3>Rien n'est confié au navigateur</h3>
+              <p>
+                Les prix et les horaires d'ouverture sont
+                revérifiés côté serveur à chaque commande. Un
+                prix ne peut pas être falsifié depuis les outils
+                de développement du navigateur.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <h3>Temps réel natif</h3>
+              <p>
+                Les commandes arrivent au comptoir par connexion
+                persistante (WebSocket), pas par rafraîchissement
+                de page ni vérification périodique.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <h3>RGPD par construction</h3>
+              <p>
+                Consentement marketing explicite et révocable à
+                tout moment, suppression de compte en un clic. Les
+                commandes sont anonymisées plutôt que supprimées,
+                pour rester conformes aux obligations de
+                conservation comptable françaises sans violer le
+                droit à l'effacement.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <h3>Fiabilité testée</h3>
+              <p>
+                Suite de tests automatisés exécutée à chaque
+                changement, intégration continue, supervision
+                programmée qui vérifie en continu que le service
+                répond.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <h3>Base ouverte, pas de boîte noire</h3>
+              <p>
+                Construit sur PostgreSQL (Supabase), déployé sur
+                infrastructure web standard — pas de dépendance à
+                une plateforme propriétaire fermée.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
 
       <section class="closing wrap">
         <h2>Prêt à reprendre la main sur vos commandes ?</h2>
@@ -387,5 +500,27 @@
     <footer class="bottom">
       FOODATOI
     </footer>
+
+    <script>
+      document.querySelectorAll('.view-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.view-btn').forEach(function (b) {
+            b.classList.remove('is-active');
+          });
+          btn.classList.add('is-active');
+
+          var view = btn.dataset.view;
+
+          document.getElementById('view-commercant').classList.toggle(
+            'hidden',
+            view !== 'commercant'
+          );
+          document.getElementById('view-technique').classList.toggle(
+            'hidden',
+            view !== 'technique'
+          );
+        });
+      });
+    </script>
   </body>
 </html>
