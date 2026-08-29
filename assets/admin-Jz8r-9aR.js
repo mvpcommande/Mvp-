@@ -1,4 +1,4 @@
-import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99hEtAtt.js";async function c(e,t,n){let{data:r,error:i}=await e.auth.signInWithPassword({email:t,password:n});if(i)throw i;return r.session}async function l(e){let{data:t,error:n}=await e.auth.getSession();if(n)throw n;return t.session}async function u(e){let{error:t}=await e.auth.signOut();if(t)throw t}function d(e){let t=new Map;for(let n of e??[]){let e=n.order_items??n.items??[];for(let n of e){let e=n.product_name??n.name??`Article`,r=n.options?.meat??``,i=n.options?.sauce??``,a=n.options?.drink??``,o=[e,r,i,a].join(`|`),s=Number(n.quantity??0),c=Math.round(n.line_total_cents??(n.price??0)*s*100),l=t.get(o);l?(l.quantity+=s,l.revenueCents+=c):t.set(o,{name:e,meat:r,sauce:i,drink:a,quantity:s,revenueCents:c})}}return[...t.values()].sort((e,t)=>t.quantity-e.quantity||e.name.localeCompare(t.name))}function f(e){let t=e=>{let t=String(e??``);return/[;"\n]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t},n=[`Article`,`Viande`,`Sauce`,`Boisson`,`Quantité`,`Total (€)`],r=(e??[]).map(e=>[e.name,e.meat,e.sauce,e.drink,e.quantity,(e.revenueCents/100).toFixed(2).replace(`.`,`,`)].map(t).join(`;`));return[n.join(`;`),...r].join(`
+import{n as e,t}from"./styles-WU6QyVaC.js";import{a as n,i as r,n as i,s as a,t as o,u as s}from"./errorLog-D0rldCer.js";async function c(e,t,n){let{data:r,error:i}=await e.auth.signInWithPassword({email:t,password:n});if(i)throw i;return r.session}async function l(e){let{data:t,error:n}=await e.auth.getSession();if(n)throw n;return t.session}async function u(e){let{error:t}=await e.auth.signOut();if(t)throw t}function d(e){let t=new Map;for(let n of e??[]){let e=n.order_items??n.items??[];for(let n of e){let e=n.product_name??n.name??`Article`,r=n.options?.meat??``,i=n.options?.sauce??``,a=n.options?.drink??``,o=[e,r,i,a].join(`|`),s=Number(n.quantity??0),c=Math.round(n.line_total_cents??(n.price??0)*s*100),l=t.get(o);l?(l.quantity+=s,l.revenueCents+=c):t.set(o,{name:e,meat:r,sauce:i,drink:a,quantity:s,revenueCents:c})}}return[...t.values()].sort((e,t)=>t.quantity-e.quantity||e.name.localeCompare(t.name))}function f(e){let t=e=>{let t=String(e??``);return/[;"\n]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t},n=[`Article`,`Viande`,`Sauce`,`Boisson`,`Quantité`,`Total (€)`],r=(e??[]).map(e=>[e.name,e.meat,e.sauce,e.drink,e.quantity,(e.revenueCents/100).toFixed(2).replace(`.`,`,`)].map(t).join(`;`));return[n.join(`;`),...r].join(`
 `)}function p(e,t={},n=(e=``,t=`_blank`)=>window.open(e,t)){let r=n(``,`_blank`);if(!r)return!1;let i=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,a=(e??[]).reduce((e,t)=>e+t.quantity,0),o=(e??[]).reduce((e,t)=>e+t.revenueCents,0),s=(e??[]).map(e=>`
         <tr>
           <td>${e.name}</td>
@@ -54,7 +54,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
         </table>
       </body>
     </html>
-  `),r.document.close(),r.focus(),r.print(),!0}function m(e,t){if(!t||t<=0)return null;let n=(e??[]).filter(e=>e.status!==`CANCELLED`),r=n.reduce((e,t)=>e+Math.round(Number(t.total??(t.total_cents??0)/100)*100),0);return{orderCount:n.length,totalCents:r,savingsCents:Math.round(r*t)}}function h(e,t,n){if(!e)return null;let r=`caz-food-orders-${Date.now()}`,i=e.channel(r,{config:{broadcast:{self:!1},presence:{key:``}}}).on(`postgres_changes`,{event:`INSERT`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Nouvelle commande reçue`,e),t(e)}).on(`postgres_changes`,{event:`UPDATE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande mise à jour`,e),t(e)}).on(`postgres_changes`,{event:`DELETE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande supprimée`,e),t(e)});return i.subscribe((e,t)=>{console.log(`[Realtime] Statut:`,e),t&&console.error(`[Realtime] Erreur:`,t),e===`SUBSCRIBED`&&console.log(`[Realtime] Abonnement actif pour public.orders`),e===`CHANNEL_ERROR`&&console.error(`[Realtime] CHANNEL_ERROR`,t),e===`TIMED_OUT`&&console.error(`[Realtime] TIMED_OUT`),e===`CLOSED`&&console.warn(`[Realtime] Canal fermé`),n?.(e,t)}),i}function g(e,t=(e=``,t=`_blank`)=>window.open(e,t)){let r=t(``,`_blank`);if(!r)return!1;let i=e.order_items??e.items??[],a=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,o=n(e.pickup_time),c=i.map(e=>`
+  `),r.document.close(),r.focus(),r.print(),!0}function m(e,t){if(!t||t<=0)return null;let n=(e??[]).filter(e=>e.status!==`CANCELLED`),r=n.reduce((e,t)=>e+Math.round(Number(t.total??(t.total_cents??0)/100)*100),0);return{orderCount:n.length,totalCents:r,savingsCents:Math.round(r*t)}}function h(e,t,n){if(!e)return null;let r=`caz-food-orders-${Date.now()}`,i=e.channel(r,{config:{broadcast:{self:!1},presence:{key:``}}}).on(`postgres_changes`,{event:`INSERT`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Nouvelle commande reçue`,e),t(e)}).on(`postgres_changes`,{event:`UPDATE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande mise à jour`,e),t(e)}).on(`postgres_changes`,{event:`DELETE`,schema:`public`,table:`orders`},e=>{console.log(`[Realtime] Commande supprimée`,e),t(e)});return i.subscribe((e,t)=>{console.log(`[Realtime] Statut:`,e),t&&console.error(`[Realtime] Erreur:`,t),e===`SUBSCRIBED`&&console.log(`[Realtime] Abonnement actif pour public.orders`),e===`CHANNEL_ERROR`&&console.error(`[Realtime] CHANNEL_ERROR`,t),e===`TIMED_OUT`&&console.error(`[Realtime] TIMED_OUT`),e===`CLOSED`&&console.warn(`[Realtime] Canal fermé`),n?.(e,t)}),i}function g(e,n=(e=``,t=`_blank`)=>window.open(e,t)){let r=n(``,`_blank`);if(!r)return!1;let i=e.order_items??e.items??[],o=e=>`${(Number(e||0)/100).toFixed(2).replace(`.`,`,`)} €`,s=a(e.pickup_time),c=i.map(e=>`
         <div class="row">
           <div>
             <strong>
@@ -67,7 +67,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
             </small>
           </div>
           <b>
-            ${a(e.line_total_cents??(e.price||0)*e.quantity*100)}
+            ${o(e.line_total_cents??(e.price||0)*e.quantity*100)}
           </b>
         </div>
       `).join(``);return r.document.write(`
@@ -135,30 +135,30 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
 
         <div>
           CLIENT :
-          ${s(e.customer_name??e.customer?.name??`—`)}
+          ${t(e.customer_name??e.customer?.name??`—`)}
         </div>
 
         <div>
           TÉLÉPHONE :
-          ${s(e.customer_phone??e.customer?.phone??`—`)}
+          ${t(e.customer_phone??e.customer?.phone??`—`)}
         </div>
 
         <div>
           RETRAIT :
-          ${o}
+          ${s}
         </div>
 
         ${e.notes?`
               <div class="line"></div>
               <div style="border:1px solid #111;padding:6px;font-weight:bold">
-                NOTE : ${s(e.notes)}
+                NOTE : ${t(e.notes)}
               </div>
             `:``}
 
         <div class="total">
           <span>TOTAL</span>
           <span>
-            ${a(e.total_cents??Number(e.total||0)*100)}
+            ${o(e.total_cents??Number(e.total||0)*100)}
           </span>
         </div>
 
@@ -167,7 +167,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
         </div>
       </body>
     </html>
-  `),r.document.close(),r.focus(),r.print(),!0}var _=document.querySelector(`#admin-root`),v={NEW:`Nouvelle`,ACCEPTED:`Acceptée`,PREPARING:`En préparation`,READY:`Prête`,CANCELLED:`Annulée`},y=null,b=`local`,x=null,S=null,C=null;function w(){return JSON.parse(localStorage.getItem(`caz-food-orders`)||`[]`)}function T(e){localStorage.setItem(`caz-food-orders`,JSON.stringify(e))}function E(e){return`${Number(e).toFixed(2).replace(`.`,`,`)} €`}async function D(){if(!i){k();return}try{S=await l(i)}catch(e){console.error(`Erreur récupération session:`,e),j();return}if(S){try{C=await a(i)}catch(e){console.error(`Erreur résolution restaurant:`,e),r(i,{context:`admin.resolveRestaurant`,message:e?.message??String(e),page:`admin`}),A(e);return}y=o(i,C.id),b=`remote`,O(),await P();return}j()}function O(){x&&i&&i.removeChannel(x),i&&S?.access_token&&i.realtime.setAuth(S.access_token),x=h(i,()=>P(),e=>{(e===`CLOSED`||e===`TIMED_OUT`||e===`CHANNEL_ERROR`)&&b===`remote`&&(console.warn(`[Realtime] Reconnexion dans 3s...`),r(i,{restaurantId:C?.id,context:`admin.realtime`,message:`Canal realtime perdu (${e}), reconnexion dans 3s`,page:`admin`}),setTimeout(()=>{b===`remote`&&O()},3e3))})}function k(){_.innerHTML=`
+  `),r.document.close(),r.focus(),r.print(),!0}var _=document.querySelector(`#admin-root`),v={NEW:`Nouvelle`,ACCEPTED:`Acceptée`,PREPARING:`En préparation`,READY:`Prête`,CANCELLED:`Annulée`},y=null,b=`local`,x=null,S=null,C=null;function w(){return JSON.parse(localStorage.getItem(`caz-food-orders`)||`[]`)}function T(e){localStorage.setItem(`caz-food-orders`,JSON.stringify(e))}function E(e){return`${Number(e).toFixed(2).replace(`.`,`,`)} €`}async function D(){if(!e){k();return}try{S=await l(e)}catch(e){console.error(`Erreur récupération session:`,e),j();return}if(S){try{C=await i(e)}catch(t){console.error(`Erreur résolution restaurant:`,t),o(e,{context:`admin.resolveRestaurant`,message:t?.message??String(t),page:`admin`}),A(t);return}y=n(e,C.id),b=`remote`,O(),await P();return}j()}function O(){x&&e&&e.removeChannel(x),e&&S?.access_token&&e.realtime.setAuth(S.access_token),x=h(e,()=>P(),t=>{(t===`CLOSED`||t===`TIMED_OUT`||t===`CHANNEL_ERROR`)&&b===`remote`&&(console.warn(`[Realtime] Reconnexion dans 3s...`),o(e,{restaurantId:C?.id,context:`admin.realtime`,message:`Canal realtime perdu (${t}), reconnexion dans 3s`,page:`admin`}),setTimeout(()=>{b===`remote`&&O()},3e3))})}function k(){_.innerHTML=`
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
@@ -219,7 +219,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
         </a>
       </div>
     </main>
-  `,_.querySelector(`#retry-restaurant`).onclick=()=>D()}function j(e=``){_.innerHTML=`
+  `,_.querySelector(`#retry-restaurant`).onclick=()=>D()}function j(t=``){_.innerHTML=`
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
@@ -234,9 +234,9 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
         <p>
           Connexion réservée à l'équipe Caz Food.
         </p>
-        ${e?`
+        ${t?`
               <div class="auth-error">
-                ${e}
+                ${t}
               </div>
             `:``}
         <form
@@ -278,7 +278,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
         </a>
       </div>
     </main>
-  `;let t=_.querySelector(`#login-form`);t.onsubmit=async e=>{e.preventDefault();let t=new FormData(e.currentTarget),n=e.currentTarget.querySelector(`button`);n.disabled=!0,n.textContent=`CONNEXION…`;try{S=await c(i,t.get(`email`),t.get(`password`))}catch(e){console.error(`Erreur connexion admin:`,e),j(`Email ou mot de passe incorrect.`);return}try{C=await a(i),y=o(i,C.id),b=`remote`,O(),await P()}catch(e){console.error(`Erreur résolution restaurant:`,e),A(e)}}}async function M(){if(b===`remote`)try{return await y.listOrders()}catch(e){return console.error(`Erreur récupération commandes:`,e),[]}return w()}async function N(e){let n={NEW:`ACCEPTED`,ACCEPTED:`PREPARING`,PREPARING:`READY`}[e.status];if(n)try{b===`remote`?await y.updateStatus(e.id,n):T(t(w(),e.id,n)),await P()}catch(t){console.error(`Erreur changement statut:`,t),r(i,{restaurantId:C?.id,context:`admin.updateStatus`,message:t?.message??String(t),details:{orderId:e.id,from:e.status,to:n},page:`admin`}),alert(`Impossible de modifier le statut de la commande.`)}}async function P(){if(!S&&b===`remote`){j();return}let e=(await M()).slice().sort((e,t)=>new Date(t.created_at??t.createdAt)-new Date(e.created_at??e.createdAt)),t=e.reduce((e,t)=>e+Number(t.total??(t.total_cents??0)/100),0);_.innerHTML=`
+  `;let r=_.querySelector(`#login-form`);r.onsubmit=async t=>{t.preventDefault();let r=new FormData(t.currentTarget),a=t.currentTarget.querySelector(`button`);a.disabled=!0,a.textContent=`CONNEXION…`;try{S=await c(e,r.get(`email`),r.get(`password`))}catch(e){console.error(`Erreur connexion admin:`,e),j(`Email ou mot de passe incorrect.`);return}try{C=await i(e),y=n(e,C.id),b=`remote`,O(),await P()}catch(e){console.error(`Erreur résolution restaurant:`,e),A(e)}}}async function M(){if(b===`remote`)try{return await y.listOrders()}catch(e){return console.error(`Erreur récupération commandes:`,e),[]}return w()}async function N(t){let n={NEW:`ACCEPTED`,ACCEPTED:`PREPARING`,PREPARING:`READY`}[t.status];if(n)try{b===`remote`?await y.updateStatus(t.id,n):T(s(w(),t.id,n)),await P()}catch(r){console.error(`Erreur changement statut:`,r),o(e,{restaurantId:C?.id,context:`admin.updateStatus`,message:r?.message??String(r),details:{orderId:t.id,from:t.status,to:n},page:`admin`}),alert(`Impossible de modifier le statut de la commande.`)}}async function P(){if(!S&&b===`remote`){j();return}let t=(await M()).slice().sort((e,t)=>new Date(t.created_at??t.createdAt)-new Date(e.created_at??e.createdAt)),n=t.reduce((e,t)=>e+Number(t.total??(t.total_cents??0)/100),0);_.innerHTML=`
     <main class="admin-shell">
       <header class="admin-header">
         <div>
@@ -331,7 +331,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
             À prendre en charge
           </span>
           <strong>
-            ${e.filter(e=>e.status===`NEW`).length}
+            ${t.filter(e=>e.status===`NEW`).length}
           </strong>
         </div>
         <div>
@@ -339,7 +339,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
             En préparation
           </span>
           <strong>
-            ${e.filter(e=>e.status===`PREPARING`).length}
+            ${t.filter(e=>e.status===`PREPARING`).length}
           </strong>
         </div>
         <div>
@@ -347,7 +347,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
             Prêtes
           </span>
           <strong>
-            ${e.filter(e=>e.status===`READY`).length}
+            ${t.filter(e=>e.status===`READY`).length}
           </strong>
         </div>
         <div>
@@ -355,29 +355,29 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
             Commandé
           </span>
           <strong>
-            ${E(t)}
+            ${E(n)}
           </strong>
         </div>
       </section>
-      ${(()=>{let t=m(e,C?.settings?.uber_eats_commission_rate);return!t||!t.orderCount?``:`
+      ${(()=>{let e=m(t,C?.settings?.uber_eats_commission_rate);return!e||!e.orderCount?``:`
             <section class="roi-banner">
               <p class="eyebrow">
                 VOTRE ÉCONOMIE FOODATOI
               </p>
               <p>
-                ${t.orderCount}
-                commande${t.orderCount>1?`s`:``}
-                prise${t.orderCount>1?`s`:``} en direct.
+                ${e.orderCount}
+                commande${e.orderCount>1?`s`:``}
+                prise${e.orderCount>1?`s`:``} en direct.
                 Au tarif standard Uber Eats (livraison, 30 %),
                 ça aurait coûté environ
-                <strong>${E(t.savingsCents/100)}</strong>
+                <strong>${E(e.savingsCents/100)}</strong>
                 de commission. Avec FOODATOI, cette marge reste
                 intégralement chez vous.
               </p>
             </section>
           `})()}
       <section class="orders-grid">
-        ${e.length?e.map(z).join(``):`
+        ${t.length?t.map(z).join(``):`
               <div class="empty-ticket admin-empty">
                 <div class="empty-ticket-mark">
                   +
@@ -397,7 +397,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
         ${b===`remote`?`Temps réel actif. Les nouvelles commandes apparaissent automatiquement.`:`Mode démo local.`}
       </p>
     </main>
-  `;let n=_.querySelector(`#logout`);n&&(n.onclick=async()=>{try{x&&i&&await i.removeChannel(x),i&&await u(i)}finally{S=null,C=null,y=null,b=`local`,x=null,j()}}),_.querySelectorAll(`[data-next]`).forEach(t=>{t.onclick=()=>{let n=e.find(e=>String(e.id??``)===String(t.dataset.id));n&&N(n)}}),_.querySelectorAll(`[data-print]`).forEach(t=>{t.onclick=()=>{let n=e.find(e=>String(e.id??``)===String(t.dataset.id));n&&g(n)}});let r=_.querySelector(`#export-stock`);r&&(r.onclick=()=>F(e));let a=_.querySelector(`#system-health`);a&&(a.onclick=()=>R());let o=_.querySelector(`#print-stock`);o&&(o.onclick=()=>p(d(e),{rangeLabel:`${e.length} commande${e.length>1?`s`:``} affichée${e.length>1?`s`:``}`})),_.querySelectorAll(`.order-card`).forEach(t=>{t.onclick=n=>{if(n.target.closest(`button`))return;let r=e.find(e=>String(e.id??``)===String(t.dataset.order));r&&L(r)}})}function F(e){let t=f(d(e)),n=new Blob([`﻿`+t],{type:`text/csv;charset=utf-8;`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=`caz-food-stock-${new Date().toISOString().slice(0,10)}.csv`,i.click(),URL.revokeObjectURL(r)}function I(){let e=document.querySelector(`#order-detail-overlay`);e&&e.remove()}async function L(e){let t=e.items??e.order_items??[],r=e.total??(e.total_cents??0)/100,i=document.createElement(`div`);if(i.id=`order-detail-overlay`,i.className=`modal`,i.innerHTML=`
+  `;let r=_.querySelector(`#logout`);r&&(r.onclick=async()=>{try{x&&e&&await e.removeChannel(x),e&&await u(e)}finally{S=null,C=null,y=null,b=`local`,x=null,j()}}),_.querySelectorAll(`[data-next]`).forEach(e=>{e.onclick=()=>{let n=t.find(t=>String(t.id??``)===String(e.dataset.id));n&&N(n)}}),_.querySelectorAll(`[data-print]`).forEach(e=>{e.onclick=()=>{let n=t.find(t=>String(t.id??``)===String(e.dataset.id));n&&g(n)}});let i=_.querySelector(`#export-stock`);i&&(i.onclick=()=>F(t));let a=_.querySelector(`#system-health`);a&&(a.onclick=()=>R());let o=_.querySelector(`#print-stock`);o&&(o.onclick=()=>p(d(t),{rangeLabel:`${t.length} commande${t.length>1?`s`:``} affichée${t.length>1?`s`:``}`})),_.querySelectorAll(`.order-card`).forEach(e=>{e.onclick=n=>{if(n.target.closest(`button`))return;let r=t.find(t=>String(t.id??``)===String(e.dataset.order));r&&L(r)}})}function F(e){let t=f(d(e)),n=new Blob([`﻿`+t],{type:`text/csv;charset=utf-8;`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=`caz-food-stock-${new Date().toISOString().slice(0,10)}.csv`,i.click(),URL.revokeObjectURL(r)}function I(){let e=document.querySelector(`#order-detail-overlay`);e&&e.remove()}async function L(e){let n=e.items??e.order_items??[],r=e.total??(e.total_cents??0)/100,i=document.createElement(`div`);if(i.id=`order-detail-overlay`,i.className=`modal`,i.innerHTML=`
     <div class="modal-card order-detail-card">
       <button
         class="modal-close"
@@ -416,11 +416,11 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
       <p>
         ${e.customer?.phone??e.customer_phone??`—`}
         · retrait
-        ${n(e.pickup_time)||`—`}
+        ${a(e.pickup_time)||`—`}
       </p>
       <table class="detail-items">
         <tbody>
-          ${t.map(e=>`
+          ${n.map(e=>`
                 <tr>
                   <td>
                     <strong>
@@ -450,7 +450,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
       ${e.notes?`
             <p class="detail-notes">
               <strong>Note :</strong>
-              ${s(e.notes)}
+              ${t(e.notes)}
             </p>
           `:``}
       <div id="detail-timeline">
@@ -533,11 +533,11 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
         <p>
           Aucune erreur enregistrée récemment. Bon signe.
         </p>
-      `}catch(t){console.error(`Erreur chargement état système:`,t);let n=e.querySelector(`#health-loading`);n&&(n.textContent=`Impossible de charger les logs.`)}}function z(t){let r=t.status,i=t.items??t.order_items??[],a={...t.customer??{},name:t.customer?.name??t.customer_name??`Client`,phone:t.customer?.phone??t.customer_phone??`—`,pickupTime:n(t.pickup_time)},o=t.number??t.order_number??`—`,s=t.total??(t.total_cents??0)/100,c=e(r),l=c?`
+      `}catch(t){console.error(`Erreur chargement état système:`,t);let n=e.querySelector(`#health-loading`);n&&(n.textContent=`Impossible de charger les logs.`)}}function z(e){let t=e.status,n=e.items??e.order_items??[],i={...e.customer??{},name:e.customer?.name??e.customer_name??`Client`,phone:e.customer?.phone??e.customer_phone??`—`,pickupTime:a(e.pickup_time)},o=e.number??e.order_number??`—`,s=e.total??(e.total_cents??0)/100,c=r(t),l=c?`
         <button
           class="primary"
           data-next
-          data-id="${t.id}"
+          data-id="${e.id}"
         >
           ${c} →
         </button>
@@ -547,8 +547,8 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
         </span>
       `;return`
     <article
-      class="order-card status-${String(r).toLowerCase()}"
-      data-order="${t.id}"
+      class="order-card status-${String(t).toLowerCase()}"
+      data-order="${e.id}"
     >
       <header>
         <div>
@@ -556,24 +556,24 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
             ${o}
           </span>
           <span class="status">
-            ${v[r]??r}
+            ${v[t]??t}
           </span>
         </div>
         <strong>
-          ${a.pickupTime||`—`}
+          ${i.pickupTime||`—`}
         </strong>
       </header>
       <div class="order-customer">
         <strong>
-          ${a.name}
+          ${i.name}
         </strong>
         <span>
-          ${a.phone}
+          ${i.phone}
         </span>
       </div>
-      ${i.length?`
+      ${n.length?`
             <ul>
-              ${i.map(e=>`
+              ${n.map(e=>`
                     <li>
                       <strong>
                         ${e.quantity}×
@@ -611,7 +611,7 @@ import{a as e,f as t,l as n,n as r,o as i,r as a,s as o,t as s}from"./styles-99h
           <button
             class="print-button"
             data-print
-            data-id="${t.id}"
+            data-id="${e.id}"
             title="Imprimer le ticket"
           >
             ⌁ TICKET
