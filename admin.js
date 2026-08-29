@@ -542,7 +542,7 @@ async function render() {
                 ${savings.orderCount}
                 commande${savings.orderCount > 1 ? 's' : ''}
                 prise${savings.orderCount > 1 ? 's' : ''} en direct.
-                Au tarif standard Uber Eats (livraison, 30 %),
+                Au tarif Uber Eats vente à emporter (6 %),
                 ça aurait coûté environ
                 <strong>${euro(savings.savingsCents / 100)}</strong>
                 de commission. Avec FOODATOI, cette marge reste

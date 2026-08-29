@@ -21,7 +21,9 @@ import {
 } from './uiModel.mjs';
 
 import {
-  resolveRestaurant as resolveRestaurantTenant
+  resolveRestaurant as resolveRestaurantTenant,
+  getRestaurantSlugFromQuery,
+  getRestaurantSlugFromPath
 } from './restaurantResolver.mjs';
 
 import {
@@ -2921,6 +2923,22 @@ async function bootstrap() {
     render();
 
   } catch (error) {
+    /*
+     * foodatoi.fr est maintenant le domaine de la PLATEFORME, plus
+     * celui de Caz Food spécifiquement - visiter la racine sans
+     * aucun ?resto= ni chemin ne doit pas afficher une erreur, mais
+     * rediriger vers la page vitrine. Un slug fourni mais invalide
+     * (lien mal copié) reste, lui, une vraie erreur à afficher.
+     */
+    const noSlugProvided =
+      !getRestaurantSlugFromQuery() &&
+      !getRestaurantSlugFromPath();
+
+    if (noSlugProvided) {
+      window.location.replace('/pro.html');
+      return;
+    }
+
     renderError(
       error
     );
