@@ -8,6 +8,7 @@ export default defineConfig({
         admin: 'admin.html',
         pro: 'pro.html',
         onboarding: 'onboarding.html',
+        platform: 'platform.html',
       },
     },
   },
