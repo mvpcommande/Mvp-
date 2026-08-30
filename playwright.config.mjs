@@ -4,10 +4,11 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 30000,
   retries: 1,
-  reporter: 'list',
+  reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: 'https://www.foodatoi.fr',
-    trace: 'retain-on-failure'
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure'
   },
   projects: [
     {

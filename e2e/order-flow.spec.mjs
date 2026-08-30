@@ -15,9 +15,17 @@ const DEMO_URL = 'https://www.foodatoi.fr/?resto=demo-charge';
 test('un client peut parcourir la carte, ajouter un article et passer commande', async ({ page }) => {
   await page.goto(DEMO_URL);
 
+  // Vérification robuste d'abord (le nom du resto apparaît à
+  // plusieurs endroits dès le chargement) avant celle, plus fine,
+  // sur le rôle d'en-tête - pour isoler si l'échec vient du
+  // chargement lui-même ou d'un sélecteur trop précis.
+  await expect(page.getByText('FOODATOI Démo').first()).toBeVisible({
+    timeout: 20000
+  });
+
   await expect(
     page.getByRole('heading', { name: /Choisis/i })
-  ).toBeVisible({ timeout: 15000 });
+  ).toBeVisible({ timeout: 10000 });
 
   const addButtons = page.locator('[data-add]');
   await expect(addButtons.first()).toBeVisible({ timeout: 10000 });
