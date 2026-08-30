@@ -35,7 +35,15 @@ export async function signUpOwner(client, { email, password }) {
     throw error;
   }
 
-  return { pendingConfirmation: !data?.user?.id };
+  /*
+   * Même bug corrigé que dans customerAccount.mjs : Supabase renvoie
+   * data.user.id même quand la confirmation email est en attente -
+   * seule data.session est absente dans ce cas. C'est exactement ce
+   * qui a cassé la création de restaurant de Kevin : le code
+   * pensait l'inscription pleinement réussie et tentait de créer le
+   * restaurant sans session valide, d'où l'erreur générique.
+   */
+  return { pendingConfirmation: !data?.session };
 }
 
 export async function signInOwner(client, { email, password }) {

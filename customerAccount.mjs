@@ -31,10 +31,13 @@ export async function signUpCustomer(
 
   const userId = authData?.user?.id;
 
-  if (!userId) {
-    // Confirmation email requise avant que la session existe :
-    // le compte Auth est créé, mais on ne peut pas encore créer
-    // la fiche client tant que l'utilisateur n'est pas confirmé.
+  if (!authData?.session) {
+    // Confirmation email requise avant que la session existe. Bug
+    // réel corrigé ici : Supabase renvoie authData.user.id même
+    // quand la confirmation est en attente - seule authData.session
+    // est absente dans ce cas. Vérifier user.id à la place laissait
+    // croire que l'inscription avait pleinement réussi et enchaînait
+    // sur la création de la fiche client sans session valide.
     return { pendingConfirmation: true };
   }
 
