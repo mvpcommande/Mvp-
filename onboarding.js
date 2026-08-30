@@ -19,6 +19,7 @@ import {
   uploadRestaurantLogo
 } from './restaurantOwner.mjs';
 import { compressImage } from './imageCompression.mjs';
+import { logClientError } from './errorLog.mjs';
 
 const root = document.querySelector('#onboarding-root');
 
@@ -652,6 +653,12 @@ function bindDashboardEvents() {
         render();
       } catch (err) {
         console.error('[FOODATOI onboarding]', err);
+        logClientError(supabase, {
+          restaurantId: restaurant?.id,
+          context: 'onboarding.uploadProductPhoto',
+          message: err?.message ?? String(err),
+          page: 'onboarding'
+        });
         alert('Impossible d’envoyer cette photo pour le moment.');
         label.textContent = 'Ajouter une photo';
       }
@@ -676,6 +683,12 @@ function bindDashboardEvents() {
       render();
     } catch (err) {
       console.error('[FOODATOI onboarding]', err);
+      logClientError(supabase, {
+        restaurantId: restaurant?.id,
+        context: 'onboarding.addProduct',
+        message: err?.message ?? String(err),
+        page: 'onboarding'
+      });
       alert('Impossible d’ajouter ce produit pour le moment.');
     }
   };
