@@ -24,3 +24,68 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  deploy:
+    needs: test-and-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      # Build servi depuis la racine du domaine personnalisé
+      # (www.foodatoi.fr), pas depuis /Mvp-/ - sinon les chemins
+      # d'assets pointent au mauvais endroit une fois en ligne.
+      - name: Build for the custom domain
+        run: npx vite build --base=/
+        env:
+          VITE_SUPABASE_URL: https://ffuykessameuonpnyiyc.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_MIwz0MWTUF74o8FOsMGQmw_k0yxlvk7
+
+      - name: Publish to gh-pages
+        run: |
+          touch dist/.nojekyll
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages:gh-pages
+          git worktree add /tmp/gh-pages-deploy gh-pages
+          rm -rf /tmp/gh-pages-deploy/*
+          cp -r dist/. /tmp/gh-pages-deploy/
+          cd /tmp/gh-pages-deploy
+          git add -A
+          git diff --staged --quiet && echo "Rien à déployer" && exit 0
+          git commit -m "Deploy ${{ github.sha }}"
+          git push origin gh-pages
+
+  e2e:
+    needs: deploy
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # Tourne contre le vrai site en production, sur le resto de
+      # démo prévu pour ça - pas d'environnement séparé pour
+      # l'instant. Non bloquant (continue-on-error) : un souci
+      # réseau ponctuel ici ne doit jamais empêcher un vrai
+      # correctif de partir.
+      - name: End-to-end order flow (resto démo)
+        run: npx playwright test

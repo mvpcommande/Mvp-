@@ -1,0 +1,18 @@
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './e2e',
+  timeout: 30000,
+  retries: 1,
+  reporter: 'list',
+  use: {
+    baseURL: 'https://www.foodatoi.fr',
+    trace: 'retain-on-failure'
+  },
+  projects: [
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 13'] }
+    }
+  ]
+});

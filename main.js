@@ -90,6 +90,7 @@ let activeCategory = 'Tous';
 let categoryObserver = null;
 
 let remoteStore = null;
+let checkoutIdempotencyKey = null;
 
 let accountView = 'login';
 let accountError = '';
@@ -2569,6 +2570,14 @@ function renderCart() {
               ''
           ).trim() || null;
 
+        if (!checkoutIdempotencyKey) {
+          checkoutIdempotencyKey =
+            crypto.randomUUID();
+        }
+
+        order.idempotencyKey =
+          checkoutIdempotencyKey;
+
         await submitOrder(
           order
         );
@@ -2741,6 +2750,7 @@ async function submitOrder(
     }
 
     cart = [];
+    checkoutIdempotencyKey = null;
 
     showConfirmation(
       saved
@@ -2763,6 +2773,10 @@ async function submitOrder(
         'RESTAURANT_CLOSED'
       )
         ? 'Le restaurant est fermé actuellement, la commande n’a pas pu être envoyée.'
+        : String(error?.message || '').includes(
+            'RATE_LIMITED'
+          )
+        ? 'Trop de commandes envoyées récemment avec ce numéro. Réessaie dans quelques minutes.'
         : 'Impossible d’envoyer la commande pour le moment.'
     );
   }

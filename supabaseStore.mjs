@@ -118,7 +118,11 @@ export function createSupabaseOrderStore(
               order.notes ?? null,
 
             p_items:
-              rpcItems
+              rpcItems,
+
+            p_idempotency_key:
+              order.idempotencyKey ??
+              null
           }
         )
         .single();
