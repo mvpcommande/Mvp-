@@ -8,8 +8,8 @@ on:
   workflow_dispatch: {}
 
 env:
-  SITE_URL: https://mvpcommande.github.io/Mvp-/
-  ADMIN_URL: https://mvpcommande.github.io/Mvp-/admin.html
+  SITE_URL: https://www.foodatoi.fr/?resto=caz-food
+  ADMIN_URL: https://www.foodatoi.fr/admin.html?resto=caz-food
   SUPABASE_URL: https://ffuykessameuonpnyiyc.supabase.co
   # Clé publique (anon/publishable) : déjà visible par n'importe qui dans
   # le bundle déployé, ce n'est pas un secret, elle ne donne accès qu'à
@@ -47,7 +47,7 @@ jobs:
           response=$(curl -s -X POST "$SUPABASE_URL/rest/v1/rpc/resolve_restaurant" \
             -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
             -H "Content-Type: application/json" \
-            -d '{"hostname":"mvp-.foodatoi.fr"}')
+            -d '{"hostname":"caz-food.foodatoi.fr"}')
           echo "Réponse: $response"
           if ! echo "$response" | grep -q "Caz Food"; then
             echo "::error::resolve_restaurant ne retourne pas Caz Food (réponse: $response)"
