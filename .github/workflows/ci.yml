@@ -82,6 +82,13 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # GitHub Pages met couramment 2-3 minutes à publier après un
+      # push - observé directement plusieurs fois pendant cette
+      # session en déploiement manuel. Sans cette attente, ce job
+      # tourne contre une version pas encore en ligne.
+      - name: Wait for GitHub Pages propagation
+        run: sleep 150
+
       # Tourne contre le vrai site en production, sur le resto de
       # démo prévu pour ça - pas d'environnement séparé pour
       # l'instant. Non bloquant (continue-on-error) : un souci
