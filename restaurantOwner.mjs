@@ -125,6 +125,22 @@ export async function createOwnedRestaurant(client, fields) {
     throw error;
   }
 
+  /*
+   * self_provision_restaurant() vient de poser role/restaurant_id
+   * sur auth.users, mais le jeton déjà en main dans le navigateur a
+   * été émis AVANT et ne les contient pas encore - current_restaurant_id()
+   * côté base continuerait de lire l'ancienne valeur (ou aucune)
+   * jusqu'au prochain renouvellement naturel du jeton. Sans ce
+   * rafraîchissement forcé, le tout premier "ajouter un produit"
+   * échoue systématiquement pour n'importe quel nouveau restaurant,
+   * pas seulement celui-ci - exactement ce qui vient de bloquer Kevin.
+   */
+  const { error: refreshError } = await client.auth.refreshSession();
+
+  if (refreshError) {
+    throw refreshError;
+  }
+
   return data;
 }
 
