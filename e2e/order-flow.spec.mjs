@@ -31,6 +31,14 @@ test('un client peut parcourir la carte, ajouter un article et passer commande',
   await expect(addButtons.first()).toBeVisible({ timeout: 10000 });
   await addButtons.first().click();
 
+  // "Ajouter" sur une carte ouvre la fiche produit (choix éventuels
+  // de viande/sauce), elle ne met rien au panier directement - il
+  // faut confirmer dans la fiche, sinon la modale reste ouverte et
+  // bloque tout clic suivant (c'est exactement ce qui a fait
+  // échouer les 5 premiers passages : un clic sur "Ma commande" en
+  // boucle derrière une fenêtre encore ouverte, jusqu'au délai).
+  await page.locator('#confirm-add').click();
+
   await page.getByRole('button', { name: /Ma commande/i }).click();
 
   await page.getByLabel(/TON NOM/i).fill('Test E2E');
