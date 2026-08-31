@@ -1,4 +1,4 @@
-import{n as e,t}from"./styles-D3OnuoUN.js";import"./modulepreload-polyfill-P2Xu9kJm.js";import{t as n}from"./errorLog-DYeNOlWf.js";import{a as r,c as i,d as a,f as o,h as s,i as c,l,m as u,n as d,o as f,p,r as m,s as h,t as g,u as _}from"./restaurantOwner-B6nuQ7cA.js";function v(e){return e===`logo`?{maxDimension:600,quality:.9}:{maxDimension:1600,quality:.85}}async function y(e,t=`product`){let{maxDimension:n,quality:r}=v(t);if(!e.type.startsWith(`image/`))return e;let i=await createImageBitmap(e),a=Math.min(1,n/Math.max(i.width,i.height)),o=Math.round(i.width*a),s=Math.round(i.height*a),c=document.createElement(`canvas`);c.width=o,c.height=s,c.getContext(`2d`).drawImage(i,0,0,o,s),i.close();let l=await new Promise(e=>c.toBlob(e,`image/jpeg`,r));return!l||l.size>=e.size?e:new File([l],e.name.replace(/\.\w+$/,`.jpg`),{type:`image/jpeg`})}var b=document.querySelector(`#onboarding-root`),x=[[`pizza`,`Pizza`],[`kebab`,`Kebab`],[`burger`,`Burger`],[`restaurant`,`Restaurant`],[`snack`,`Snack`],[`boulangerie`,`Boulangerie`],[`sushi`,`Sushi`],[`other`,`Autre`]],S=[[`mon`,`Lundi`],[`tue`,`Mardi`],[`wed`,`Mercredi`],[`thu`,`Jeudi`],[`fri`,`Vendredi`],[`sat`,`Samedi`],[`sun`,`Dimanche`]],C=`loading`,w=`signup`,T=``,E=null,D={},O=[];function k(){return`${window.location.protocol}//${window.location.host}`}function A(){return`${k()}/?resto=${E.slug}`}function j(){return`${k()}/admin.html?resto=${E.slug}`}async function M(){if(!e){C=`error`,T=`Supabase n’est pas configuré.`,P();return}let{data:{session:t}}=await e.auth.getSession();if(!t){C=`auth`,P();return}await N()}async function N(){C=`loading`,P();try{if(E=await r(e),!E){C=`create`,P();return}D=E.settings?.opening_hours||{},O=await c(e,E.id),C=`dashboard`}catch(e){console.error(`[FOODATOI onboarding]`,e),T=`Impossible de charger votre espace pour le moment.`,C=`error`}P()}function P(){if(C===`loading`){b.innerHTML=`<div class="onboarding-shell"><p class="eyebrow">FOODATOI</p><h1>Chargement…</h1></div>`;return}if(C===`error`){b.innerHTML=`
+import{n as e,t}from"./styles-DCdQM9yS.js";import"./modulepreload-polyfill-P2Xu9kJm.js";import{t as n}from"./errorLog-DYeNOlWf.js";import{a as r,c as i,d as a,f as o,h as s,i as c,l,m as u,n as d,o as f,p,r as m,s as h,t as g,u as _}from"./restaurantOwner-CqwJnIPL.js";function v(e){return e===`logo`?{maxDimension:600,quality:.9}:{maxDimension:1600,quality:.85}}async function y(e,t=`product`){let{maxDimension:n,quality:r}=v(t);if(!e.type.startsWith(`image/`))return e;let i=await createImageBitmap(e),a=Math.min(1,n/Math.max(i.width,i.height)),o=Math.round(i.width*a),s=Math.round(i.height*a),c=document.createElement(`canvas`);c.width=o,c.height=s,c.getContext(`2d`).drawImage(i,0,0,o,s),i.close();let l=await new Promise(e=>c.toBlob(e,`image/jpeg`,r));return!l||l.size>=e.size?e:new File([l],e.name.replace(/\.\w+$/,`.jpg`),{type:`image/jpeg`})}var b=document.querySelector(`#onboarding-root`),x=[[`pizza`,`Pizza`],[`kebab`,`Kebab`],[`burger`,`Burger`],[`restaurant`,`Restaurant`],[`snack`,`Snack`],[`boulangerie`,`Boulangerie`],[`sushi`,`Sushi`],[`other`,`Autre`]],S=[[`mon`,`Lundi`],[`tue`,`Mardi`],[`wed`,`Mercredi`],[`thu`,`Jeudi`],[`fri`,`Vendredi`],[`sat`,`Samedi`],[`sun`,`Dimanche`]],C=`loading`,w=`signup`,T=``,E=null,D={},O=[];function k(){return`${window.location.protocol}//${window.location.host}`}function A(){return`${k()}/?resto=${E.slug}`}function j(){return`${k()}/admin.html?resto=${E.slug}`}async function M(){if(!e){C=`error`,T=`Supabase n’est pas configuré.`,P();return}let{data:{session:t}}=await e.auth.getSession();if(!t){C=`auth`,P();return}await N()}async function N(){C=`loading`,P();try{if(E=await r(e),!E){C=`create`,P();return}D=E.settings?.opening_hours||{},O=await c(e,E.id),C=`dashboard`}catch(e){console.error(`[FOODATOI onboarding]`,e),T=`Impossible de charger votre espace pour le moment.`,C=`error`}P()}function P(){if(C===`loading`){b.innerHTML=`<div class="onboarding-shell"><p class="eyebrow">FOODATOI</p><h1>Chargement…</h1></div>`;return}if(C===`error`){b.innerHTML=`
       <div class="onboarding-shell">
         <p class="eyebrow">FOODATOI</p>
         <h1>Un problème est survenu.</h1>
@@ -137,19 +137,21 @@ import{n as e,t}from"./styles-D3OnuoUN.js";import"./modulepreload-polyfill-P2Xu9
 
       <section class="onboarding-section">
         <h2>Identité visuelle</h2>
-        <div class="identity-row">
-          <div class="identity-logo-preview">
-            ${E.logo_url?`<img src="${t(E.logo_url)}" alt="">`:`<span>${t((E.name||`?`).slice(0,2).toUpperCase())}</span>`}
-          </div>
-          <label class="secondary" id="logo-upload-label">
-            ${E.logo_url?`Changer le logo`:`Ajouter un logo`}
-            <input type="file" id="logo-input" accept="image/jpeg,image/png,image/webp" hidden>
-          </label>
-        </div>
-        <label class="color-picker-row">
-          COULEUR PRINCIPALE
-          <input type="color" id="color-input" value="${t(E.primary_color||`#e84d27`)}">
-        </label>
+        ${E.plan===`commerce`?`<p class="muted">Logo et couleur personnalisés disponibles avec le palier Pro.</p>`:`
+              <div class="identity-row">
+                <div class="identity-logo-preview">
+                  ${E.logo_url?`<img src="${t(E.logo_url)}" alt="">`:`<span>${t((E.name||`?`).slice(0,2).toUpperCase())}</span>`}
+                </div>
+                <label class="secondary" id="logo-upload-label">
+                  ${E.logo_url?`Changer le logo`:`Ajouter un logo`}
+                  <input type="file" id="logo-input" accept="image/jpeg,image/png,image/webp" hidden>
+                </label>
+              </div>
+              <label class="color-picker-row">
+                COULEUR PRINCIPALE
+                <input type="color" id="color-input" value="${t(E.primary_color||`#e84d27`)}">
+              </label>
+            `}
       </section>
 
       <section class="onboarding-section">
@@ -191,7 +193,7 @@ import{n as e,t}from"./styles-D3OnuoUN.js";import"./modulepreload-polyfill-P2Xu9
                         <span>${t(e.category)} · ${(e.price_cents/100).toFixed(2)} €</span>
                       </div>
                       <div class="product-row-actions">
-                        ${n?`<span class="photo-ok">Photo ✓</span>`:`
+                        ${n?`<span class="photo-ok">Photo ✓</span>`:E.plan===`commerce`?`<span class="muted small-note">Photo (palier Pro)</span>`:`
                               <label class="photo-upload-btn">
                                 Ajouter une photo
                                 <input type="file" accept="image/jpeg,image/png,image/webp" class="photo-input" data-product="${e.id}" hidden>
@@ -227,10 +229,12 @@ import{n as e,t}from"./styles-D3OnuoUN.js";import"./modulepreload-polyfill-P2Xu9
             DESCRIPTION (facultatif)
             <input name="description">
           </label>
-          <label>
-            PHOTO (facultatif)
-            <input name="photo" type="file" accept="image/jpeg,image/png,image/webp">
-          </label>
+          ${E.plan===`commerce`?``:`
+                <label>
+                  PHOTO (facultatif)
+                  <input name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+                </label>
+              `}
           <label class="account-toggle"><input type="checkbox" name="meat">Choix de viande</label>
           <label class="account-toggle"><input type="checkbox" name="sauce">Choix de sauce</label>
           <label class="account-toggle"><input type="checkbox" name="drink">Boisson incluse</label>
