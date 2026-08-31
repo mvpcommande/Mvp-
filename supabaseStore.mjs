@@ -54,7 +54,8 @@ export function createSupabaseOrderStore(
     async createOrder(order) {
       const pickupTime =
         parisTimeToIsoDate(
-          order.customer?.pickupTime
+          order.customer?.pickupTime,
+          order.customer?.pickupDate
         );
 
       const items =

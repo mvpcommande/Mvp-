@@ -28,7 +28,8 @@ import {
 
 import {
   isRestaurantOpen,
-  formatOpeningHours
+  formatOpeningHours,
+  parisTimeToIsoDate
 } from './timeFormat.mjs';
 
 import {
@@ -2411,27 +2412,7 @@ function renderCart() {
 
     </div>
 
-    ${
-      !isRestaurantOpen(
-        restaurant?.settings
-          ?.opening_hours
-      )
-        ? `
-          <div class="closed-banner">
-            <p class="eyebrow">
-              FERMÉ ACTUELLEMENT
-            </p>
-            <p>
-              ${escapeHtml(
-                getRestaurantDisplayName()
-              )}
-              n'accepte pas de commande en dehors de ses horaires d'ouverture.
-              Reviens plus tard pour commander.
-            </p>
-          </div>
-        `
-        : ''
-    }
+    <div id="hours-banner"></div>
 
     <form
       id="order-form"
@@ -2466,11 +2447,23 @@ function renderCart() {
       </label>
 
       <label>
+        JOUR DE RETRAIT
+
+        <input
+          name="pickupDate"
+          type="date"
+          id="pickup-date"
+          required
+        >
+      </label>
+
+      <label>
         HEURE SOUHAITÉE
 
         <input
           name="pickupTime"
           type="time"
+          id="pickup-time"
           required
         >
       </label>
@@ -2489,14 +2482,7 @@ function renderCart() {
       <button
         class="primary full"
         type="submit"
-        ${
-          !isRestaurantOpen(
-            restaurant?.settings
-              ?.opening_hours
-          )
-            ? 'disabled'
-            : ''
-        }
+        id="submit-order"
       >
         Envoyer ma commande →
       </button>
@@ -2537,17 +2523,70 @@ function renderCart() {
     );
 
   if (form) {
+    const dateInput = form.querySelector('#pickup-date');
+    const timeInput = form.querySelector('#pickup-time');
+    const banner = element.querySelector('#hours-banner');
+    const submitButton = form.querySelector('#submit-order');
+
+    const todayIso = new Date().toLocaleDateString('en-CA');
+    const maxDate = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA');
+
+    dateInput.min = todayIso;
+    dateInput.max = maxDate;
+    dateInput.value = todayIso;
+
+    function selectedInstant() {
+      const iso = parisTimeToIsoDate(
+        timeInput.value,
+        dateInput.value
+      );
+      return iso ? new Date(iso) : null;
+    }
+
+    function updateHoursState() {
+      const instant = selectedInstant();
+
+      const open =
+        instant &&
+        isRestaurantOpen(
+          restaurant?.settings?.opening_hours,
+          instant
+        );
+
+      submitButton.disabled = !open;
+
+      banner.innerHTML = open
+        ? ''
+        : `
+          <div class="closed-banner">
+            <p class="eyebrow">FERMÉ À CE CRÉNEAU</p>
+            <p>
+              ${escapeHtml(getRestaurantDisplayName())}
+              n'accepte pas de commande à l'horaire choisi.
+              Choisis un autre jour ou une autre heure.
+            </p>
+          </div>
+        `;
+    }
+
+    dateInput.onchange = updateHoursState;
+    timeInput.onchange = updateHoursState;
+    updateHoursState();
+
     form.onsubmit =
       async event => {
         event.preventDefault();
 
+        const instant = selectedInstant();
+
         if (
+          !instant ||
           !isRestaurantOpen(
-            restaurant?.settings
-              ?.opening_hours
+            restaurant?.settings?.opening_hours,
+            instant
           )
         ) {
-          renderCart();
+          updateHoursState();
           return;
         }
 
