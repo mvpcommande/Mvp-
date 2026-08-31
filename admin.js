@@ -9,7 +9,9 @@ import {
   aggregateOrderItems,
   buildStockSummaryCsv,
   printStockSummary,
-  calculateUberEatsSavings
+  calculateUberEatsSavings,
+  filterOrdersByDateRange,
+  buildAccountingCsv
 } from './adminFeatures.mjs';
 import { resolveRestaurant } from './restaurantResolver.mjs';
 import { formatPickupTime } from './timeFormat.mjs';
@@ -452,6 +454,12 @@ async function render() {
           </button>
           <button
             class="secondary"
+            id="export-accounting"
+          >
+            Export comptable
+          </button>
+          <button
+            class="secondary"
             id="print-stock"
           >
             Imprimer le résumé
@@ -667,6 +675,14 @@ async function render() {
     exportButton.onclick =
       () => downloadStockSummaryCsv(data);
   }
+  const accountingExportButton =
+    root.querySelector(
+      '#export-accounting'
+    );
+  if (accountingExportButton) {
+    accountingExportButton.onclick =
+      () => openAccountingExportModal(data);
+  }
   const healthButton =
     root.querySelector(
       '#system-health'
@@ -742,6 +758,54 @@ function downloadStockSummaryCsv(orders) {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+function downloadAccountingCsv(orders, from, to) {
+  const filtered = filterOrdersByDateRange(orders, from, to);
+  const csv = buildAccountingCsv(filtered);
+  const blob = new Blob(
+    ['\uFEFF' + csv],
+    { type: 'text/csv;charset=utf-8;' }
+  );
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  const suffix = from || to
+    ? `${from || 'debut'}_${to || 'fin'}`
+    : new Date().toISOString().slice(0, 10);
+  link.download = `caz-food-comptabilite-${suffix}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function openAccountingExportModal(orders) {
+  const overlay = document.createElement('div');
+  overlay.id = 'accounting-export-overlay';
+  overlay.className = 'modal';
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <button class="modal-close" id="close-accounting-export">×</button>
+      <p class="eyebrow">EXPORT COMPTABLE</p>
+      <h2>Choisis une période</h2>
+      <p>Laisse les deux champs vides pour tout exporter.</p>
+      <form id="accounting-export-form" class="order-form">
+        <label>DU<input type="date" name="from"></label>
+        <label>AU<input type="date" name="to"></label>
+        <button class="primary full" type="submit">Télécharger le CSV</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.querySelector('#close-accounting-export').onclick = () => overlay.remove();
+
+  document.querySelector('#accounting-export-form').onsubmit = (event) => {
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget));
+    downloadAccountingCsv(orders, fields.from || null, fields.to || null);
+    overlay.remove();
+  };
+}
+
 function closeOrderDetail() {
   const overlay =
     document.querySelector(

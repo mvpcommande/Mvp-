@@ -79,6 +79,67 @@ export function buildStockSummaryCsv(rows) {
   return [header.join(';'), ...lines].join('\n');
 }
 
+/**
+ * Filtre une liste de commandes sur une plage de dates (bornes
+ * incluses, comparées sur created_at). from/to au format YYYY-MM-DD
+ * ou null pour ne pas borner ce côté-là.
+ */
+export function filterOrdersByDateRange(orders, from, to) {
+  const fromTime = from ? new Date(`${from}T00:00:00`).getTime() : -Infinity;
+  const toTime = to ? new Date(`${to}T23:59:59.999`).getTime() : Infinity;
+
+  return (orders ?? []).filter((order) => {
+    const createdAt = new Date(order.createdAt ?? order.created_at).getTime();
+    return createdAt >= fromTime && createdAt <= toTime;
+  });
+}
+
+/**
+ * Export comptable : une ligne par commande (pas par produit comme
+ * le résumé stock), pensé pour être transmis tel quel à un
+ * comptable - numéro, date, montant, statut de paiement.
+ */
+export function buildAccountingCsv(orders) {
+  const escape = (value) => {
+    const text = String(value ?? '');
+    return /[;"\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+
+  const header = [
+    'Numéro de commande',
+    'Date',
+    'Heure de retrait',
+    'Client',
+    'Téléphone',
+    'Montant TTC (€)',
+    'Statut paiement',
+    'Statut commande'
+  ];
+
+  const lines = (orders ?? []).map((order) => {
+    const created = new Date(order.createdAt ?? order.created_at);
+    const dateStr = Number.isNaN(created.getTime())
+      ? ''
+      : created.toLocaleDateString('fr-FR');
+
+    return [
+      order.number ?? order.order_number ?? '',
+      dateStr,
+      formatPickupTime(order.pickupTime ?? order.pickup_time),
+      order.customer?.name ?? order.customer_name ?? '',
+      order.customer?.phone ?? order.customer_phone ?? '',
+      ((order.total ?? (order.total_cents ?? 0) / 100)).toFixed(2).replace('.', ','),
+      order.paymentStatus ?? order.payment_status ?? '',
+      order.status ?? ''
+    ]
+      .map(escape)
+      .join(';');
+  });
+
+  return [header.join(';'), ...lines].join('\n');
+}
+
+
 export function printStockSummary(
   rows,
   meta = {},
