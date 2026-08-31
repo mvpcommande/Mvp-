@@ -373,23 +373,29 @@ function renderDashboard() {
 
       <section class="onboarding-section">
         <h2>Identité visuelle</h2>
-        <div class="identity-row">
-          <div class="identity-logo-preview">
-            ${
-              restaurant.logo_url
-                ? `<img src="${escapeHtml(restaurant.logo_url)}" alt="">`
-                : `<span>${escapeHtml((restaurant.name || '?').slice(0, 2).toUpperCase())}</span>`
-            }
-          </div>
-          <label class="secondary" id="logo-upload-label">
-            ${restaurant.logo_url ? 'Changer le logo' : 'Ajouter un logo'}
-            <input type="file" id="logo-input" accept="image/jpeg,image/png,image/webp" hidden>
-          </label>
-        </div>
-        <label class="color-picker-row">
-          COULEUR PRINCIPALE
-          <input type="color" id="color-input" value="${escapeHtml(restaurant.primary_color || '#e84d27')}">
-        </label>
+        ${
+          restaurant.plan === 'commerce'
+            ? `<p class="muted">Logo et couleur personnalisés disponibles avec le palier Pro.</p>`
+            : `
+              <div class="identity-row">
+                <div class="identity-logo-preview">
+                  ${
+                    restaurant.logo_url
+                      ? `<img src="${escapeHtml(restaurant.logo_url)}" alt="">`
+                      : `<span>${escapeHtml((restaurant.name || '?').slice(0, 2).toUpperCase())}</span>`
+                  }
+                </div>
+                <label class="secondary" id="logo-upload-label">
+                  ${restaurant.logo_url ? 'Changer le logo' : 'Ajouter un logo'}
+                  <input type="file" id="logo-input" accept="image/jpeg,image/png,image/webp" hidden>
+                </label>
+              </div>
+              <label class="color-picker-row">
+                COULEUR PRINCIPALE
+                <input type="color" id="color-input" value="${escapeHtml(restaurant.primary_color || '#e84d27')}">
+              </label>
+            `
+        }
       </section>
 
       <section class="onboarding-section">
@@ -445,6 +451,8 @@ function renderDashboard() {
                         ${
                           hasPhoto
                             ? `<span class="photo-ok">Photo ✓</span>`
+                            : restaurant.plan === 'commerce'
+                            ? `<span class="muted small-note">Photo (palier Pro)</span>`
                             : `
                               <label class="photo-upload-btn">
                                 Ajouter une photo
@@ -485,10 +493,16 @@ function renderDashboard() {
             DESCRIPTION (facultatif)
             <input name="description">
           </label>
-          <label>
-            PHOTO (facultatif)
-            <input name="photo" type="file" accept="image/jpeg,image/png,image/webp">
-          </label>
+          ${
+            restaurant.plan === 'commerce'
+              ? ''
+              : `
+                <label>
+                  PHOTO (facultatif)
+                  <input name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+                </label>
+              `
+          }
           <label class="account-toggle"><input type="checkbox" name="meat">Choix de viande</label>
           <label class="account-toggle"><input type="checkbox" name="sauce">Choix de sauce</label>
           <label class="account-toggle"><input type="checkbox" name="drink">Boisson incluse</label>
