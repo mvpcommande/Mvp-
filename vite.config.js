@@ -11,6 +11,7 @@ export default defineConfig({
         platform: 'platform.html',
         legal: 'legal.html',
         counter: 'counter.html',
+        chainAdmin: 'chain-admin.html',
       },
     },
   },
