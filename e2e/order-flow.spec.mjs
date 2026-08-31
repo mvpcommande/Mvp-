@@ -39,7 +39,9 @@ test('un client peut parcourir la carte, ajouter un article et passer commande',
   // boucle derrière une fenêtre encore ouverte, jusqu'au délai).
   await page.locator('#confirm-add').click();
 
-  await page.locator('#open-cart').click();
+  // openCart() se déclenche déjà automatiquement après la
+  // confirmation - un clic explicite ici tombait sur un tiroir déjà
+  // ouvert et bloquait tout (le vrai blocage de cette itération).
 
   await page.getByLabel(/TON NOM/i).fill('Test E2E');
   await page.getByLabel(/TON TÉLÉPHONE/i).fill('0600000000');
