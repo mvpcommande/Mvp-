@@ -1,16 +1,13 @@
 /**
- * Test de bout en bout contre le vrai site en production, ciblé sur
- * "Resto Démo" (slug demo-charge) - créé exactement pour ça, sans
- * conséquence sur un vrai restaurant si l'exécution répétée y
- * accumule des commandes de test.
- *
- * Tourne contre www.foodatoi.fr réel, pas un environnement de test
- * séparé (qui n'existe pas encore) - à garder à l'esprit si le site
- * est indisponible au moment de l'exécution en CI.
+ * Test de bout en bout contre l'environnement de test isolé
+ * (dépôt -Mvp-staging, base Supabase kkhlpeqherxfdnilewkp) - plus
+ * la production. "Resto Démo" (slug demo-charge) y existe en miroir
+ * du même resto sur la vraie base, sans aucun impact sur les
+ * données réelles quel que soit le nombre de passages.
  */
 import { test, expect } from '@playwright/test';
 
-const DEMO_URL = 'https://www.foodatoi.fr/?resto=demo-charge';
+const DEMO_URL = 'https://mvpcommande.github.io/-Mvp-staging/?resto=demo-charge';
 
 test('un client peut parcourir la carte, ajouter un article et passer commande', async ({ page }) => {
   await page.goto(DEMO_URL);
