@@ -39,7 +39,7 @@ test('un client peut parcourir la carte, ajouter un article et passer commande',
   // boucle derrière une fenêtre encore ouverte, jusqu'au délai).
   await page.locator('#confirm-add').click();
 
-  await page.getByRole('button', { name: /Ma commande/i }).click();
+  await page.locator('#open-cart').click();
 
   await page.getByLabel(/TON NOM/i).fill('Test E2E');
   await page.getByLabel(/TON TÉLÉPHONE/i).fill('0600000000');
@@ -49,7 +49,7 @@ test('un client peut parcourir la carte, ajouter un article et passer commande',
     await timeInput.fill('12:00');
   }
 
-  await page.getByRole('button', { name: /Commander|Envoyer/i }).click();
+  await page.locator('#order-form button[type="submit"]').click();
 
   await expect(
     page.getByText(/FA-\d{6}-[A-Z0-9]{6}/)
