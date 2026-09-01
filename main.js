@@ -51,6 +51,12 @@ import {
   setCustomerConsent,
   deleteCustomerAccount
 } from './customerAccount.mjs';
+import {
+  getMyLoyaltyAccount,
+  getLoyaltyProgram,
+  getLoyaltyRewards,
+  redeemLoyaltyReward
+} from './loyalty.mjs';
 
 import './styles.css';
 
@@ -99,6 +105,9 @@ let accountLoading = false;
 let accountCustomer = null;
 let accountOrders = [];
 let accountConsents = [];
+let loyaltyAccount = null;
+let loyaltyRewardsAvailable = [];
+let loyaltyRedeeming = false;
 let accountDeleteConfirming = false;
 
 const MEATS = [
@@ -1911,6 +1920,26 @@ async function loadAccountDashboard() {
 
   accountOrders = orders;
   accountConsents = consents;
+
+  try {
+    const program = await getLoyaltyProgram(supabase, restaurant.id);
+    if (program?.is_active) {
+      const [account, rewards] = await Promise.all([
+        getMyLoyaltyAccount(supabase, restaurant.id),
+        getLoyaltyRewards(supabase, restaurant.id)
+      ]);
+      loyaltyAccount = account;
+      loyaltyRewardsAvailable = rewards.filter((r) => r.is_active);
+    } else {
+      loyaltyAccount = null;
+      loyaltyRewardsAvailable = [];
+    }
+  } catch (err) {
+    console.error('[FOODATOI] Erreur chargement fidélité:', err);
+    loyaltyAccount = null;
+    loyaltyRewardsAvailable = [];
+  }
+
   accountView = 'dashboard';
 }
 
@@ -1982,6 +2011,43 @@ function renderAccountContent() {
             : `<p class="muted">Aucune commande pour le moment.</p>`
         }
       </div>
+
+      ${
+        loyaltyAccount || loyaltyRewardsAvailable.length
+          ? `
+            <div class="account-section">
+              <h3>Ma fidélité</h3>
+              <p class="loyalty-balance">${loyaltyAccount?.balance_points ?? 0} points</p>
+              ${
+                loyaltyRewardsAvailable.length
+                  ? `<ul class="account-orders loyalty-rewards">
+                      ${loyaltyRewardsAvailable
+                        .map(
+                          (reward) => `
+                            <li>
+                              <div>
+                                <strong>${escapeHtml(reward.name)}</strong>
+                                ${reward.description ? `<span>${escapeHtml(reward.description)}</span>` : ''}
+                              </div>
+                              <button
+                                class="secondary small"
+                                data-redeem-reward="${reward.id}"
+                                type="button"
+                                ${(loyaltyAccount?.balance_points ?? 0) < reward.cost_points || loyaltyRedeeming ? 'disabled' : ''}
+                              >
+                                ${reward.cost_points} pts
+                              </button>
+                            </li>
+                          `
+                        )
+                        .join('')}
+                    </ul>`
+                  : `<p class="muted">Aucune récompense disponible pour le moment.</p>`
+              }
+            </div>
+          `
+          : ''
+      }
 
       <div class="account-section">
         <h3>Communications</h3>
@@ -2200,6 +2266,29 @@ function bindAccountDashboardEvents() {
       renderAccountContent();
     };
   }
+
+  document.querySelectorAll('[data-redeem-reward]').forEach((button) => {
+    button.onclick = async () => {
+      if (loyaltyRedeeming) {
+        return;
+      }
+
+      loyaltyRedeeming = true;
+      renderAccountContent();
+
+      try {
+        await redeemLoyaltyReward(supabase, button.dataset.redeemReward);
+        loyaltyAccount = await getMyLoyaltyAccount(supabase, restaurant.id);
+        alert('Récompense échangée ! Montre cet écran en caisse pour en profiter.');
+      } catch (err) {
+        console.error('[FOODATOI] Erreur échange récompense:', err);
+        alert('Impossible d’échanger cette récompense pour le moment.');
+      } finally {
+        loyaltyRedeeming = false;
+        renderAccountContent();
+      }
+    };
+  });
 
   ['EMAIL', 'SMS'].forEach(channel => {
     const input = document.querySelector(
