@@ -15,10 +15,49 @@ import {
 } from './adminFeatures.mjs';
 import { resolveRestaurant } from './restaurantResolver.mjs';
 import { formatPickupTime } from './timeFormat.mjs';
+import ReceiptPrinterEncoder from '@point-of-sale/receipt-printer-encoder';
+import WebUSBReceiptPrinter from '@point-of-sale/webusb-receipt-printer';
+import {
+  isThermalPrinterSupported,
+  buildReceiptBytes,
+  createThermalPrinterController
+} from './thermalPrinter.mjs';
 import { logClientError } from './errorLog.mjs';
 import { escapeHtml } from './htmlEscape.mjs';
 import './styles.css';
 const root = document.querySelector('#admin-root');
+
+/*
+ * Imprimante thermique réelle : uniquement là où WebUSB existe
+ * (Chrome/Edge). Sur Safari/iOS, isThermalPrinterSupported() est
+ * false, le bouton reste caché, et printOrderSmart() retombe sur le
+ * dialogue navigateur existant sans que rien d'autre ne change.
+ */
+const thermalPrinter = isThermalPrinterSupported()
+  ? createThermalPrinterController(WebUSBReceiptPrinter)
+  : null;
+
+if (thermalPrinter) {
+  thermalPrinter.tryAutoReconnect();
+}
+
+function printOrderSmart(order, restaurantName) {
+  if (thermalPrinter?.isConnected()) {
+    try {
+      const bytes = buildReceiptBytes(order, ReceiptPrinterEncoder, {
+        restaurantName,
+        language: thermalPrinter.getDeviceInfo()?.language || 'esc-pos',
+        codepageMapping: thermalPrinter.getDeviceInfo()?.codepageMapping
+      });
+      thermalPrinter.printBytes(bytes);
+      return;
+    } catch (err) {
+      console.error('[FOODATOI admin] Échec impression thermique, repli navigateur:', err);
+    }
+  }
+  printOrder(order);
+}
+
 const labels = {
   NEW: 'Nouvelle',
   ACCEPTED: 'Acceptée',
@@ -460,6 +499,13 @@ async function render() {
           </button>
           <button
             class="secondary"
+            id="connect-printer"
+            hidden
+          >
+            Connecter l'imprimante
+          </button>
+          <button
+            class="secondary"
             id="print-stock"
           >
             Imprimer le résumé
@@ -663,7 +709,7 @@ async function render() {
                 )
             );
           if (order) {
-            printOrder(order);
+            printOrderSmart(order, restaurant?.name);
           }
         };
     });
@@ -682,6 +728,26 @@ async function render() {
   if (accountingExportButton) {
     accountingExportButton.onclick =
       () => openAccountingExportModal(data);
+  }
+  const connectPrinterButton =
+    root.querySelector(
+      '#connect-printer'
+    );
+  if (connectPrinterButton && thermalPrinter) {
+    connectPrinterButton.hidden = false;
+    connectPrinterButton.textContent = thermalPrinter.isConnected()
+      ? `Imprimante : ${thermalPrinter.getDeviceInfo()?.productName || 'connectée'}`
+      : "Connecter l'imprimante";
+    connectPrinterButton.onclick = async () => {
+      connectPrinterButton.textContent = 'Connexion…';
+      try {
+        await thermalPrinter.connect();
+        connectPrinterButton.textContent = `Imprimante : ${thermalPrinter.getDeviceInfo()?.productName || 'connectée'}`;
+      } catch (err) {
+        console.error('[FOODATOI admin] Connexion imprimante annulée ou échouée:', err);
+        connectPrinterButton.textContent = "Connecter l'imprimante";
+      }
+    };
   }
   const healthButton =
     root.querySelector(
@@ -970,7 +1036,7 @@ async function renderOrderDetail(order) {
     .querySelector(
       '#print-from-detail'
     ).onclick = () =>
-    printOrder(order);
+    printOrderSmart(order, restaurant?.name);
   if (
     mode === 'remote' &&
     remote?.getOrderEvents
