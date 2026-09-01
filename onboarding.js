@@ -20,6 +20,14 @@ import {
 } from './restaurantOwner.mjs';
 import { compressImage } from './imageCompression.mjs';
 import { logClientError } from './errorLog.mjs';
+import {
+  getLoyaltyProgram,
+  upsertLoyaltyProgram,
+  getLoyaltyRewards,
+  addLoyaltyReward,
+  toggleLoyaltyReward,
+  deleteLoyaltyReward
+} from './loyalty.mjs';
 
 const root = document.querySelector('#onboarding-root');
 
@@ -50,6 +58,8 @@ let error = '';
 let restaurant = null;
 let openingHours = {};
 let products = [];
+let loyaltyProgram = null;
+let loyaltyRewards = [];
 
 function siteOrigin() {
   return `${window.location.protocol}//${window.location.host}`;
@@ -99,6 +109,12 @@ async function loadOwnerState() {
 
     openingHours = restaurant.settings?.opening_hours || {};
     products = await getOwnProducts(supabase, restaurant.id);
+
+    if (restaurant.plan !== 'commerce') {
+      loyaltyProgram = await getLoyaltyProgram(supabase, restaurant.id);
+      loyaltyRewards = await getLoyaltyRewards(supabase, restaurant.id);
+    }
+
     view = 'dashboard';
   } catch (err) {
     console.error('[FOODATOI onboarding]', err);
@@ -399,6 +415,77 @@ function renderDashboard() {
       </section>
 
       <section class="onboarding-section">
+        <h2>Programme de fidélité</h2>
+        ${
+          restaurant.plan === 'commerce'
+            ? `<p class="muted">Programme de fidélité disponible avec le palier Pro.</p>`
+            : `
+              <label class="account-toggle">
+                <input type="checkbox" id="loyalty-active" ${loyaltyProgram?.is_active ? 'checked' : ''}>
+                Activer le programme de fidélité
+              </label>
+              <div class="form-grid">
+                <label>
+                  NOM DU PROGRAMME
+                  <input id="loyalty-name" value="${escapeHtml(loyaltyProgram?.name || 'Carte fidélité')}">
+                </label>
+                <label>
+                  POINTS PAR EURO DÉPENSÉ
+                  <input id="loyalty-rate" type="number" min="0.1" step="0.1" value="${loyaltyProgram?.points_per_euro || 1}">
+                </label>
+              </div>
+              <button class="secondary full" id="save-loyalty-program" type="button">Enregistrer le programme</button>
+
+              <p class="onboarding-hint">
+                Les points sont attribués automatiquement quand une commande passe au statut "Prête" -
+                aucune action supplémentaire nécessaire au comptoir.
+              </p>
+
+              <h3>Récompenses</h3>
+              <div class="product-list">
+                ${
+                  loyaltyRewards.length
+                    ? loyaltyRewards.map((r) => `
+                        <div class="product-row">
+                          <div class="product-row-main">
+                            <strong>${escapeHtml(r.name)}</strong>
+                            <span>${r.cost_points} points${r.description ? ' · ' + escapeHtml(r.description) : ''}</span>
+                          </div>
+                          <div class="product-row-actions">
+                            <label class="account-toggle small">
+                              <input type="checkbox" class="reward-active" data-id="${r.id}" ${r.is_active ? 'checked' : ''}>
+                              Active
+                            </label>
+                            <button class="danger small" data-delete-reward="${r.id}" type="button">Supprimer</button>
+                          </div>
+                        </div>
+                      `).join('')
+                    : `<p class="muted">Aucune récompense pour le moment.</p>`
+                }
+              </div>
+
+              <form id="reward-form" class="order-form">
+                <label>
+                  NOM DE LA RÉCOMPENSE
+                  <input name="name" required placeholder="Ex: Boisson offerte">
+                </label>
+                <div class="form-grid">
+                  <label>
+                    COÛT EN POINTS
+                    <input name="costPoints" type="number" min="1" required>
+                  </label>
+                  <label>
+                    DESCRIPTION (facultatif)
+                    <input name="description">
+                  </label>
+                </div>
+                <button class="primary full" type="submit">Ajouter la récompense</button>
+              </form>
+            `
+        }
+      </section>
+
+      <section class="onboarding-section">
         <h2>Horaires d'ouverture</h2>
         <form id="hours-form">
           ${DAYS.map(([key, label]) => {
@@ -619,36 +706,42 @@ function bindDashboardEvents() {
     };
   });
 
-  document.querySelector('#color-input').onchange = async (event) => {
-    try {
-      await updateRestaurantColor(supabase, restaurant.id, event.target.value);
-      restaurant.primary_color = event.target.value;
-    } catch (err) {
-      console.error('[FOODATOI onboarding]', err);
-      alert('Impossible d’enregistrer la couleur pour le moment.');
-    }
-  };
+  const colorInput = document.querySelector('#color-input');
+  if (colorInput) {
+    colorInput.onchange = async (event) => {
+      try {
+        await updateRestaurantColor(supabase, restaurant.id, event.target.value);
+        restaurant.primary_color = event.target.value;
+      } catch (err) {
+        console.error('[FOODATOI onboarding]', err);
+        alert('Impossible d’enregistrer la couleur pour le moment.');
+      }
+    };
+  }
 
-  document.querySelector('#logo-input').onchange = async (event) => {
-    const file = event.target.files[0];
-    if (!file) {
-      return;
-    }
+  const logoInput = document.querySelector('#logo-input');
+  if (logoInput) {
+    logoInput.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        return;
+      }
 
-    const label = document.querySelector('#logo-upload-label');
-    const originalText = label.firstChild.textContent;
-    label.firstChild.textContent = 'Envoi…';
+      const label = document.querySelector('#logo-upload-label');
+      const originalText = label.firstChild.textContent;
+      label.firstChild.textContent = 'Envoi…';
 
-    try {
-      const compressed = await compressImage(file, 'logo');
-      restaurant.logo_url = await uploadRestaurantLogo(supabase, restaurant.id, compressed);
-      render();
-    } catch (err) {
-      console.error('[FOODATOI onboarding]', err);
-      alert('Impossible d’envoyer le logo pour le moment.');
-      label.firstChild.textContent = originalText;
-    }
-  };
+      try {
+        const compressed = await compressImage(file, 'logo');
+        restaurant.logo_url = await uploadRestaurantLogo(supabase, restaurant.id, compressed);
+        render();
+      } catch (err) {
+        console.error('[FOODATOI onboarding]', err);
+        alert('Impossible d’envoyer le logo pour le moment.');
+        label.firstChild.textContent = originalText;
+      }
+    };
+  }
 
   document.querySelectorAll('.photo-input').forEach((input) => {
     input.onchange = async () => {
@@ -706,6 +799,66 @@ function bindDashboardEvents() {
       alert('Impossible d’ajouter ce produit pour le moment.');
     }
   };
+
+  const saveLoyaltyButton = document.querySelector('#save-loyalty-program');
+  if (saveLoyaltyButton) {
+    saveLoyaltyButton.onclick = async () => {
+      try {
+        await upsertLoyaltyProgram(supabase, restaurant.id, {
+          name: document.querySelector('#loyalty-name').value,
+          isActive: document.querySelector('#loyalty-active').checked,
+          pointsPerEuro: document.querySelector('#loyalty-rate').value
+        });
+        loyaltyProgram = await getLoyaltyProgram(supabase, restaurant.id);
+        render();
+      } catch (err) {
+        console.error('[FOODATOI onboarding]', err);
+        alert('Impossible d’enregistrer le programme pour le moment.');
+      }
+    };
+  }
+
+  const rewardForm = document.querySelector('#reward-form');
+  if (rewardForm) {
+    rewardForm.onsubmit = async (event) => {
+      event.preventDefault();
+      const fields = Object.fromEntries(new FormData(event.currentTarget));
+
+      try {
+        await addLoyaltyReward(supabase, restaurant.id, fields);
+        loyaltyRewards = await getLoyaltyRewards(supabase, restaurant.id);
+        render();
+      } catch (err) {
+        console.error('[FOODATOI onboarding]', err);
+        alert('Impossible d’ajouter cette récompense pour le moment.');
+      }
+    };
+  }
+
+  document.querySelectorAll('.reward-active').forEach((toggle) => {
+    toggle.onchange = async () => {
+      try {
+        await toggleLoyaltyReward(supabase, toggle.dataset.id, toggle.checked);
+      } catch (err) {
+        console.error('[FOODATOI onboarding]', err);
+        alert('Impossible de mettre à jour cette récompense pour le moment.');
+        toggle.checked = !toggle.checked;
+      }
+    };
+  });
+
+  document.querySelectorAll('[data-delete-reward]').forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        await deleteLoyaltyReward(supabase, btn.dataset.deleteReward);
+        loyaltyRewards = loyaltyRewards.filter((r) => r.id !== btn.dataset.deleteReward);
+        render();
+      } catch (err) {
+        console.error('[FOODATOI onboarding]', err);
+        alert('Impossible de supprimer cette récompense pour le moment.');
+      }
+    };
+  });
 }
 
 init();

@@ -10,6 +10,7 @@
 .photo-upload-btn{border:1px dashed var(--line);padding:8px 10px;font-size:11px;color:var(--muted);cursor:pointer;flex-shrink:0}.photo-ok{color:#317040;font-size:12px;flex-shrink:0}
 .chain-site-row{text-decoration:none;color:inherit;display:flex;cursor:pointer;transition:border-color .15s}.chain-site-row:hover{border-color:var(--ink)}
 .small-note{font-size:11px;flex-shrink:0}
+.onboarding-hint{font-size:12px;color:var(--muted);margin:8px 0 20px;font-style:italic}
 .product-row{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);padding:12px 14px}.product-row-main span{display:block;color:var(--muted);font-size:12px;margin-top:2px}.product-row-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .identity-row{display:flex;align-items:center;gap:16px;margin-bottom:18px}.identity-logo-preview{width:64px;height:64px;background:var(--ink);color:var(--acid);display:grid;place-items:center;font:700 16px 'DM Mono';flex-shrink:0;overflow:hidden}.identity-logo-preview img{width:100%;height:100%;object-fit:cover}.color-picker-row{display:flex;align-items:center;gap:12px;font:500 10px 'DM Mono';letter-spacing:.05em}.color-picker-row input[type=color]{width:48px;height:36px;border:1px solid var(--line);padding:2px;background:#fffdf8;cursor:pointer}
 @media(max-width:600px){.pending-row{flex-direction:column;align-items:stretch}.pending-actions{width:100%}.pending-actions button{flex:1}}
