@@ -173,7 +173,7 @@ export function printStockSummary(
     <html lang="fr">
       <head>
         <meta charset="utf-8">
-        <title>Résumé stock — Caz Food</title>
+        <title>Résumé stock — ${meta.restaurantName ?? 'FOODATOI'}</title>
 
         <style>
           body { font: 13px/1.4 sans-serif; margin: 0; padding: 24px; color: #111; }
@@ -188,7 +188,7 @@ export function printStockSummary(
       </head>
 
       <body>
-        <h1>Résumé stock — Caz Food</h1>
+        <h1>Résumé stock — ${meta.restaurantName ?? 'FOODATOI'}</h1>
         <p class="meta">
           ${meta.rangeLabel ?? 'Toutes les commandes affichées'} ·
           généré le ${new Date().toLocaleString('fr-FR')}
@@ -284,7 +284,6 @@ export function subscribeToOrderChanges(client, callback, onStatusChange) {
         table: 'orders'
       },
       (payload) => {
-        console.log('[Realtime] Nouvelle commande reçue', payload);
         callback(payload);
       }
     )
@@ -296,7 +295,6 @@ export function subscribeToOrderChanges(client, callback, onStatusChange) {
         table: 'orders'
       },
       (payload) => {
-        console.log('[Realtime] Commande mise à jour', payload);
         callback(payload);
       }
     )
@@ -308,20 +306,13 @@ export function subscribeToOrderChanges(client, callback, onStatusChange) {
         table: 'orders'
       },
       (payload) => {
-        console.log('[Realtime] Commande supprimée', payload);
         callback(payload);
       }
     );
 
   channel.subscribe((status, error) => {
-    console.log('[Realtime] Statut:', status);
-
     if (error) {
       console.error('[Realtime] Erreur:', error);
-    }
-
-    if (status === 'SUBSCRIBED') {
-      console.log('[Realtime] Abonnement actif pour public.orders');
     }
 
     if (status === 'CHANNEL_ERROR') {
@@ -346,7 +337,8 @@ import { formatPickupTime } from './timeFormat.mjs';
 
 export function printOrder(
   order,
-  openWindow = (url = '', target = '_blank') => window.open(url, target)
+  openWindow = (url = '', target = '_blank') => window.open(url, target),
+  restaurantName = null
 ) {
   const win = openWindow('', '_blank');
 
@@ -446,9 +438,7 @@ export function printOrder(
 
       <body>
         <div class="center">
-          <strong>CAZ FOOD</strong>
-          <br>
-          CAZÈRES
+          <strong>${restaurantName ?? 'FOODATOI'}</strong>
           <br><br>
           ${order.order_number ?? order.number ?? '—'}
         </div>

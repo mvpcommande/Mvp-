@@ -55,7 +55,7 @@ function printOrderSmart(order, restaurantName) {
       console.error('[FOODATOI admin] Échec impression thermique, repli navigateur:', err);
     }
   }
-  printOrder(order);
+  printOrder(order, undefined, restaurantName);
 }
 
 const labels = {
@@ -189,21 +189,17 @@ function renderSetup() {
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
-          CF
+          F
         </div>
         <p class="eyebrow">
-          CAZ FOOD · CONFIGURATION
+          FOODATOI · CONFIGURATION
         </p>
         <h1>
           Le comptoir<br>
           <em>arrive bientôt.</em>
         </h1>
         <p>
-          Ajoute
-          <code>VITE_SUPABASE_URL</code>
-          et
-          <code>VITE_SUPABASE_PUBLISHABLE_KEY</code>
-          dans Netlify pour activer le compte commerçant.
+          La configuration du compte commerçant n'est pas encore terminée.
         </p>
       </div>
     </main>
@@ -214,10 +210,10 @@ function renderRestaurantError(error) {
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
-          CF
+          F
         </div>
         <p class="eyebrow">
-          CAZ FOOD · LE COMPTOIR
+          FOODATOI · LE COMPTOIR
         </p>
         <h1>
           Restaurant introuvable.
@@ -250,16 +246,16 @@ function renderLogin(error = '') {
     <main class="admin-auth">
       <div class="auth-card">
         <div class="auth-mark">
-          CF
+          F
         </div>
         <p class="eyebrow">
-          CAZ FOOD · LE COMPTOIR
+          FOODATOI · LE COMPTOIR
         </p>
         <h1>
           Bon retour.
         </h1>
         <p>
-          Connexion réservée à l'équipe Caz Food.
+          Connexion réservée à l'équipe du restaurant.
         </p>
         ${
           error
@@ -465,7 +461,7 @@ async function render() {
       <header class="admin-header">
         <div>
           <p class="eyebrow">
-            CAZ FOOD · SERVICE
+            ${escapeHtml((restaurant?.name || 'FOODATOI').toUpperCase())} · SERVICE
           </p>
           <h1>
             Le comptoir.
@@ -767,7 +763,8 @@ async function render() {
         printStockSummary(
           aggregateOrderItems(data),
           {
-            rangeLabel: `${data.length} commande${data.length > 1 ? 's' : ''} affichée${data.length > 1 ? 's' : ''}`
+            rangeLabel: `${data.length} commande${data.length > 1 ? 's' : ''} affichée${data.length > 1 ? 's' : ''}`,
+            restaurantName: restaurant?.name
           }
         );
   }
@@ -818,11 +815,20 @@ function downloadStockSummaryCsv(orders) {
   const link =
     document.createElement('a');
   link.href = url;
-  link.download = `caz-food-stock-${new Date()
+  link.download = `${restaurantFilePrefix()}-stock-${new Date()
     .toISOString()
     .slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function restaurantFilePrefix() {
+  return (restaurant?.name || 'foodatoi')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'foodatoi';
 }
 
 function downloadAccountingCsv(orders, from, to) {
@@ -838,7 +844,7 @@ function downloadAccountingCsv(orders, from, to) {
   const suffix = from || to
     ? `${from || 'debut'}_${to || 'fin'}`
     : new Date().toISOString().slice(0, 10);
-  link.download = `caz-food-comptabilite-${suffix}.csv`;
+  link.download = `${restaurantFilePrefix()}-comptabilite-${suffix}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
