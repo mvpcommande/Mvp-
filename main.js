@@ -818,6 +818,7 @@ function render() {
         </section>
 
         ${
+          restaurant?.settings?.delivery_mode === 'redirect' &&
           restaurant?.settings?.delivery_redirect_url
             ? `
               <section class="delivery-banner">
@@ -2535,8 +2536,85 @@ function renderCart() {
         >
       </label>
 
-      <label>
-        JOUR DE RETRAIT
+      ${
+        restaurant?.settings?.delivery_mode === 'internal'
+          ? `
+            <div class="fulfillment-toggle">
+
+              <label>
+                <input
+                  type="radio"
+                  name="fulfillmentType"
+                  value="PICKUP"
+                  checked
+                >
+                Retrait sur place
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="fulfillmentType"
+                  value="DELIVERY"
+                >
+                Livraison
+              </label>
+
+            </div>
+
+            <div
+              id="delivery-address-fields"
+              class="delivery-address-fields"
+              hidden
+            >
+
+              <label>
+                ADRESSE
+
+                <input
+                  name="deliveryStreet"
+                  placeholder="12 rue des Fleurs"
+                  autocomplete="street-address"
+                >
+              </label>
+
+              <label>
+                CODE POSTAL
+
+                <input
+                  name="deliveryPostalCode"
+                  placeholder="31000"
+                  inputmode="numeric"
+                  autocomplete="postal-code"
+                >
+              </label>
+
+              <label>
+                VILLE
+
+                <input
+                  name="deliveryCity"
+                  placeholder="Toulouse"
+                  autocomplete="address-level2"
+                >
+              </label>
+
+              <label>
+                COMPLÉMENT (bâtiment, étage, code portail...)
+
+                <input
+                  name="deliveryComplement"
+                  placeholder="Facultatif"
+                >
+              </label>
+
+            </div>
+          `
+          : ''
+      }
+
+      <label id="pickup-date-label">
+        <span>JOUR DE RETRAIT</span>
 
         <input
           name="pickupDate"
@@ -2616,6 +2694,39 @@ function renderCart() {
     const timeInput = form.querySelector('#pickup-time');
     const banner = element.querySelector('#hours-banner');
     const submitButton = form.querySelector('#submit-order');
+
+    const fulfillmentInputs = form.querySelectorAll('input[name="fulfillmentType"]');
+    const deliveryFields = element.querySelector('#delivery-address-fields');
+    const pickupDateLabel = form.querySelector('#pickup-date-label span');
+
+    function updateFulfillmentState() {
+      if (!fulfillmentInputs.length) {
+        return;
+      }
+
+      const isDelivery =
+        form.querySelector('input[name="fulfillmentType"]:checked')?.value === 'DELIVERY';
+
+      if (deliveryFields) {
+        deliveryFields.hidden = !isDelivery;
+
+        deliveryFields.querySelectorAll('input').forEach(input => {
+          input.required = isDelivery && input.name !== 'deliveryComplement';
+        });
+      }
+
+      if (pickupDateLabel) {
+        pickupDateLabel.textContent = isDelivery
+          ? 'JOUR DE LIVRAISON'
+          : 'JOUR DE RETRAIT';
+      }
+    }
+
+    fulfillmentInputs.forEach(input => {
+      input.onchange = updateFulfillmentState;
+    });
+
+    updateFulfillmentState();
 
     const todayIso = new Date().toLocaleDateString('en-CA');
     const maxDate = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA');

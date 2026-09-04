@@ -65,6 +65,10 @@ const labels = {
   READY: 'Prête',
   CANCELLED: 'Annulée'
 };
+const deliveryLabels = {
+  TO_DELIVER: 'À livrer',
+  DELIVERED: 'Livrée'
+};
 let remote = null;
 let mode = 'local';
 let realtimeChannel = null;
@@ -423,6 +427,41 @@ async function advance(order) {
     );
   }
 }
+async function toggleDelivery(order) {
+  if (mode !== 'remote') {
+    return;
+  }
+  const next =
+    order.delivery_status === 'TO_DELIVER'
+      ? 'DELIVERED'
+      : 'TO_DELIVER';
+  try {
+    await remote.updateDeliveryStatus(
+      order.id,
+      next
+    );
+    await render();
+  } catch (error) {
+    console.error(
+      'Erreur changement statut livraison:',
+      error
+    );
+    logClientError(supabase, {
+      restaurantId: restaurant?.id,
+      context: 'admin.updateDeliveryStatus',
+      message: error?.message ?? String(error),
+      details: {
+        orderId: order.id,
+        from: order.delivery_status,
+        to: next
+      },
+      page: 'admin'
+    });
+    alert(
+      'Impossible de modifier le statut de livraison.'
+    );
+  }
+}
 async function render() {
   if (
     !session &&
@@ -706,6 +745,28 @@ async function render() {
             );
           if (order) {
             printOrderSmart(order, restaurant?.name);
+          }
+        };
+    });
+  root
+    .querySelectorAll(
+      '[data-toggle-delivery]'
+    )
+    .forEach(button => {
+      button.onclick =
+        () => {
+          const order =
+            data.find(
+              item =>
+                String(
+                  item.id ?? ''
+                ) ===
+                String(
+                  button.dataset.id
+                )
+            );
+          if (order) {
+            toggleDelivery(order);
           }
         };
     });
@@ -1281,6 +1342,14 @@ function orderCard(order) {
     order.total ??
     (order.total_cents ?? 0) /
       100;
+  const isDelivery =
+    order.fulfillment_type ===
+    'DELIVERY';
+  const deliveryAddress =
+    order.delivery_address ??
+    null;
+  const deliveryStatus =
+    order.delivery_status;
   const actionLabel =
     getNextStatusLabel(
       status
@@ -1298,9 +1367,35 @@ function orderCard(order) {
       `
       : `
         <span class="ready-badge">
-          ✓ Prête pour retrait
+          ✓ Prête${
+            isDelivery
+              ? ', à livrer'
+              : ' pour retrait'
+          }
         </span>
       `;
+  const deliveryToggle =
+    isDelivery
+      ? `
+        <button
+          class="delivery-toggle${
+            deliveryStatus ===
+            'DELIVERED'
+              ? ' is-delivered'
+              : ''
+          }"
+          data-toggle-delivery
+          data-id="${order.id}"
+        >
+          🛵 ${
+            deliveryLabels[
+              deliveryStatus
+            ] ??
+            deliveryLabels.TO_DELIVER
+          }
+        </button>
+      `
+      : '';
   return `
     <article
       class="order-card status-${String(
@@ -1329,12 +1424,31 @@ function orderCard(order) {
       </header>
       <div class="order-customer">
         <strong>
-          ${customer.name}
+          ${escapeHtml(customer.name)}
         </strong>
         <span>
-          ${customer.phone}
+          ${escapeHtml(customer.phone)}
         </span>
       </div>
+      ${
+        isDelivery && deliveryAddress
+          ? `
+            <div class="order-delivery">
+              <span class="delivery-tag">🛵 LIVRAISON</span>
+              <span>
+                ${escapeHtml(deliveryAddress.street ?? '')},
+                ${escapeHtml(deliveryAddress.postal_code ?? '')}
+                ${escapeHtml(deliveryAddress.city ?? '')}
+              </span>
+              ${
+                deliveryAddress.complement
+                  ? `<small>${escapeHtml(deliveryAddress.complement)}</small>`
+                  : ''
+              }
+            </div>
+          `
+          : ''
+      }
       ${
         items.length
           ? `
@@ -1396,6 +1510,7 @@ function orderCard(order) {
         </strong>
         <div class="order-actions">
           ${action}
+          ${deliveryToggle}
           <button
             class="print-button"
             data-print
