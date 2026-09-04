@@ -54,3 +54,49 @@ test('un client peut parcourir la carte, ajouter un article et passer commande',
     page.getByText(/FA-\d{6}-[A-Z0-9]{6}/)
   ).toBeVisible({ timeout: 15000 });
 });
+
+/**
+ * Suppose que le resto demo-charge (staging) est configuré en
+ * settings.delivery_mode = 'internal' - sinon le toggle
+ * retrait/livraison n'apparaît jamais dans le formulaire et ce test
+ * échoue dès le premier assert sur fulfillmentType. À configurer
+ * côté Supabase staging avant de lancer ce test (pas fait depuis cet
+ * environnement, qui n'a ni accès réseau à mvpcommande.github.io ni
+ * accès à la base de test).
+ */
+test('un client en livraison interne voit l\'encart adresse et peut commander', async ({ page }) => {
+  await page.goto(DEMO_URL);
+
+  await expect(page.getByText('FOODATOI Démo').first()).toBeVisible({
+    timeout: 20000
+  });
+
+  const addButtons = page.locator('[data-add]');
+  await expect(addButtons.first()).toBeVisible({ timeout: 10000 });
+  await addButtons.first().click();
+  await page.locator('#confirm-add').click();
+
+  await page.getByLabel(/TON NOM/i).fill('Test E2E Livraison');
+  await page.getByLabel(/TON TÉLÉPHONE/i).fill('0600000000');
+
+  await page.locator('input[name="fulfillmentType"][value="DELIVERY"]').check();
+
+  await expect(
+    page.locator('#delivery-address-fields')
+  ).toBeVisible();
+
+  await page.locator('input[name="deliveryStreet"]').fill('12 rue des Fleurs');
+  await page.locator('input[name="deliveryPostalCode"]').fill('31000');
+  await page.locator('input[name="deliveryCity"]').fill('Toulouse');
+
+  const timeInput = page.locator('input[name="pickupTime"]');
+  if (await timeInput.count()) {
+    await timeInput.fill('20:00');
+  }
+
+  await page.locator('#order-form button[type="submit"]').click();
+
+  await expect(
+    page.getByText(/FA-\d{6}-[A-Z0-9]{6}/)
+  ).toBeVisible({ timeout: 15000 });
+});

@@ -58,6 +58,37 @@ export function createSupabaseOrderStore(
           order.customer?.pickupDate
         );
 
+      const fulfillmentType =
+        order.type === 'DELIVERY'
+          ? 'DELIVERY'
+          : 'PICKUP';
+
+      // Adresse renseignée uniquement pour les restos en livraison
+      // interne (settings.delivery_mode = 'internal', ex: Rice
+      // District) ; create_order revalide tout côté serveur.
+      const deliveryAddress =
+        fulfillmentType === 'DELIVERY'
+          ? {
+              street:
+                order.customer?.deliveryStreet ??
+                '',
+
+              postal_code:
+                order.customer
+                  ?.deliveryPostalCode ??
+                '',
+
+              city:
+                order.customer?.deliveryCity ??
+                '',
+
+              complement:
+                order.customer
+                  ?.deliveryComplement ||
+                null
+            }
+          : null;
+
       const items =
         Array.isArray(
           order.items
@@ -123,7 +154,13 @@ export function createSupabaseOrderStore(
 
             p_idempotency_key:
               order.idempotencyKey ??
-              null
+              null,
+
+            p_fulfillment_type:
+              fulfillmentType,
+
+            p_delivery_address:
+              deliveryAddress
           }
         )
         .single();
@@ -180,6 +217,8 @@ export function createSupabaseOrderStore(
           status,
           payment_status,
           fulfillment_type,
+          delivery_address,
+          delivery_status,
           total_cents,
           notes,
           created_at,
@@ -242,7 +281,11 @@ export function createSupabaseOrderStore(
           pickupTime:
             formatPickupTime(
               order.pickup_time
-            )
+            ),
+
+          deliveryAddress:
+            order.delivery_address ??
+            null
         },
 
         items:
@@ -339,6 +382,69 @@ export function createSupabaseOrderStore(
       if (error) {
         console.error(
           'Erreur changement statut FOODATOI:',
+          error
+        );
+
+        throw error;
+      }
+
+      return data;
+    },
+
+    /**
+     * Change le statut de livraison d'une commande (restos en
+     * livraison interne uniquement, settings.delivery_mode = 'internal').
+     *
+     * Colonne distincte de `status` : la préparation (NEW -> ... ->
+     * READY) et le suivi du livreur (TO_DELIVER -> DELIVERED) sont
+     * deux choses différentes qui avancent indépendamment.
+     */
+    async updateDeliveryStatus(
+      orderId,
+      deliveryStatus
+    ) {
+      if (!isUuid(orderId)) {
+        throw new Error(
+          'orderId invalide.'
+        );
+      }
+
+      if (
+        !['TO_DELIVER', 'DELIVERED'].includes(
+          deliveryStatus
+        )
+      ) {
+        throw new Error(
+          'Statut de livraison invalide.'
+        );
+      }
+
+      const {
+        data,
+        error
+      } = await client
+        .from('orders')
+        .update({
+          delivery_status:
+            deliveryStatus,
+
+          updated_at:
+            new Date().toISOString()
+        })
+        .eq(
+          'id',
+          orderId
+        )
+        .eq(
+          'restaurant_id',
+          restaurantId
+        )
+        .select()
+        .single();
+
+      if (error) {
+        console.error(
+          'Erreur changement statut livraison FOODATOI:',
           error
         );
 
