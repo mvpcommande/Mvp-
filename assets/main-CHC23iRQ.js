@@ -1,4 +1,4 @@
-import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9kJm.js";import{d as n,i as r,l as i,n as a,o,r as s,s as c,t as l,u}from"./restaurantResolver-B1dJEPxX.js";import{t as d}from"./errorLog-DYeNOlWf.js";import{a as f,i as p,o as m,r as ee}from"./loyalty-Bi6_Ljfe.js";function te(e,t){return[...e,{...t,quantity:t.quantity??1}]}function h(e){return Number(e.reduce((e,t)=>e+t.price*t.quantity,0).toFixed(2))}function ne(e,t,n=()=>Date.now()){return{number:`#${n()}`,type:`PICKUP`,status:`NEW`,items:e,customer:t,total:h(e),createdAt:new Date().toISOString()}}function re(e){return typeof e==`string`&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim())}async function ie(e,t,{email:n,password:r,name:i,phone:a,marketingEmail:o,marketingSms:s}){let{data:c,error:l}=await e.auth.signUp({email:String(n).trim(),password:r});if(l)throw l;let u=c?.user?.id;if(!c?.session)return{pendingConfirmation:!0};let{data:d,error:f}=await e.from(`customers`).insert({restaurant_id:t,auth_user_id:u,name:String(i||``).trim()||null,phone:String(a||``).trim()||null,email:String(n).trim()}).select().single();if(f)throw f;let p=[{channel:`EMAIL`,granted:!!o},{channel:`SMS`,granted:!!s}].map(e=>({restaurant_id:t,customer_id:d.id,channel:e.channel,granted:e.granted,source:`signup`,granted_at:e.granted?new Date().toISOString():null})),{error:m}=await e.from(`marketing_consents`).insert(p);if(m)throw m;return{pendingConfirmation:!1,customer:d}}async function ae(e,{email:t,password:n}){let{data:r,error:i}=await e.auth.signInWithPassword({email:String(t).trim(),password:n});if(i)throw i;return r}async function g(e){let{error:t}=await e.auth.signOut();if(t)throw t}async function oe(e,t){let{data:{user:n}}=await e.auth.getUser();if(!n)return null;let{data:r,error:i}=await e.from(`customers`).select(`*`).eq(`auth_user_id`,n.id).eq(`restaurant_id`,t).maybeSingle();if(i)throw i;return r}async function se(e,t){let{data:n,error:r}=await e.from(`orders`).select(`id, order_number, status, total_cents, pickup_time, created_at, order_items(product_name, quantity, line_total_cents)`).eq(`customer_id`,t).order(`created_at`,{ascending:!1}).limit(50);if(r)throw r;return n??[]}async function _(e,t){let{data:n,error:r}=await e.from(`marketing_consents`).select(`channel, granted`).eq(`customer_id`,t);if(r)throw r;return n??[]}async function v(e,{restaurantId:t,customerId:n,channel:r,granted:i}){let{error:a}=await e.from(`marketing_consents`).upsert({restaurant_id:t,customer_id:n,channel:r,granted:i,source:`account`,granted_at:i?new Date().toISOString():null,withdrawn_at:i?null:new Date().toISOString()},{onConflict:`restaurant_id,customer_id,channel`});if(a)throw a;let{error:o}=await e.from(`marketing_consent_events`).insert({restaurant_id:t,customer_id:n,channel:r,granted:i,source:`account`});if(o)throw o}async function y(e){let{error:t}=await e.rpc(`delete_customer_account`);if(t)throw t;await g(e)}var b=null,x=[],S=[],C=null,w=null,T=null,E=`login`,D=``,O=!1,k=null,A=[],j=[],M=null,N=[],P=!1,F=!1,ce=[`Kebab`,`Poulet Paprika`,`Tenders`,`Kefta`,`Merguez`,`Nuggets`,`Steak Haché`,`Cordon Bleu`,`Veggy`],le=[`Ketchup`,`Biggy`,`Marocaine`,`Mayo`,`Blanche`,`Curry`,`Algérienne`,`Harissa`,`Andalouse`,`Brésilienne`,`Moutarde`,`Fromagère`],ue=[`Canette`,`Bouteille`,`Eau`,`Redbull`,`Compote`,`Capri-Sun`],I=document.querySelector(`#root`),L=e=>`${Number(e??0).toFixed(2).replace(`.`,`,`)} €`,de=()=>S.reduce((e,t)=>e+Number(t.quantity??0),0);function R(){return b?.name||`FOODATOI`}function z(){return b?.phone||``}function B(){let e=b?.address;return e?typeof e==`string`?e:typeof e==`object`?[e.street,e.postal_code||e.postalCode,e.city].filter(Boolean).join(` · `):``:``}function V(){return b?.primary_color||`#111111`}async function H(){return b=await s(e),console.info(`[FOODATOI] Restaurant résolu:`,b),fe(),w=o(e,b.id),b}function fe(){b&&(document.documentElement.style.setProperty(`--restaurant-primary`,V()),document.title=`${R()} · FOODATOI`)}function pe(e){if(!Array.isArray(e)||!e.length)return null;let t=[...e].sort((e,t)=>e.is_primary===t.is_primary?(e.sort_order??0)-(t.sort_order??0):e.is_primary?-1:1)[0]?.public_url;return t?/^https?:\/\//i.test(t)?t:`/${t.replace(/^\/+/,``)}`:null}function me(e){let t=e.options&&typeof e.options==`object`?e.options:{},n=Number(e.price_cents??0)/100;return{id:e.id,category:e.category||`Autres`,name:e.name||`Produit`,description:e.description||``,price:n,emoji:t.emoji||t.icon||`🍽️`,imageUrl:pe(e.product_images),options:t,meat:!!(t.meat||t.meats||t.viande||t.viandes),sauce:!!(t.sauce||t.sauces),drink:!!(t.drink||t.drinks||t.boisson||t.boissons),multipleMeat:!!(t.multipleMeat||t.multiple_meat),tripleMeat:!!(t.tripleMeat||t.triple_meat)}}async function he(){if(!e)throw Error(`Supabase n’est pas configuré.`);if(!b?.id)throw Error(`Restaurant non résolu.`);let{data:t,error:n}=await e.from(`products`).select(`
+import{n as e,t}from"./styles-C3YC0o_E.js";import"./modulepreload-polyfill-P2Xu9kJm.js";import{d as n,i as r,l as i,n as a,o,r as s,s as c,t as l,u}from"./restaurantResolver-Cdaav57m.js";import{t as d}from"./errorLog-DYeNOlWf.js";import{a as f,i as p,o as m,r as h}from"./loyalty-Bi6_Ljfe.js";function g(e,t){return[...e,{...t,quantity:t.quantity??1}]}function _(e){return Number(e.reduce((e,t)=>e+t.price*t.quantity,0).toFixed(2))}function ee(e,t,n=()=>Date.now()){return{number:`#${n()}`,type:t?.fulfillmentType===`DELIVERY`?`DELIVERY`:`PICKUP`,status:`NEW`,items:e,customer:t,total:_(e),createdAt:new Date().toISOString()}}function te(e){return typeof e==`string`&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim())}async function ne(e,t,{email:n,password:r,name:i,phone:a,marketingEmail:o,marketingSms:s}){let{data:c,error:l}=await e.auth.signUp({email:String(n).trim(),password:r});if(l)throw l;let u=c?.user?.id;if(!c?.session)return{pendingConfirmation:!0};let{data:d,error:f}=await e.from(`customers`).insert({restaurant_id:t,auth_user_id:u,name:String(i||``).trim()||null,phone:String(a||``).trim()||null,email:String(n).trim()}).select().single();if(f)throw f;let p=[{channel:`EMAIL`,granted:!!o},{channel:`SMS`,granted:!!s}].map(e=>({restaurant_id:t,customer_id:d.id,channel:e.channel,granted:e.granted,source:`signup`,granted_at:e.granted?new Date().toISOString():null})),{error:m}=await e.from(`marketing_consents`).insert(p);if(m)throw m;return{pendingConfirmation:!1,customer:d}}async function re(e,{email:t,password:n}){let{data:r,error:i}=await e.auth.signInWithPassword({email:String(t).trim(),password:n});if(i)throw i;return r}async function v(e){let{error:t}=await e.auth.signOut();if(t)throw t}async function y(e,t){let{data:{user:n}}=await e.auth.getUser();if(!n)return null;let{data:r,error:i}=await e.from(`customers`).select(`*`).eq(`auth_user_id`,n.id).eq(`restaurant_id`,t).maybeSingle();if(i)throw i;return r}async function ie(e,t){let{data:n,error:r}=await e.from(`orders`).select(`id, order_number, status, total_cents, pickup_time, created_at, order_items(product_name, quantity, line_total_cents)`).eq(`customer_id`,t).order(`created_at`,{ascending:!1}).limit(50);if(r)throw r;return n??[]}async function b(e,t){let{data:n,error:r}=await e.from(`marketing_consents`).select(`channel, granted`).eq(`customer_id`,t);if(r)throw r;return n??[]}async function ae(e,{restaurantId:t,customerId:n,channel:r,granted:i}){let{error:a}=await e.from(`marketing_consents`).upsert({restaurant_id:t,customer_id:n,channel:r,granted:i,source:`account`,granted_at:i?new Date().toISOString():null,withdrawn_at:i?null:new Date().toISOString()},{onConflict:`restaurant_id,customer_id,channel`});if(a)throw a;let{error:o}=await e.from(`marketing_consent_events`).insert({restaurant_id:t,customer_id:n,channel:r,granted:i,source:`account`});if(o)throw o}async function oe(e){let{error:t}=await e.rpc(`delete_customer_account`);if(t)throw t;await v(e)}var x=null,S=[],C=[],w=null,T=null,E=null,D=`login`,O=``,k=!1,A=null,j=[],M=[],N=null,P=[],F=!1,I=!1,se=[`Kebab`,`Poulet Paprika`,`Tenders`,`Kefta`,`Merguez`,`Nuggets`,`Steak Haché`,`Cordon Bleu`,`Veggy`],ce=[`Ketchup`,`Biggy`,`Marocaine`,`Mayo`,`Blanche`,`Curry`,`Algérienne`,`Harissa`,`Andalouse`,`Brésilienne`,`Moutarde`,`Fromagère`],le=[`Canette`,`Bouteille`,`Eau`,`Redbull`,`Compote`,`Capri-Sun`],L=document.querySelector(`#root`),R=e=>`${Number(e??0).toFixed(2).replace(`.`,`,`)} €`,ue=()=>C.reduce((e,t)=>e+Number(t.quantity??0),0);function z(){return x?.name||`FOODATOI`}function de(){return x?.phone||``}function B(){let e=x?.address;return e?typeof e==`string`?e:typeof e==`object`?[e.street,e.postal_code||e.postalCode,e.city].filter(Boolean).join(` · `):``:``}function V(){return x?.primary_color||`#111111`}async function H(){return x=await s(e),console.info(`[FOODATOI] Restaurant résolu:`,x),fe(),T=o(e,x.id),x}function fe(){x&&(document.documentElement.style.setProperty(`--restaurant-primary`,V()),document.title=`${z()} · FOODATOI`)}function pe(e){if(!Array.isArray(e)||!e.length)return null;let t=[...e].sort((e,t)=>e.is_primary===t.is_primary?(e.sort_order??0)-(t.sort_order??0):e.is_primary?-1:1)[0]?.public_url;return t?/^https?:\/\//i.test(t)?t:`/${t.replace(/^\/+/,``)}`:null}function me(e){let t=e.options&&typeof e.options==`object`?e.options:{},n=Number(e.price_cents??0)/100;return{id:e.id,category:e.category||`Autres`,name:e.name||`Produit`,description:e.description||``,price:n,emoji:t.emoji||t.icon||`🍽️`,imageUrl:pe(e.product_images),options:t,meat:!!(t.meat||t.meats||t.viande||t.viandes),sauce:!!(t.sauce||t.sauces),drink:!!(t.drink||t.drinks||t.boisson||t.boissons),multipleMeat:!!(t.multipleMeat||t.multiple_meat),tripleMeat:!!(t.tripleMeat||t.triple_meat)}}async function he(){if(!e)throw Error(`Supabase n’est pas configuré.`);if(!x?.id)throw Error(`Restaurant non résolu.`);let{data:t,error:n}=await e.from(`products`).select(`
       id,
       name,
       category,
@@ -14,7 +14,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
         is_primary,
         sort_order
       )
-    `).eq(`restaurant_id`,b.id).eq(`is_active`,!0).order(`sort_order`,{ascending:!0,nullsFirst:!1}).order(`created_at`,{ascending:!0});if(n)throw console.error(`[FOODATOI] Erreur chargement catalogue:`,n),n;return x=(t??[]).filter(e=>e.restaurant_id===b.id).map(me),console.info(`[FOODATOI] ${x.length} produit(s) chargé(s) pour ${R()}.`),x}function ge(){return[`Tous`,...new Set(x.map(e=>e.category).filter(Boolean))]}function U(e){return String(e).normalize(`NFD`).replace(/[\u0300-\u036f]/g,``).toLowerCase().replace(/[^a-z0-9]+/g,`-`).replace(/(^-|-$)/g,``)}function _e(e){let t=[],n=new Map;return e.forEach(e=>{let r=e.category||`Autres`;n.has(r)||(n.set(r,[]),t.push(r)),n.get(r).push(e)}),t.map(e=>({category:e,slug:U(e),items:n.get(e)}))}function ve(){I.innerHTML=`
+    `).eq(`restaurant_id`,x.id).eq(`is_active`,!0).order(`sort_order`,{ascending:!0,nullsFirst:!1}).order(`created_at`,{ascending:!0});if(n)throw console.error(`[FOODATOI] Erreur chargement catalogue:`,n),n;return S=(t??[]).filter(e=>e.restaurant_id===x.id).map(me),console.info(`[FOODATOI] ${S.length} produit(s) chargé(s) pour ${z()}.`),S}function ge(){return[`Tous`,...new Set(S.map(e=>e.category).filter(Boolean))]}function U(e){return String(e).normalize(`NFD`).replace(/[\u0300-\u036f]/g,``).toLowerCase().replace(/[^a-z0-9]+/g,`-`).replace(/(^-|-$)/g,``)}function _e(e){let t=[],n=new Map;return e.forEach(e=>{let r=e.category||`Autres`;n.has(r)||(n.set(r,[]),t.push(r)),n.get(r).push(e)}),t.map(e=>({category:e,slug:U(e),items:n.get(e)}))}function ve(){L.innerHTML=`
     <div class="app-frame">
 
       <main>
@@ -43,7 +43,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       </main>
 
     </div>
-  `}function ye(t){console.error(`[FOODATOI] Erreur application:`,t),d(e,{context:`main.init`,message:t?.message??String(t),page:`main`}),I.innerHTML=`
+  `}function ye(t){console.error(`[FOODATOI] Erreur application:`,t),d(e,{context:`main.init`,message:t?.message??String(t),page:`main`}),L.innerHTML=`
     <div class="app-frame">
 
       <main>
@@ -81,17 +81,17 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       </main>
 
     </div>
-  `}function W(){let e=ge(),n=R(),r=B(),i=z();I.innerHTML=`
+  `}function W(){let e=ge(),n=z(),r=B(),i=de();L.innerHTML=`
     <div class="app-frame">
 
       <header class="masthead">
 
         <div class="brand-lockup">
 
-          ${b?.logo_url?`
+          ${x?.logo_url?`
                 <img
                   class="brand-mark-image"
-                  src="${t(b.logo_url)}"
+                  src="${t(x.logo_url)}"
                   alt="${t(n)}"
                 >
               `:`
@@ -107,7 +107,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
             </strong>
 
             <span>
-              ${t(b?.sector||`RESTAURANT`)}
+              ${t(x?.sector||`RESTAURANT`)}
             </span>
 
           </div>
@@ -134,7 +134,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
             </span>
 
             <b>
-              ${de()}
+              ${ue()}
             </b>
           </button>
 
@@ -241,7 +241,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
 
         </section>
 
-        ${b?.settings?.delivery_redirect_url?`
+        ${x?.settings?.delivery_mode===`redirect`&&x?.settings?.delivery_redirect_url?`
               <section class="delivery-banner">
 
                 <div>
@@ -259,7 +259,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
 
                 <a
                   class="secondary"
-                  href="${t(b.settings.delivery_redirect_url)}"
+                  href="${t(x.settings.delivery_redirect_url)}"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -287,9 +287,9 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
 
             <span class="menu-count">
 
-              ${x.length}
+              ${S.length}
 
-              ${x.length>1?`produits`:`produit`}
+              ${S.length>1?`produits`:`produit`}
 
             </span>
 
@@ -315,7 +315,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
                 </nav>
               `:``}
 
-          ${x.length?_e(x).map(e=>`
+          ${S.length?_e(S).map(e=>`
                       <section
                         class="menu-category-section"
                         id="menu-cat-${e.slug}"
@@ -369,9 +369,9 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
 
         </div>
 
-        ${c(b?.settings?.opening_hours).length?`
+        ${c(x?.settings?.opening_hours).length?`
               <div class="footer-hours">
-                ${c(b?.settings?.opening_hours).map(e=>`
+                ${c(x?.settings?.opening_hours).map(e=>`
                       <span>
                         ${t(e.label)}
                         <b>
@@ -392,9 +392,9 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
                 </a>
               `:``}
 
-          ${b?.settings?.facebook_url?`
+          ${x?.settings?.facebook_url?`
                 <a
-                  href="${t(b.settings.facebook_url)}"
+                  href="${t(x.settings.facebook_url)}"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -501,7 +501,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       <div class="menu-card-bottom">
 
         <strong>
-          ${L(e.price)}
+          ${R(e.price)}
         </strong>
 
         <button
@@ -522,7 +522,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       </div>
 
     </article>
-  `}function xe(){C&&C.disconnect();let e=document.querySelectorAll(`.menu-category-section`);if(!e.length)return;let t=document.querySelector(`.category-rail`)?.offsetHeight||0;C=new IntersectionObserver(e=>{e.forEach(e=>{if(e.isIntersecting){let t=e.target.id.replace(`menu-cat-`,``);document.querySelectorAll(`[data-category]`).forEach(e=>{e.classList.toggle(`is-active`,e.dataset.target===t)})}})},{rootMargin:`-${t+20}px 0px -70% 0px`,threshold:0}),e.forEach(e=>C.observe(e))}function Se(){document.querySelectorAll(`[data-category]`).forEach(e=>{e.onclick=()=>{let t=e.dataset.target;if(t===`top`){window.scrollTo({top:0,behavior:`smooth`});return}let n=document.getElementById(`menu-cat-${t}`);if(n){let e=document.querySelector(`.category-rail`)?.offsetHeight||0,t=n.getBoundingClientRect().top+window.scrollY-e-12;window.scrollTo({top:t,behavior:`smooth`})}}}),xe(),document.querySelectorAll(`[data-add]`).forEach(e=>{e.onclick=()=>Ce(e.dataset.add)});let e=document.querySelector(`#open-cart`);e&&(e.onclick=q);let t=document.querySelector(`#open-account`);t&&(t.onclick=De);let n=document.querySelector(`#close-cart`);n&&(n.onclick=J);let r=document.querySelector(`#backdrop`);r&&(r.onclick=J)}function Ce(e){let n=x.find(t=>t.id===e);if(!n)return;let r=we(n),i=Te(n),a=Ee(n);document.querySelector(`#modal-content`).innerHTML=`
+  `}function xe(){w&&w.disconnect();let e=document.querySelectorAll(`.menu-category-section`);if(!e.length)return;let t=document.querySelector(`.category-rail`)?.offsetHeight||0;w=new IntersectionObserver(e=>{e.forEach(e=>{if(e.isIntersecting){let t=e.target.id.replace(`menu-cat-`,``);document.querySelectorAll(`[data-category]`).forEach(e=>{e.classList.toggle(`is-active`,e.dataset.target===t)})}})},{rootMargin:`-${t+20}px 0px -70% 0px`,threshold:0}),e.forEach(e=>w.observe(e))}function Se(){document.querySelectorAll(`[data-category]`).forEach(e=>{e.onclick=()=>{let t=e.dataset.target;if(t===`top`){window.scrollTo({top:0,behavior:`smooth`});return}let n=document.getElementById(`menu-cat-${t}`);if(n){let e=document.querySelector(`.category-rail`)?.offsetHeight||0,t=n.getBoundingClientRect().top+window.scrollY-e-12;window.scrollTo({top:t,behavior:`smooth`})}}}),xe(),document.querySelectorAll(`[data-add]`).forEach(e=>{e.onclick=()=>Ce(e.dataset.add)});let e=document.querySelector(`#open-cart`);e&&(e.onclick=q);let t=document.querySelector(`#open-account`);t&&(t.onclick=De);let n=document.querySelector(`#close-cart`);n&&(n.onclick=J);let r=document.querySelector(`#backdrop`);r&&(r.onclick=J)}function Ce(e){let n=S.find(t=>t.id===e);if(!n)return;let r=we(n),i=Te(n),a=Ee(n);document.querySelector(`#modal-content`).innerHTML=`
 
     <button
       class="modal-close"
@@ -587,9 +587,9 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       id="confirm-add"
       type="button"
     >
-      Ajouter · ${L(n.price)}
+      Ajouter · ${R(n.price)}
     </button>
-  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#modal-close`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`)},document.querySelector(`#confirm-add`).onclick=()=>{let e=Math.max(1,Math.min(20,Number(document.querySelector(`#qty`).value||1))),t={},r=document.querySelector(`#meat-1`)?.value,i=document.querySelector(`#meat-2`)?.value,a=document.querySelector(`#meat-3`)?.value,o=document.querySelector(`#sauce`)?.value,s=document.querySelector(`#drink`)?.value;r&&(t.meat=r),i&&(t.meat2=i),a&&(t.meat3=a),(i||a)&&(t.meats=[r,i,a].filter(Boolean)),o&&(t.sauce=o),s&&(t.drink=s),S=te(S,{...n,quantity:e,options:t}),document.querySelector(`#product-modal`).classList.add(`hidden`),W(),q()}}function G(e,t,n){for(let n of t)if(Array.isArray(e?.[n])&&e[n].length)return e[n];return n}function we(e){if(!e.meat)return``;let t=G(e.options,[`meats`,`meat`,`viandes`,`viande`],ce);return e.tripleMeat?`
+  `,document.querySelector(`#product-modal`).classList.remove(`hidden`),document.querySelector(`#modal-close`).onclick=()=>{document.querySelector(`#product-modal`).classList.add(`hidden`)},document.querySelector(`#confirm-add`).onclick=()=>{let e=Math.max(1,Math.min(20,Number(document.querySelector(`#qty`).value||1))),t={},r=document.querySelector(`#meat-1`)?.value,i=document.querySelector(`#meat-2`)?.value,a=document.querySelector(`#meat-3`)?.value,o=document.querySelector(`#sauce`)?.value,s=document.querySelector(`#drink`)?.value;r&&(t.meat=r),i&&(t.meat2=i),a&&(t.meat3=a),(i||a)&&(t.meats=[r,i,a].filter(Boolean)),o&&(t.sauce=o),s&&(t.drink=s),C=g(C,{...n,quantity:e,options:t}),document.querySelector(`#product-modal`).classList.add(`hidden`),W(),q()}}function G(e,t,n){for(let n of t)if(Array.isArray(e?.[n])&&e[n].length)return e[n];return n}function we(e){if(!e.meat)return``;let t=G(e.options,[`meats`,`meat`,`viandes`,`viande`],se);return e.tripleMeat?`
       <label>
         VIANDE 1
 
@@ -642,7 +642,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       SAUCE
 
       <select id="sauce">
-        ${K(G(e.options,[`sauces`,`sauce`],le))}
+        ${K(G(e.options,[`sauces`,`sauce`],ce))}
       </select>
     </label>
   `:``}function Ee(e){return e.drink?`
@@ -650,27 +650,27 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       BOISSON
 
       <select id="drink">
-        ${K(G(e.options,[`drinks`,`drink`,`boissons`,`boisson`],ue))}
+        ${K(G(e.options,[`drinks`,`drink`,`boissons`,`boisson`],le))}
       </select>
     </label>
   `:``}function K(e){return e.map(e=>`<option value="${t(e)}">${t(e)}</option>`).join(``)}function q(){document.querySelector(`#drawer`).classList.add(`open`),document.querySelector(`#backdrop`).classList.remove(`hidden`),Q()}function J(){document.querySelector(`#drawer`).classList.remove(`open`),document.querySelector(`#backdrop`).classList.add(`hidden`)}async function De(){let t=document.querySelector(`#account-overlay`);t||(t=document.createElement(`div`),t.id=`account-overlay`,t.className=`modal`,t.innerHTML=`
       <div class="modal-card order-detail-card" id="account-content"></div>
-    `,document.body.appendChild(t),t.onclick=e=>{e.target===t&&t.remove()}),D=``,O=!0,Z();try{let{data:{session:t}}=await e.auth.getSession();t?await Y():E=`login`}catch(e){console.error(`[FOODATOI] Erreur ouverture compte:`,e),D=`Impossible de charger ton compte pour le moment.`}O=!1,Z()}async function Y(){if(k=await oe(e,b.id),!k){E=`login`;return}let[t,n]=await Promise.all([se(e,k.id),_(e,k.id)]);A=t,j=n;try{if((await ee(e,b.id))?.is_active){let[t,n]=await Promise.all([f(e,b.id),p(e,b.id)]);M=t,N=n.filter(e=>e.is_active)}else M=null,N=[]}catch(e){console.error(`[FOODATOI] Erreur chargement fidélité:`,e),M=null,N=[]}E=`dashboard`}function X(e){return!!j.find(t=>t.channel===e)?.granted}function Z(){let e=document.querySelector(`#account-content`);if(!e)return;let n=D?`<p class="account-error">${t(D)}</p>`:``;if(O){e.innerHTML=`
+    `,document.body.appendChild(t),t.onclick=e=>{e.target===t&&t.remove()}),O=``,k=!0,Z();try{let{data:{session:t}}=await e.auth.getSession();t?await Y():D=`login`}catch(e){console.error(`[FOODATOI] Erreur ouverture compte:`,e),O=`Impossible de charger ton compte pour le moment.`}k=!1,Z()}async function Y(){if(A=await y(e,x.id),!A){D=`login`;return}let[t,n]=await Promise.all([ie(e,A.id),b(e,A.id)]);j=t,M=n;try{if((await h(e,x.id))?.is_active){let[t,n]=await Promise.all([f(e,x.id),p(e,x.id)]);N=t,P=n.filter(e=>e.is_active)}else N=null,P=[]}catch(e){console.error(`[FOODATOI] Erreur chargement fidélité:`,e),N=null,P=[]}D=`dashboard`}function X(e){return!!M.find(t=>t.channel===e)?.granted}function Z(){let e=document.querySelector(`#account-content`);if(!e)return;let n=O?`<p class="account-error">${t(O)}</p>`:``;if(k){e.innerHTML=`
       <p class="eyebrow">Mon compte</p>
       <h2>Chargement…</h2>
-    `;return}if(E===`dashboard`&&k){e.innerHTML=`
+    `;return}if(D===`dashboard`&&A){e.innerHTML=`
       <button class="modal-close" id="account-close">×</button>
 
       <p class="eyebrow">Mon compte</p>
-      <h2>${t(k.name||`Bonjour`)}</h2>
-      <p>${t(k.email||``)}</p>
+      <h2>${t(A.name||`Bonjour`)}</h2>
+      <p>${t(A.email||``)}</p>
 
       ${n}
 
       <div class="account-section">
         <h3>Mes commandes</h3>
-        ${A.length?`<ul class="account-orders">
-                ${A.map(e=>`
+        ${j.length?`<ul class="account-orders">
+                ${j.map(e=>`
                       <li>
                         <div>
                           <strong>${t(e.order_number)}</strong>
@@ -679,18 +679,18 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
                         <div>
                           ${(e.order_items||[]).map(e=>`${e.quantity}× ${t(e.product_name)}`).join(`, `)}
                         </div>
-                        <strong>${L((e.total_cents||0)/100)}</strong>
+                        <strong>${R((e.total_cents||0)/100)}</strong>
                       </li>
                     `).join(``)}
               </ul>`:`<p class="muted">Aucune commande pour le moment.</p>`}
       </div>
 
-      ${M||N.length?`
+      ${N||P.length?`
             <div class="account-section">
               <h3>Ma fidélité</h3>
-              <p class="loyalty-balance">${M?.balance_points??0} points</p>
-              ${N.length?`<ul class="account-orders loyalty-rewards">
-                      ${N.map(e=>`
+              <p class="loyalty-balance">${N?.balance_points??0} points</p>
+              ${P.length?`<ul class="account-orders loyalty-rewards">
+                      ${P.map(e=>`
                             <li>
                               <div>
                                 <strong>${t(e.name)}</strong>
@@ -700,7 +700,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
                                 class="secondary small"
                                 data-redeem-reward="${e.id}"
                                 type="button"
-                                ${(M?.balance_points??0)<e.cost_points||P?`disabled`:``}
+                                ${(N?.balance_points??0)<e.cost_points||F?`disabled`:``}
                               >
                                 ${e.cost_points} pts
                               </button>
@@ -727,7 +727,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
           Se déconnecter
         </button>
 
-        ${F?`
+        ${I?`
               <p class="account-error">
                 Cette action supprime définitivement ton compte, tes coordonnées et tes préférences. Elle ne peut pas être annulée.
               </p>
@@ -743,7 +743,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
               </button>
             `}
       </div>
-    `,ke();return}let r=E===`signup`;e.innerHTML=`
+    `,ke();return}let r=D===`signup`;e.innerHTML=`
     <button class="modal-close" id="account-close">×</button>
 
     <p class="eyebrow">Mon compte</p>
@@ -783,7 +783,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
               Je souhaite recevoir des offres par SMS
             </label>
             <p class="account-legal">
-              Tes données servent uniquement à gérer ton compte et tes commandes chez ${t(R())}. Tu peux les supprimer à tout moment depuis cet espace.
+              Tes données servent uniquement à gérer ton compte et tes commandes chez ${t(z())}. Tu peux les supprimer à tout moment depuis cet espace.
             </p>
           `:``}
 
@@ -795,7 +795,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
     <button class="secondary full" id="account-toggle-mode" type="button">
       ${r?`J’ai déjà un compte`:`Créer un compte`}
     </button>
-  `,Oe()}function Oe(){let t=document.querySelector(`#account-close`);t&&(t.onclick=()=>document.querySelector(`#account-overlay`)?.remove());let n=document.querySelector(`#account-toggle-mode`);n&&(n.onclick=()=>{E=E===`signup`?`login`:`signup`,D=``,Z()});let r=document.querySelector(`#account-form`);r&&(r.onsubmit=async t=>{t.preventDefault();let n=Object.fromEntries(new FormData(t.currentTarget));if(!re(n.email)){D=`Adresse email invalide.`,Z();return}O=!0,D=``,Z();try{if(E===`signup`){if((await ie(e,b.id,n)).pendingConfirmation){O=!1,D=`Compte créé ! Vérifie tes emails pour confirmer ton adresse avant de te connecter.`,E=`login`,Z();return}await Y()}else await ae(e,n),await Y()}catch(t){console.error(`[FOODATOI] Erreur compte client:`,t),d(e,{restaurantId:b?.id,context:`main.customerAccount`,message:t?.message??String(t),page:`main`}),D=String(t?.message||``).includes(`Invalid login credentials`)?`Email ou mot de passe incorrect.`:String(t?.message||``).includes(`already registered`)?`Un compte existe déjà avec cet email.`:`Impossible de traiter la demande pour le moment.`}O=!1,Z()})}function ke(){let t=document.querySelector(`#account-close`);t&&(t.onclick=()=>document.querySelector(`#account-overlay`)?.remove());let n=document.querySelector(`#account-logout`);n&&(n.onclick=async()=>{await g(e),E=`login`,k=null,A=[],j=[],F=!1,Z()}),document.querySelectorAll(`[data-redeem-reward]`).forEach(t=>{t.onclick=async()=>{if(!P){P=!0,Z();try{await m(e,t.dataset.redeemReward),M=await f(e,b.id),alert(`Récompense échangée ! Montre cet écran en caisse pour en profiter.`)}catch(e){console.error(`[FOODATOI] Erreur échange récompense:`,e),alert(`Impossible d’échanger cette récompense pour le moment.`)}finally{P=!1,Z()}}}}),[`EMAIL`,`SMS`].forEach(t=>{let n=document.querySelector(`#consent-${t.toLowerCase()}`);n&&(n.onchange=async()=>{try{await v(e,{restaurantId:b.id,customerId:k.id,channel:t,granted:n.checked}),j=await _(e,k.id)}catch(e){console.error(`[FOODATOI] Erreur consentement:`,e),n.checked=!n.checked}})});let r=document.querySelector(`#account-delete`);r&&(r.onclick=()=>{F=!0,Z()});let i=document.querySelector(`#account-delete-cancel`);i&&(i.onclick=()=>{F=!1,Z()});let a=document.querySelector(`#account-delete-confirm`);a&&(a.onclick=async()=>{O=!0,Z();try{await y(e),E=`login`,k=null,A=[],j=[],F=!1,D=`Ton compte et tes données ont été supprimés.`}catch(t){console.error(`[FOODATOI] Erreur suppression compte:`,t),d(e,{restaurantId:b?.id,context:`main.deleteAccount`,message:t?.message??String(t),page:`main`}),D=`Impossible de supprimer le compte pour le moment.`,F=!1}O=!1,Z()})}function Q(){let e=document.querySelector(`#cart-content`);if(!e)return;if(!S.length){e.innerHTML=`
+  `,Oe()}function Oe(){let t=document.querySelector(`#account-close`);t&&(t.onclick=()=>document.querySelector(`#account-overlay`)?.remove());let n=document.querySelector(`#account-toggle-mode`);n&&(n.onclick=()=>{D=D===`signup`?`login`:`signup`,O=``,Z()});let r=document.querySelector(`#account-form`);r&&(r.onsubmit=async t=>{t.preventDefault();let n=Object.fromEntries(new FormData(t.currentTarget));if(!te(n.email)){O=`Adresse email invalide.`,Z();return}k=!0,O=``,Z();try{if(D===`signup`){if((await ne(e,x.id,n)).pendingConfirmation){k=!1,O=`Compte créé ! Vérifie tes emails pour confirmer ton adresse avant de te connecter.`,D=`login`,Z();return}await Y()}else await re(e,n),await Y()}catch(t){console.error(`[FOODATOI] Erreur compte client:`,t),d(e,{restaurantId:x?.id,context:`main.customerAccount`,message:t?.message??String(t),page:`main`}),O=String(t?.message||``).includes(`Invalid login credentials`)?`Email ou mot de passe incorrect.`:String(t?.message||``).includes(`already registered`)?`Un compte existe déjà avec cet email.`:`Impossible de traiter la demande pour le moment.`}k=!1,Z()})}function ke(){let t=document.querySelector(`#account-close`);t&&(t.onclick=()=>document.querySelector(`#account-overlay`)?.remove());let n=document.querySelector(`#account-logout`);n&&(n.onclick=async()=>{await v(e),D=`login`,A=null,j=[],M=[],I=!1,Z()}),document.querySelectorAll(`[data-redeem-reward]`).forEach(t=>{t.onclick=async()=>{if(!F){F=!0,Z();try{await m(e,t.dataset.redeemReward),N=await f(e,x.id),alert(`Récompense échangée ! Montre cet écran en caisse pour en profiter.`)}catch(e){console.error(`[FOODATOI] Erreur échange récompense:`,e),alert(`Impossible d’échanger cette récompense pour le moment.`)}finally{F=!1,Z()}}}}),[`EMAIL`,`SMS`].forEach(t=>{let n=document.querySelector(`#consent-${t.toLowerCase()}`);n&&(n.onchange=async()=>{try{await ae(e,{restaurantId:x.id,customerId:A.id,channel:t,granted:n.checked}),M=await b(e,A.id)}catch(e){console.error(`[FOODATOI] Erreur consentement:`,e),n.checked=!n.checked}})});let r=document.querySelector(`#account-delete`);r&&(r.onclick=()=>{I=!0,Z()});let i=document.querySelector(`#account-delete-cancel`);i&&(i.onclick=()=>{I=!1,Z()});let a=document.querySelector(`#account-delete-confirm`);a&&(a.onclick=async()=>{k=!0,Z();try{await oe(e),D=`login`,A=null,j=[],M=[],I=!1,O=`Ton compte et tes données ont été supprimés.`}catch(t){console.error(`[FOODATOI] Erreur suppression compte:`,t),d(e,{restaurantId:x?.id,context:`main.deleteAccount`,message:t?.message??String(t),page:`main`}),O=`Impossible de supprimer le compte pour le moment.`,I=!1}k=!1,Z()})}function Q(){let e=document.querySelector(`#cart-content`);if(!e)return;if(!C.length){e.innerHTML=`
       <div class="empty-ticket">
 
         <div class="empty-ticket-mark">
@@ -826,7 +826,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       <div class="ticket-header">
 
         <span>
-          ${t(R())}
+          ${t(z())}
         </span>
 
         <span>
@@ -837,7 +837,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
 
       <div class="ticket-items">
 
-        ${S.map((e,t)=>Ae(e,t)).join(``)}
+        ${C.map((e,t)=>Ae(e,t)).join(``)}
 
       </div>
 
@@ -848,7 +848,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
         </span>
 
         <strong>
-          ${L(h(S))}
+          ${R(_(C))}
         </strong>
 
       </div>
@@ -907,8 +907,81 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
         >
       </label>
 
-      <label>
-        JOUR DE RETRAIT
+      ${x?.settings?.delivery_mode===`internal`?`
+            <div class="fulfillment-toggle">
+
+              <label>
+                <input
+                  type="radio"
+                  name="fulfillmentType"
+                  value="PICKUP"
+                  checked
+                >
+                Retrait sur place
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="fulfillmentType"
+                  value="DELIVERY"
+                >
+                Livraison
+              </label>
+
+            </div>
+
+            <div
+              id="delivery-address-fields"
+              class="delivery-address-fields"
+              hidden
+            >
+
+              <label>
+                ADRESSE
+
+                <input
+                  name="deliveryStreet"
+                  placeholder="12 rue des Fleurs"
+                  autocomplete="street-address"
+                >
+              </label>
+
+              <label>
+                CODE POSTAL
+
+                <input
+                  name="deliveryPostalCode"
+                  placeholder="31000"
+                  inputmode="numeric"
+                  autocomplete="postal-code"
+                >
+              </label>
+
+              <label>
+                VILLE
+
+                <input
+                  name="deliveryCity"
+                  placeholder="Toulouse"
+                  autocomplete="address-level2"
+                >
+              </label>
+
+              <label>
+                COMPLÉMENT (bâtiment, étage, code portail...)
+
+                <input
+                  name="deliveryComplement"
+                  placeholder="Facultatif"
+                >
+              </label>
+
+            </div>
+          `:``}
+
+      <label id="pickup-date-label">
+        <span>JOUR DE RETRAIT</span>
 
         <input
           name="pickupDate"
@@ -949,20 +1022,20 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       </button>
 
       <small>
-        ${w?`Commande transmise directement à l’espace ${t(R())}.`:`Mode démo : aucune commande réelle n’est envoyée.`}
+        ${T?`Commande transmise directement à l’espace ${t(z())}.`:`Mode démo : aucune commande réelle n’est envoyée.`}
       </small>
 
     </form>
-  `,e.querySelectorAll(`[data-remove]`).forEach(e=>{e.onclick=()=>{S.splice(Number(e.dataset.remove),1),Q()}});let n=e.querySelector(`#order-form`);if(n){let r=n.querySelector(`#pickup-date`),a=n.querySelector(`#pickup-time`),o=e.querySelector(`#hours-banner`),s=n.querySelector(`#submit-order`),c=new Date().toLocaleDateString(`en-CA`),l=new Date(Date.now()+5184e6).toLocaleDateString(`en-CA`);r.min=c,r.max=l,r.value=c;function d(){let e=u(a.value,r.value);return e?new Date(e):null}function f(){let e=d(),n=e&&i(b?.settings?.opening_hours,e);s.disabled=!n,o.innerHTML=n?``:`
+  `,e.querySelectorAll(`[data-remove]`).forEach(e=>{e.onclick=()=>{C.splice(Number(e.dataset.remove),1),Q()}});let n=e.querySelector(`#order-form`);if(n){let r=n.querySelector(`#pickup-date`),a=n.querySelector(`#pickup-time`),o=e.querySelector(`#hours-banner`),s=n.querySelector(`#submit-order`),c=n.querySelectorAll(`input[name="fulfillmentType"]`),l=e.querySelector(`#delivery-address-fields`),d=n.querySelector(`#pickup-date-label span`);function f(){if(!c.length)return;let e=n.querySelector(`input[name="fulfillmentType"]:checked`)?.value===`DELIVERY`;l&&(l.hidden=!e,l.querySelectorAll(`input`).forEach(t=>{t.required=e&&t.name!==`deliveryComplement`})),d&&(d.textContent=e?`JOUR DE LIVRAISON`:`JOUR DE RETRAIT`)}c.forEach(e=>{e.onchange=f}),f();let p=new Date().toLocaleDateString(`en-CA`),m=new Date(Date.now()+5184e6).toLocaleDateString(`en-CA`);r.min=p,r.max=m,r.value=p;function h(){let e=u(a.value,r.value);return e?new Date(e):null}function g(){let e=h(),n=e&&i(x?.settings?.opening_hours,e);s.disabled=!n,o.innerHTML=n?``:`
           <div class="closed-banner">
             <p class="eyebrow">FERMÉ À CE CRÉNEAU</p>
             <p>
-              ${t(R())}
+              ${t(z())}
               n'accepte pas de commande à l'horaire choisi.
               Choisis un autre jour ou une autre heure.
             </p>
           </div>
-        `}r.onchange=f,a.onchange=f,f(),n.onsubmit=async e=>{e.preventDefault();let t=d();if(!t||!i(b?.settings?.opening_hours,t)){f();return}let n=Object.fromEntries(new FormData(e.currentTarget)),r=ne(S,n);r.notes=String(n.specialInstructions||``).trim()||null,T||=crypto.randomUUID(),r.idempotencyKey=T,await je(r)}}}function Ae(e,n){let r=$(e.options);return`
+        `}r.onchange=g,a.onchange=g,g(),n.onsubmit=async e=>{e.preventDefault();let t=h();if(!t||!i(x?.settings?.opening_hours,t)){g();return}let n=Object.fromEntries(new FormData(e.currentTarget)),r=ee(C,n);r.notes=String(n.specialInstructions||``).trim()||null,E||=crypto.randomUUID(),r.idempotencyKey=E,await je(r)}}}function Ae(e,n){let r=$(e.options);return`
     <div class="ticket-item">
 
       <div>
@@ -981,7 +1054,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       </div>
 
       <b>
-        ${L(e.price*e.quantity)}
+        ${R(e.price*e.quantity)}
       </b>
 
       <button
@@ -993,7 +1066,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       </button>
 
     </div>
-  `}function $(e={}){if(!e||typeof e!=`object`)return``;let t=[];return Array.isArray(e.meats)?t.push(`Viandes : ${e.meats.join(`, `)}`):e.meat&&t.push(`Viande : ${e.meat}`),e.sauce&&t.push(`Sauce : ${e.sauce}`),e.drink&&t.push(`Boisson : ${e.drink}`),t.join(` · `)}async function je(t){try{let e,r={...t,restaurant_id:b?.id||null,restaurantId:b?.id||null};if(!r.restaurant_id)throw Error(`Restaurant FOODATOI introuvable pour cette commande.`);if(w)e=await w.createOrder(r);else{let t=JSON.parse(localStorage.getItem(`foodatoi-orders`)||`[]`);e=n(t,r).at(-1),localStorage.setItem(`foodatoi-orders`,JSON.stringify([...t,e]))}S=[],T=null,Me(e)}catch(t){console.error(`[FOODATOI] Erreur création commande:`,t),d(e,{restaurantId:b?.id,context:`main.createOrder`,message:t?.message??String(t),page:`main`}),alert(String(t?.message||``).includes(`RESTAURANT_CLOSED`)?`Le restaurant est fermé actuellement, la commande n’a pas pu être envoyée.`:String(t?.message||``).includes(`RATE_LIMITED`)?`Trop de commandes envoyées récemment avec ce numéro. Réessaie dans quelques minutes.`:`Impossible d’envoyer la commande pour le moment.`)}}function Me(e){let n=r(e);J(),document.querySelector(`#modal-content`).innerHTML=`
+  `}function $(e={}){if(!e||typeof e!=`object`)return``;let t=[];return Array.isArray(e.meats)?t.push(`Viandes : ${e.meats.join(`, `)}`):e.meat&&t.push(`Viande : ${e.meat}`),e.sauce&&t.push(`Sauce : ${e.sauce}`),e.drink&&t.push(`Boisson : ${e.drink}`),t.join(` · `)}async function je(t){try{let e,r={...t,restaurant_id:x?.id||null,restaurantId:x?.id||null};if(!r.restaurant_id)throw Error(`Restaurant FOODATOI introuvable pour cette commande.`);if(T)e=await T.createOrder(r);else{let t=JSON.parse(localStorage.getItem(`foodatoi-orders`)||`[]`);e=n(t,r).at(-1),localStorage.setItem(`foodatoi-orders`,JSON.stringify([...t,e]))}C=[],E=null,Me(e)}catch(t){console.error(`[FOODATOI] Erreur création commande:`,t),d(e,{restaurantId:x?.id,context:`main.createOrder`,message:t?.message??String(t),page:`main`}),alert(String(t?.message||``).includes(`RESTAURANT_CLOSED`)?`Le restaurant est fermé actuellement, la commande n’a pas pu être envoyée.`:String(t?.message||``).includes(`RATE_LIMITED`)?`Trop de commandes envoyées récemment avec ce numéro. Réessaie dans quelques minutes.`:`Impossible d’envoyer la commande pour le moment.`)}}function Me(e){let n=r(e);J(),document.querySelector(`#modal-content`).innerHTML=`
     <div class="confirmation">
 
       <div class="confirmed-stamp">
@@ -1011,7 +1084,7 @@ import{n as e,t}from"./styles-CA22tAoU.js";import"./modulepreload-polyfill-P2Xu9
       <p>
         Ton ticket est parti chez
         <strong>
-          ${t(R())}
+          ${t(z())}
         </strong>.
 
         Retrait souhaité à
