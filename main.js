@@ -1142,7 +1142,14 @@ function card(item) {
   return `
     <article class="menu-card">
 
-      <div class="menu-card-media">
+      <div
+        class="menu-card-media"
+        ${
+          item.imageUrl
+            ? `data-zoom="${escapeHtml(item.id)}" role="button" aria-label="Agrandir la photo de ${escapeHtml(item.name)}"`
+            : ''
+        }
+      >
         ${
           item.imageUrl
             ? `
@@ -1349,6 +1356,17 @@ function bind() {
       button.onclick = () =>
         openProduct(
           button.dataset.add
+        );
+    });
+
+  document
+    .querySelectorAll(
+      '.menu-card-media[data-zoom]'
+    )
+    .forEach(media => {
+      media.onclick = () =>
+        openProduct(
+          media.dataset.zoom
         );
     });
 
