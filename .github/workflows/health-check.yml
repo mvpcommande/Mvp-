@@ -20,7 +20,7 @@ jobs:
   health-check:
     runs-on: ubuntu-latest
     steps:
-      - name: Le site client répond et sert le bon contenu
+      - name: Le site client répond (200) et sert le shell FOODATOI
         run: |
           status=$(curl -s -o /tmp/index.html -w "%{http_code}" "$SITE_URL")
           echo "HTTP $status"
@@ -28,8 +28,13 @@ jobs:
             echo "::error::Le site répond en $status au lieu de 200"
             exit 1
           fi
-          if ! grep -q "Caz Food" /tmp/index.html; then
-            echo "::error::Contenu attendu absent de la page d'accueil"
+          # L'app est rendue côté client (SPA) : le nom du restaurant
+          # n'est PAS dans le HTML statique (il est injecté par JS après
+          # appel Supabase). On vérifie donc que le SHELL de l'app est bien
+          # déployé (point de montage + marque). La santé du tenant Caz Food
+          # est couverte par les étapes resolve_restaurant + produits.
+          if ! grep -q 'id="root"' /tmp/index.html || ! grep -q "FOODATOI" /tmp/index.html; then
+            echo "::error::Shell FOODATOI absent de la page d'accueil (déploiement cassé ?)"
             exit 1
           fi
 
