@@ -19,7 +19,10 @@ import {
   uploadRestaurantLogo
 } from './restaurantOwner.mjs';
 import { compressImage } from './imageCompression.mjs';
-import { logClientError } from './errorLog.mjs';
+import {
+  logClientError,
+  installGlobalErrorLogging
+} from './errorLog.mjs';
 import {
   getLoyaltyProgram,
   upsertLoyaltyProgram,
@@ -56,6 +59,11 @@ let view = 'loading';
 let authMode = 'signup';
 let error = '';
 let restaurant = null;
+installGlobalErrorLogging(supabase, {
+  page: 'onboarding',
+  getRestaurantId: () => restaurant?.id ?? null
+});
+
 let openingHours = {};
 let products = [];
 let loyaltyProgram = null;

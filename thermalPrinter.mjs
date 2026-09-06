@@ -109,9 +109,11 @@ export function createThermalPrinterController(WebUSBReceiptPrinter, storage = t
     if (saved) {
       try {
         printer.reconnect(JSON.parse(saved));
-      } catch {
+      } catch (err) {
         // Appareil non retrouvé (débranché, changé) - pas grave,
-        // l'utilisateur reconnectera manuellement au besoin.
+        // l'utilisateur reconnectera manuellement au besoin, mais on
+        // trace quand même (repris par le filet global console.warn).
+        console.warn('[FOODATOI] Reconnexion imprimante impossible:', err);
       }
     }
   }

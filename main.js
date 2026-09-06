@@ -33,7 +33,8 @@ import {
 } from './timeFormat.mjs';
 
 import {
-  logClientError
+  logClientError,
+  installGlobalErrorLogging
 } from './errorLog.mjs';
 
 import {
@@ -91,6 +92,11 @@ import './styles.css';
  */
 
 let restaurant = null;
+installGlobalErrorLogging(supabase, {
+  page: 'client',
+  getRestaurantId: () => restaurant?.id ?? null
+});
+
 let menu = [];
 let cart = [];
 let activeCategory = 'Tous';

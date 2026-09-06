@@ -3,7 +3,15 @@ import { supabase } from './supabaseClient.js';
 import { escapeHtml } from './htmlEscape.mjs';
 import { signInOwner, signOutOwner } from './restaurantOwner.mjs';
 import { getMyChain, getChainDashboard } from './chainAdmin.mjs';
-import { logClientError } from './errorLog.mjs';
+import {
+  logClientError,
+  installGlobalErrorLogging
+} from './errorLog.mjs';
+installGlobalErrorLogging(supabase, {
+  page: 'chain-admin',
+  getRestaurantId: () => null
+});
+
 
 const root = document.querySelector('#chain-admin-root');
 

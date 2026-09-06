@@ -22,7 +22,10 @@ import {
   buildReceiptBytes,
   createThermalPrinterController
 } from './thermalPrinter.mjs';
-import { logClientError } from './errorLog.mjs';
+import {
+  logClientError,
+  installGlobalErrorLogging
+} from './errorLog.mjs';
 import { escapeHtml } from './htmlEscape.mjs';
 import './styles.css';
 const root = document.querySelector('#admin-root');
@@ -74,6 +77,11 @@ let mode = 'local';
 let realtimeChannel = null;
 let session = null;
 let restaurant = null;
+installGlobalErrorLogging(supabase, {
+  page: 'admin',
+  getRestaurantId: () => restaurant?.id ?? null
+});
+
 function localOrders() {
   return JSON.parse(
     localStorage.getItem('caz-food-orders') || '[]'
