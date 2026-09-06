@@ -135,7 +135,7 @@ async function init() {
   }
   renderLogin();
 }
-function subscribeRealtime() {
+async function subscribeRealtime() {
   if (
     realtimeChannel &&
     supabase
@@ -161,7 +161,7 @@ function subscribeRealtime() {
     supabase &&
     session?.access_token
   ) {
-    supabase.realtime.setAuth(
+    await supabase.realtime.setAuth(
       session.access_token
     );
   }
