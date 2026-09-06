@@ -985,18 +985,18 @@ async function renderOrderDetail(order) {
         }
       </p>
       <h2>
-        ${
+        ${escapeHtml(
           order.customer?.name ??
           order.customer_name ??
           'Client'
-        }
+        )}
       </h2>
       <p>
-        ${
+        ${escapeHtml(
           order.customer?.phone ??
           order.customer_phone ??
           '—'
-        }
+        )}
         · retrait
         ${
           formatPickupTime(
@@ -1013,15 +1013,15 @@ async function renderOrderDetail(order) {
                   <td>
                     <strong>
                       ${item.quantity}×
-                      ${
+                      ${escapeHtml(
                         item.name ??
                         item.product_name ??
                         'Article'
-                      }
+                      )}
                     </strong>
                     <br>
                     <small>
-                      ${
+                      ${escapeHtml(
                         [
                           item.options?.meat,
                           item.options?.sauce,
@@ -1029,7 +1029,7 @@ async function renderOrderDetail(order) {
                         ]
                           .filter(Boolean)
                           .join(' · ') || '—'
-                      }
+                      )}
                     </small>
                   </td>
                   <td class="num">
@@ -1460,16 +1460,16 @@ function orderCard(order) {
                       <strong>
                         ${item.quantity}×
                       </strong>
-                      ${
+                      ${escapeHtml(
                         item.name ??
                         item.product_name ??
                         'Article'
-                      }
+                      )}
                       ${
                         item.options?.meat
                           ? `
                             <small>
-                              · ${item.options.meat}
+                              · ${escapeHtml(item.options.meat)}
                             </small>
                           `
                           : ''
@@ -1478,7 +1478,7 @@ function orderCard(order) {
                         item.options?.sauce
                           ? `
                             <small>
-                              · ${item.options.sauce}
+                              · ${escapeHtml(item.options.sauce)}
                             </small>
                           `
                           : ''
@@ -1487,7 +1487,7 @@ function orderCard(order) {
                         item.options?.drink
                           ? `
                             <small>
-                              · ${item.options.drink}
+                              · ${escapeHtml(item.options.drink)}
                             </small>
                           `
                           : ''

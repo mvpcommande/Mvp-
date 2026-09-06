@@ -18,7 +18,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run test suite
         run: npm test
@@ -40,7 +40,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       # Build servi depuis la racine du domaine personnalisé
       # (www.foodatoi.fr), pas depuis /Mvp-/ - sinon les chemins
@@ -78,7 +78,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
