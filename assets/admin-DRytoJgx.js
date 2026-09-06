@@ -435,10 +435,10 @@ import{n as e,t}from"./styles-DcBQzno-.js";import"./modulepreload-polyfill-P2Xu9
         ${L[e.status]??e.status}
       </p>
       <h2>
-        ${e.customer?.name??e.customer_name??`Client`}
+        ${t(e.customer?.name??e.customer_name??`Client`)}
       </h2>
       <p>
-        ${e.customer?.phone??e.customer_phone??`—`}
+        ${t(e.customer?.phone??e.customer_phone??`—`)}
         · retrait
         ${r(e.pickup_time)||`—`}
       </p>
@@ -449,11 +449,11 @@ import{n as e,t}from"./styles-DcBQzno-.js";import"./modulepreload-polyfill-P2Xu9
                   <td>
                     <strong>
                       ${e.quantity}×
-                      ${e.name??e.product_name??`Article`}
+                      ${t(e.name??e.product_name??`Article`)}
                     </strong>
                     <br>
                     <small>
-                      ${[e.options?.meat,e.options?.sauce,e.options?.drink].filter(Boolean).join(` · `)||`—`}
+                      ${t([e.options?.meat,e.options?.sauce,e.options?.drink].filter(Boolean).join(` · `)||`—`)}
                     </small>
                   </td>
                   <td class="num">
@@ -621,20 +621,20 @@ import{n as e,t}from"./styles-DcBQzno-.js";import"./modulepreload-polyfill-P2Xu9
                       <strong>
                         ${e.quantity}×
                       </strong>
-                      ${e.name??e.product_name??`Article`}
+                      ${t(e.name??e.product_name??`Article`)}
                       ${e.options?.meat?`
                             <small>
-                              · ${e.options.meat}
+                              · ${t(e.options.meat)}
                             </small>
                           `:``}
                       ${e.options?.sauce?`
                             <small>
-                              · ${e.options.sauce}
+                              · ${t(e.options.sauce)}
                             </small>
                           `:``}
                       ${e.options?.drink?`
                             <small>
-                              · ${e.options.drink}
+                              · ${t(e.options.drink)}
                             </small>
                           `:``}
                     </li>
