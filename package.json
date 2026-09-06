@@ -13,7 +13,7 @@
   "dependencies": {
     "@point-of-sale/receipt-printer-encoder": "3.0.3",
     "@point-of-sale/webusb-receipt-printer": "2.0.0",
-    "@supabase/supabase-js": "2.57.0",
+    "@supabase/supabase-js": "2.115.0",
     "vite": "8.2.2"
   },
   "devDependencies": {
