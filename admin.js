@@ -821,6 +821,25 @@ async function render() {
   if (healthButton) {
     healthButton.onclick =
       () => renderSystemHealth();
+    // Badge : nombre d'erreurs des dernières 24 h, pour que le comptoir
+    // remarque un incident sans ouvrir la modale. Best-effort — en cas
+    // d'échec, getRecentErrors a déjà tracé via console.error (filet
+    // global), donc rien n'est perdu ici.
+    if (mode === 'remote' && remote?.getRecentErrors) {
+      remote
+        .getRecentErrors()
+        .then((errors) => {
+          const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+          const recent = errors.filter(
+            (e) => new Date(e.created_at).getTime() > dayAgo
+          ).length;
+          if (recent > 0) {
+            healthButton.textContent = `État système (${recent})`;
+            healthButton.classList.add('has-errors');
+          }
+        })
+        .catch(() => {});
+    }
   }
   const printStockButton =
     root.querySelector(
@@ -1251,40 +1270,52 @@ async function renderSystemHealth() {
         '#health-loading'
       );
     if (!loadingEl) return;
+    const byContext = errors.reduce((acc, e) => {
+      const key = e.context || '—';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const summary = Object.entries(byContext)
+      .sort((a, b) => b[1] - a[1])
+      .map(([ctx, n]) => `${escapeHtml(ctx)} (${n})`)
+      .join(' · ');
     loadingEl.outerHTML = errors.length
       ? `
         <p>
           ${errors.length} erreur${errors.length > 1 ? 's' : ''}
           enregistrée${errors.length > 1 ? 's' : ''}, la plus récente en premier.
         </p>
+        <p class="health-summary">${summary}</p>
         <ul class="detail-timeline-list health-list">
           ${errors
-            .map(
-              (err) => `
+            .map((err) => {
+              const when = new Date(err.created_at).toLocaleString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+              const stack =
+                err.details && err.details.stack
+                  ? String(err.details.stack)
+                  : '';
+              return `
                 <li>
-                  <span>
-                    ${new Date(
-                      err.created_at
-                    ).toLocaleString(
-                      'fr-FR',
-                      {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }
-                    )}
-                  </span>
+                  <span>${when}</span>
                   <div>
-                    <strong>
-                      ${err.context ?? '—'}
-                    </strong>
+                    <strong>${escapeHtml(err.context ?? '—')}</strong>
+                    ${err.page ? ` · <em>${escapeHtml(err.page)}</em>` : ''}
                     <br>
-                    ${err.message ?? ''}
+                    ${escapeHtml(err.message ?? '')}
+                    ${
+                      stack
+                        ? `<details class="health-stack"><summary>détails</summary><pre>${escapeHtml(stack)}</pre></details>`
+                        : ''
+                    }
                   </div>
                 </li>
-              `
-            )
+              `;
+            })
             .join('')}
         </ul>
       `
