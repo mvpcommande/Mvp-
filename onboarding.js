@@ -19,6 +19,7 @@ import {
   uploadRestaurantLogo
 } from './restaurantOwner.mjs';
 import { compressImage } from './imageCompression.mjs';
+import { setupMenuImport } from './menuImport.mjs';
 import {
   logClientError,
   installGlobalErrorLogging
@@ -604,6 +605,12 @@ function renderDashboard() {
           }
         </div>
 
+        <h3>Importer un menu (PDF ou photo)</h3>
+        <p class="menu-import-hint">Envoyez la carte : l'IA la lit et pré-remplit vos produits. Vous vérifiez et corrigez avant l'ajout.</p>
+        <input type="file" id="menu-import-file" accept="application/pdf,image/jpeg,image/png,image/webp">
+        <span id="menu-import-status" class="onboarding-saved"></span>
+        <div id="menu-import-review"></div>
+
         <h3>Ajouter un produit</h3>
         <form id="product-form" class="order-form">
           <label>
@@ -839,6 +846,15 @@ function bindDashboardEvents() {
         label.textContent = 'Ajouter une photo';
       }
     };
+  });
+
+  setupMenuImport({
+    supabase,
+    restaurant,
+    onImported: async () => {
+      products = await getOwnProducts(supabase, restaurant.id);
+      render();
+    }
   });
 
   document.querySelector('#product-form').onsubmit = async (event) => {

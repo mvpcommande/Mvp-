@@ -54,3 +54,12 @@ button.has-errors {
   max-height: 180px;
   overflow: auto;
 }
+
+/* Import de menu (relecture) */
+.menu-import-hint { font-size: 13px; color: #6b6b6b; margin: 4px 0 8px; }
+.menu-import-intro { font-weight: 600; margin: 12px 0 8px; }
+.menu-import-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.menu-import-row { display: grid; grid-template-columns: 2fr 1.4fr 0.8fr 2fr auto; gap: 6px; align-items: center; }
+.menu-import-row input { width: 100%; padding: 8px; font-size: 13px; }
+.menu-import-remove { border: 1px solid #d8d4c8; background: transparent; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+@media (max-width: 640px) { .menu-import-row { grid-template-columns: 1fr 1fr; } }
