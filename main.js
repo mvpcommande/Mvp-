@@ -36,6 +36,7 @@ import {
   logClientError,
   installGlobalErrorLogging
 } from './errorLog.mjs';
+import { trackPageview } from './analytics.mjs';
 
 import {
   escapeHtml
@@ -3184,6 +3185,10 @@ function showConfirmation(
 
 async function bootstrap() {
   try {
+    // Mesure d'audience anonyme, tout au début (capture aussi ?src=... avant
+    // toute redirection). Best-effort, ne bloque rien.
+    trackPageview();
+
     renderLoading();
 
     /**
