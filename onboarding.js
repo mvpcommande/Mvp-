@@ -32,6 +32,31 @@ import {
   deleteLoyaltyReward
 } from './loyalty.mjs';
 
+// --- Intégration SumUp (paiement en ligne) ---
+// client_id et redirect_uri sont publics (ils transitent par le navigateur).
+// Le client_secret vit UNIQUEMENT en secret Supabase (Edge Function).
+const SUMUP_CLIENT_ID = 'cc_classic_FekbkakoriGLZPgAYEy6xCBlEKHLw';
+const SUMUP_REDIRECT_URI =
+  'https://ffuykessameuonpnyiyc.supabase.co/functions/v1/sumup-oauth-callback';
+// TODO: repasser à 'payments' une fois le scope validé par SumUp. Pour
+// l'instant on demande un scope déjà accordé, afin de tester le flux de
+// connexion de bout en bout dès aujourd'hui (sandbox).
+const SUMUP_SCOPES = 'transactions.history';
+
+// Message de retour après redirection SumUp (?sumup=connected|error)
+(() => {
+  const status = new URLSearchParams(window.location.search).get('sumup');
+  if (!status) return;
+  if (status === 'connected') {
+    alert('Compte SumUp connecté \u2713');
+  } else if (status === 'error') {
+    alert('La connexion SumUp a échoué. Réessayez.');
+  }
+  const clean = new URL(window.location.href);
+  clean.searchParams.delete('sumup');
+  window.history.replaceState({}, '', clean);
+})();
+
 const root = document.querySelector('#onboarding-root');
 
 const SECTORS = [
@@ -423,6 +448,17 @@ function renderDashboard() {
       </section>
 
       <section class="onboarding-section">
+        <h2>Paiement en ligne (SumUp)</h2>
+        ${
+          restaurant.sumup_connected
+            ? `<p class="muted">\u2713 Compte SumUp connecté${restaurant.sumup_merchant_code ? ` \u2014 ${escapeHtml(restaurant.sumup_merchant_code)}` : ''}. Les commandes payées en ligne seront encaissées directement sur votre compte SumUp, sans commission.</p>
+               <button type="button" class="secondary" id="sumup-connect">Reconnecter SumUp</button>`
+            : `<p class="muted">Connectez votre compte SumUp pour encaisser les commandes payées en ligne directement sur votre compte \u2014 sans commission, l'argent va chez vous.</p>
+               <button type="button" class="secondary" id="sumup-connect">Connecter SumUp</button>`
+        }
+      </section>
+
+      <section class="onboarding-section">
         <h2>Programme de fidélité</h2>
         ${
           restaurant.plan === 'commerce'
@@ -747,6 +783,31 @@ function bindDashboardEvents() {
         console.error('[FOODATOI onboarding]', err);
         alert('Impossible d’envoyer le logo pour le moment.');
         label.firstChild.textContent = originalText;
+      }
+    };
+  }
+
+  const sumupBtn = document.querySelector('#sumup-connect');
+  if (sumupBtn) {
+    sumupBtn.onclick = async () => {
+      sumupBtn.disabled = true;
+      try {
+        const { data: state, error } = await supabase.rpc('sumup_begin_connect');
+        if (error || !state) {
+          throw error || new Error('no state');
+        }
+        const params = new URLSearchParams({
+          response_type: 'code',
+          client_id: SUMUP_CLIENT_ID,
+          redirect_uri: SUMUP_REDIRECT_URI,
+          scope: SUMUP_SCOPES,
+          state
+        });
+        window.location.href = `https://api.sumup.com/authorize?${params.toString()}`;
+      } catch (err) {
+        console.error('[FOODATOI onboarding] SumUp connect', err);
+        alert('Impossible de démarrer la connexion SumUp pour le moment.');
+        sumupBtn.disabled = false;
       }
     };
   }
