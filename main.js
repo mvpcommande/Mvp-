@@ -1147,36 +1147,26 @@ function render() {
 
 function card(item) {
   return `
-    <article class="menu-card">
+    <article class="menu-card${item.imageUrl ? '' : ' menu-card--no-photo'}">
 
-      <div
-        class="menu-card-media"
-        ${
-          item.imageUrl
-            ? `data-zoom="${escapeHtml(item.id)}" role="button" aria-label="Agrandir la photo de ${escapeHtml(item.name)}"`
-            : ''
-        }
-      >
-        ${
-          item.imageUrl
-            ? `
+      ${
+        item.imageUrl
+          ? `
+            <div
+              class="menu-card-media"
+              data-zoom="${escapeHtml(item.id)}"
+              role="button"
+              aria-label="Agrandir la photo de ${escapeHtml(item.name)}"
+            >
               <img
-                src="${escapeHtml(
-                  item.imageUrl
-                )}"
+                src="${escapeHtml(item.imageUrl)}"
                 alt=""
                 loading="lazy"
               >
-            `
-            : `
-              <span class="menu-card-media-fallback">
-                ${escapeHtml(
-                  item.emoji
-                )}
-              </span>
-            `
-        }
-      </div>
+            </div>
+          `
+          : ''
+      }
 
       <div class="menu-card-body">
 

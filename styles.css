@@ -63,3 +63,8 @@ button.has-errors {
 .menu-import-row input { width: 100%; padding: 8px; font-size: 13px; }
 .menu-import-remove { border: 1px solid #d8d4c8; background: transparent; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
 @media (max-width: 640px) { .menu-import-row { grid-template-columns: 1fr 1fr; } }
+
+/* Carte produit sans photo : compacte, pas de dalle vide */
+.menu-card--no-photo{min-height:auto}
+.menu-card--no-photo .menu-card-body{padding-top:18px}
+@media(max-width:700px){.menu-card--no-photo{min-height:auto}}
