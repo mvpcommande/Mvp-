@@ -1170,12 +1170,6 @@ function card(item) {
 
       <div class="menu-card-body">
 
-        <p class="eyebrow">
-          ${escapeHtml(
-            item.category
-          )}
-        </p>
-
         <h3>
           ${escapeHtml(
             item.name

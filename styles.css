@@ -68,3 +68,12 @@ button.has-errors {
 .menu-card--no-photo{min-height:auto}
 .menu-card--no-photo .menu-card-body{padding-top:18px}
 @media(max-width:700px){.menu-card--no-photo{min-height:auto}}
+
+/* Compactage des cartes produit (plus de densité, façon liste) */
+.menu-card{min-height:auto}
+.menu-card-body{padding:14px 16px 0}
+.menu-card h3{font-size:19px;line-height:1.05;margin:0 0 5px}
+.menu-card p{font-size:12.5px;line-height:1.4}
+.menu-card-bottom{padding:10px 16px 14px}
+.menu-card-bottom strong{font-size:16px}
+@media(max-width:700px){.menu-card{min-height:auto}}
