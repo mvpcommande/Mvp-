@@ -453,7 +453,7 @@ import{i as e,n as t,r as n,t as r}from"./styles-BeptKHnq.js";import"./modulepre
                     </strong>
                     <br>
                     <small>
-                      ${r([e.options?.meat,e.options?.sauce,e.options?.drink].filter(Boolean).join(` · `)||`—`)}
+                      ${r([e.options?.meat,e.options?.sauce,e.options?.drink,...Array.isArray(e.options?.groups)?e.options.groups.map(e=>e&&e.label&&e.choice?`${e.label}: ${e.choice}`:null):[]].filter(Boolean).join(` · `)||`—`)}
                     </small>
                   </td>
                   <td class="num">
@@ -636,6 +636,7 @@ import{i as e,n as t,r as n,t as r}from"./styles-BeptKHnq.js";import"./modulepre
                               · ${r(e.options.drink)}
                             </small>
                           `:``}
+                      ${Array.isArray(e.options?.groups)?e.options.groups.map(e=>e&&e.label&&e.choice?`<small> · ${r(e.label)}: ${r(e.choice)}</small>`:``).join(``):``}
                     </li>
                   `).join(``)}
             </ul>
