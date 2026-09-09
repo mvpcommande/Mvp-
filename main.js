@@ -1426,6 +1426,29 @@ function openProduct(id) {
   const drinkField =
     buildDrinkField(item);
 
+  const groups =
+    Array.isArray(item.options?.groups)
+      ? item.options.groups
+      : [];
+  const groupsField = groups
+    .map(
+      (g, gi) => `
+      <label>
+        ${escapeHtml(g.label || 'Choix')}
+        <select id="grp-${gi}" data-group-label="${escapeHtml(g.label || 'Choix')}"${(g.min ?? 1) >= 1 ? ' data-required="1"' : ''}>
+          <option value="">Choisir…</option>
+          ${(g.items || [])
+            .map(
+              (it) =>
+                `<option value="${escapeHtml(String(it))}">${escapeHtml(String(it))}</option>`
+            )
+            .join('')}
+        </select>
+      </label>
+    `
+    )
+    .join('');
+
   document.querySelector(
     '#modal-content'
   ).innerHTML = `
@@ -1484,6 +1507,8 @@ function openProduct(id) {
     }
 
     <div class="form-grid">
+
+      ${groupsField}
 
       ${meatField}
 
@@ -1611,6 +1636,27 @@ function openProduct(id) {
     if (drink) {
       options.drink =
         drink;
+    }
+
+    let missingGroup = null;
+    const groupSelections = [];
+    document
+      .querySelectorAll('#product-modal [data-group-label]')
+      .forEach((sel) => {
+        const label = sel.getAttribute('data-group-label');
+        if (sel.hasAttribute('data-required') && !sel.value && !missingGroup) {
+          missingGroup = label;
+        }
+        if (sel.value) {
+          groupSelections.push({ label, choice: sel.value });
+        }
+      });
+    if (missingGroup) {
+      alert('Merci de choisir : ' + missingGroup);
+      return;
+    }
+    if (groupSelections.length) {
+      options.groups = groupSelections;
     }
 
     cart = addItem(
@@ -2932,6 +2978,14 @@ function formatOptions(
     parts.push(
       `Boisson : ${options.drink}`
     );
+  }
+
+  if (Array.isArray(options.groups)) {
+    options.groups.forEach((g) => {
+      if (g && g.label && g.choice) {
+        parts.push(`${g.label} : ${g.choice}`);
+      }
+    });
   }
 
   return parts.join(

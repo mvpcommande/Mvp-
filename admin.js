@@ -1052,7 +1052,14 @@ async function renderOrderDetail(order) {
                         [
                           item.options?.meat,
                           item.options?.sauce,
-                          item.options?.drink
+                          item.options?.drink,
+                          ...(Array.isArray(item.options?.groups)
+                            ? item.options.groups.map((g) =>
+                                g && g.label && g.choice
+                                  ? `${g.label}: ${g.choice}`
+                                  : null
+                              )
+                            : [])
                         ]
                           .filter(Boolean)
                           .join(' · ') || '—'
@@ -1529,6 +1536,17 @@ function orderCard(order) {
                               · ${escapeHtml(item.options.drink)}
                             </small>
                           `
+                          : ''
+                      }
+                      ${
+                        Array.isArray(item.options?.groups)
+                          ? item.options.groups
+                              .map((g) =>
+                                g && g.label && g.choice
+                                  ? `<small> · ${escapeHtml(g.label)}: ${escapeHtml(g.choice)}</small>`
+                                  : ''
+                              )
+                              .join('')
                           : ''
                       }
                     </li>
