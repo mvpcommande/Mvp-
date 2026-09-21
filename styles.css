@@ -100,9 +100,9 @@ button.has-errors {
 /* -- Header compact ------------------------------------------------ */
 .oi-header{padding:var(--sp-3) 0 var(--sp-2)}
 .oi-header-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3)}
-.oi-brand-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
-.oi-brand-meta strong{font:700 clamp(18px,4.5vw,22px)/1.15 'Space Grotesk';letter-spacing:-.01em;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.oi-status-line{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.oi-brand-meta{display:flex;flex-direction:column;gap:3px;min-width:0}
+.oi-brand-meta strong{font:700 clamp(18px,4.5vw,22px)/1.2 'Space Grotesk';letter-spacing:-.01em;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oi-status-line{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;line-height:1}
 /*
  * Deux anciennes règles ciblent tout <span> descendant de
  * ".brand-lockup" à n'importe quelle profondeur — ".brand-lockup div
@@ -119,12 +119,23 @@ button.has-errors {
 .oi-header .oi-status-badge.is-closed{background:rgba(23,23,20,.07);color:var(--muted)}
 .oi-header .oi-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin:0}
 .oi-header .oi-eta{display:inline;font:500 11px 'DM Mono';color:var(--muted);margin:0}
-.oi-tagline{margin:var(--sp-2) 0 0;font:600 15px 'DM Sans';color:#555047;letter-spacing:-.01em}
-.oi-tagline em{font-style:normal;color:var(--hot)}
+.oi-tagline{margin:6px 0 0;font:500 14px 'DM Sans';color:#5c574c;letter-spacing:.01em}
+.oi-tagline em{font-style:normal;font-weight:700;color:var(--hot)}
 
 .brand-lockup{gap:10px}
-.masthead-actions{gap:6px}
-#root .icon-btn{width:42px;height:42px;min-width:44px;min-height:44px;display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.masthead-actions{gap:var(--sp-2)}
+#root .icon-btn{width:42px;height:42px;min-width:44px;min-height:44px;display:grid;place-items:center;color:var(--ink);flex-shrink:0;transition:background-color .15s ease,border-color .15s ease}
+#root .icon-btn:hover{background:var(--paper);border-color:var(--ink)}
+
+/*
+ * Monogramme / logo : mêmes dimensions et même rayon des deux
+ * côtés pour que le repli (pas de logo_url) ne se voie pas comme
+ * un placeholder — juste une variante sobre du même gabarit.
+ */
+.oi-header .brand-mark,
+.oi-header .brand-mark-image{width:38px;height:38px;border-radius:var(--radius-sm);flex-shrink:0}
+.oi-header .brand-mark{background:var(--ink);color:var(--acid);display:grid;place-items:center;font:700 14px 'Space Grotesk';letter-spacing:0}
+.oi-header .brand-mark-image{object-fit:cover;display:block}
 .oi-cart-btn{position:relative}
 .oi-cart-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--acid);color:var(--acid-ink);font:700 10px 'DM Mono';display:grid;place-items:center}
 
@@ -132,24 +143,33 @@ button.has-errors {
 .oi-mode-section{padding:var(--sp-2) 0 var(--sp-3)}
 .oi-mode-label{margin:0 0 var(--sp-2);font:600 13px 'DM Sans';color:var(--ink)}
 .oi-segmented{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:4px}
-.oi-segmented-btn{flex:1;min-height:44px;border:0;background:transparent;border-radius:calc(var(--radius-md) - 4px);font:700 13px 'DM Sans';color:var(--muted);cursor:pointer;transition:background .15s ease,color .15s ease}
-.oi-segmented-btn.is-active{background:var(--acid);color:var(--acid-ink)}
+.oi-segmented-btn{flex:1;min-height:44px;border:0;background:transparent;border-radius:calc(var(--radius-md) - 4px);font:700 13px 'DM Sans';color:var(--ink);opacity:.5;cursor:pointer;transition:background-color .18s ease,opacity .18s ease}
+.oi-segmented-btn:not(.is-active):hover{background:rgba(23,23,20,.06);opacity:.75}
+.oi-segmented-btn.is-active{background:var(--acid);color:var(--acid-ink);opacity:1}
 
 /* -- Bannières (fermé / livraison) ----------------------------------- */
-.oi-closed-banner{margin-bottom:var(--sp-3);box-shadow:none}
+.oi-closed-banner{margin-bottom:var(--sp-3);box-shadow:none;border-radius:var(--radius-md)}
 .oi-delivery-banner{border-top:0;border:1px solid var(--line);background:var(--card);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3);border-radius:var(--radius-md);gap:var(--sp-3)}
 .oi-delivery-banner p.eyebrow{margin-bottom:4px}
 .oi-delivery-banner p:not(.eyebrow){font-size:13px}
 
 /* -- Catégories (rail sticky) ---------------------------------------- */
-.oi-cat-rail{margin:0 0 var(--sp-4);padding:var(--sp-2) 0;gap:6px;border-bottom:1px solid var(--line)}
-.oi-chip{min-height:44px;padding:9px 15px;border-radius:var(--radius-pill);background:var(--card);border-color:var(--line);font:600 12.5px 'DM Sans';letter-spacing:0;color:#575148}
+.oi-cat-rail{margin:0 0 var(--sp-4);padding:var(--sp-2) 0;gap:var(--sp-2);border-bottom:1px solid var(--line);scroll-padding:0 var(--sp-4)}
+.oi-chip{min-height:44px;padding:8px 13px;border-radius:var(--radius-pill);background:var(--card);border-color:var(--line);font:600 12px 'DM Sans';letter-spacing:0;color:#575148;transition:background-color .18s ease,color .18s ease,border-color .18s ease}
+.oi-chip:hover{border-color:var(--ink)}
 .oi-chip.is-active{background:var(--acid);border-color:var(--acid);color:var(--acid-ink)}
+.oi-chip.is-active:hover{border-color:var(--acid)}
 
 /* -- Sections / cartes produit --------------------------------------- */
 .oi-menu{padding-top:var(--sp-2)}
 .oi-section{scroll-margin-top:56px}
-.oi-section + .oi-section{margin-top:var(--sp-8);padding-top:var(--sp-8);border-top:1px solid var(--line)}
+/*
+ * Rupture visible mais légère entre sections : assez pour marquer
+ * un nouveau groupe, pas assez pour que chaque section se lise
+ * comme un bloc indépendant façon widget SaaS — la carte doit
+ * rester un menu qu'on parcourt d'un geste, pas une pile de cartes.
+ */
+.oi-section + .oi-section{margin-top:var(--sp-6);padding-top:var(--sp-4);border-top:1px solid var(--line)}
 .oi-section-head{margin:0 0 var(--sp-3)}
 .oi-section-head h2{margin:0;font:700 21px/1.2 'Space Grotesk';letter-spacing:-.02em;color:var(--ink)}
 .oi-card-list{display:flex;flex-direction:column;gap:var(--sp-3)}
@@ -158,7 +178,7 @@ button.has-errors {
 .oi-card-main{flex:1;min-width:0;display:flex;align-items:flex-start;gap:var(--sp-3);background:none;border:0;padding:0;margin:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .oi-card-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-bottom:34px}
 .oi-card-badges{display:flex;gap:6px;margin-bottom:2px}
-.oi-badge{display:inline-block;padding:3px 7px;border-radius:6px;font:700 10px 'DM Mono';letter-spacing:.02em;text-transform:uppercase}
+.oi-badge{display:inline-block;padding:2px 7px;border-radius:var(--radius-sm);font:600 10px 'DM Sans';letter-spacing:.01em}
 .oi-badge--acid{background:var(--acid);color:var(--acid-ink)}
 .oi-badge--ink{background:var(--ink);color:#fff}
 .oi-card-name{font:700 16px/1.25 'DM Sans';color:var(--ink)}
@@ -181,7 +201,9 @@ button.has-errors {
 .oi-sticky-cart-cta{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700}
 
 /* -- Tiroir panier / bottom sheet --------------------------------------- */
-#root .drawer{padding:var(--sp-4);width:min(460px,100%)}
+/* Durée d'origine (.28s, règle partagée) ramenée à 200ms : hors de
+   la fourchette 120–220ms retenue pour les animations de ce bloc. */
+#root .drawer{padding:var(--sp-4);width:min(460px,100%);transition-duration:.2s}
 #root .drawer-head h2{font-size:26px}
 #root .ticket-paper{box-shadow:none;border:1px solid var(--line)}
 
@@ -271,5 +293,10 @@ button.has-errors {
   .app-frame{padding-left:12px;padding-right:12px}
   .oi-card-media{width:72px;height:72px}
   .oi-card-text{padding-bottom:30px}
+}
+
+/* -- Mouvement réduit : coupe transitions/animations, pas les états ------- */
+@media(prefers-reduced-motion:reduce){
+  #root *{transition-duration:.001ms!important;animation-duration:.001ms!important}
 }
 

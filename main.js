@@ -188,6 +188,14 @@ const ICONS = {
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
+function prefersReducedMotion() {
+  return Boolean(
+    window.matchMedia?.(
+      '(prefers-reduced-motion: reduce)'
+    ).matches
+  );
+}
+
 const euro = value =>
   `${Number(value ?? 0)
     .toFixed(2)
@@ -1201,12 +1209,40 @@ function setupCategorySpy() {
                 '[data-category]'
               )
               .forEach(button => {
+                const isActive =
+                  button.dataset.target ===
+                  slug;
+
                 button.classList.toggle(
                   'is-active',
-                  button.dataset
-                    .target ===
-                    slug
+                  isActive
                 );
+
+                if (isActive) {
+                  button.setAttribute(
+                    'aria-current',
+                    'true'
+                  );
+
+                  /*
+                   * La pastille active doit rester visible dans le
+                   * rail pendant que l'utilisateur défile la page :
+                   * inline:'center' la recentre horizontalement,
+                   * block:'nearest' évite tout scroll vertical
+                   * parasite (le rail défile sur son propre axe).
+                   */
+                  button.scrollIntoView({
+                    behavior: prefersReducedMotion()
+                      ? 'auto'
+                      : 'smooth',
+                    inline: 'center',
+                    block: 'nearest'
+                  });
+                } else {
+                  button.removeAttribute(
+                    'aria-current'
+                  );
+                }
               });
           }
         });
