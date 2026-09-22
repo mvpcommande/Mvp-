@@ -362,3 +362,164 @@ test('backoff progresse selon la table fournie puis plafonne', async () => {
   // (5000ms), jamais un retry plus rapide que le pire cas configuré.
   assert.equal(h.manager.getDebugCounters().reconnectAttempt, 4);
 });
+
+// ---------------------------------------------------------------------
+// Bloc 5.7 — régression JWT figé dans le wiring setAuth (admin.js)
+// ---------------------------------------------------------------------
+//
+// Mock fidèle au comportement réel de realtime-js (RealtimeClient.
+// _performAuth, vérifié directement dans node_modules/@supabase/
+// realtime-js/dist/main/RealtimeClient.js) : si un token explicite est
+// fourni à setAuth(), il est utilisé tel quel, même périmé ; sinon un
+// accessToken callback est relu -- exactement comme this.accessToken()
+// -> SupabaseClient._getAccessToken() -> auth.getSession() dans le SDK
+// réel, qui renvoie toujours le token courant (rafraîchi par auth-js).
+function createMockRealtimeClient(getFreshSdkToken) {
+  const authCallsSent = [];
+  return {
+    authCallsSent,
+    setAuth: async (explicitToken = null) => {
+      const tokenSent = explicitToken ? explicitToken : await getFreshSdkToken();
+      authCallsSent.push(tokenSent);
+    }
+  };
+}
+
+function buildManagerWithSetAuth(setAuthHook) {
+  const clock = createFakeClock();
+  let channelSeq = 0;
+  const subscribeCalls = [];
+  const manager = createRealtimeConnectionManager({
+    subscribe: (onMessage, onStatusChange) => {
+      const channel = { id: ++channelSeq, onMessage, onStatusChange };
+      subscribeCalls.push(channel);
+      return channel;
+    },
+    unsubscribe: async () => {},
+    setAuth: setAuthHook,
+    onMessage: () => {},
+    onStatusChange: () => {},
+    onPoll: () => {},
+    isActive: () => true,
+    jitterMs: 0,
+    now: clock.now,
+    random: () => 0,
+    setTimeoutFn: clock.setTimeoutFn,
+    clearTimeoutFn: clock.clearTimeoutFn,
+    setIntervalFn: clock.setIntervalFn,
+    clearIntervalFn: clock.clearIntervalFn
+  });
+  return {
+    manager,
+    clock,
+    subscribeCalls,
+    currentChannel: () => subscribeCalls[subscribeCalls.length - 1]
+  };
+}
+
+test('Bloc 5.7 AVANT correctif : wiring historique (token explicite figé) réinjecte TOKEN_A après un refresh SDK vers TOKEN_B', async () => {
+  let sdkFreshToken = 'TOKEN_A';
+  const mockRealtime = createMockRealtimeClient(() => sdkFreshToken);
+
+  // Reproduction fidèle de l'ancien wiring de admin.js : `session` figée
+  // une fois au login, jamais mise à jour, passée explicitement à
+  // setAuth() -- c'est exactement `await supabase.realtime.setAuth(
+  // session.access_token)` tel qu'il existait avant ce Bloc 5.7.
+  const staleSession = { access_token: 'TOKEN_A' };
+  const oldStyleSetAuth = async () => {
+    await mockRealtime.setAuth(staleSession.access_token);
+  };
+
+  const h = buildManagerWithSetAuth(oldStyleSetAuth);
+  h.manager.start();
+  await tick();
+
+  // Le SDK rafraîchit son token en interne (auth-js) ; notre `session`
+  // locale ne le voit jamais -- exactement le bug identifié en Bloc 5.6.
+  sdkFreshToken = 'TOKEN_B';
+
+  h.currentChannel().onStatusChange('CLOSED');
+  h.clock.advance(1000);
+  await tick();
+
+  assert.ok(
+    mockRealtime.authCallsSent.includes('TOKEN_A'),
+    'preuve du bug : TOKEN_A (périmé) est bien réinjecté malgré le refresh SDK vers TOKEN_B'
+  );
+  assert.ok(
+    !mockRealtime.authCallsSent.includes('TOKEN_B'),
+    'le wiring historique ne voit jamais TOKEN_B'
+  );
+});
+
+// D. TIMED_OUT -> reconnect normal (même famille que CLOSED/CHANNEL_ERROR
+// dans DROPPED_STATUSES, mais testé explicitement par son propre nom).
+test('D. TIMED_OUT déclenche reconnecting + polling, une reconnexion programmée', async () => {
+  const h = createHarness();
+  h.manager.start();
+  await tick();
+  h.currentChannel().onStatusChange('SUBSCRIBED');
+  h.currentChannel().onStatusChange('TIMED_OUT');
+
+  assert.equal(h.manager.getStatus(), 'reconnecting');
+  const counters = h.manager.getDebugCounters();
+  assert.equal(counters.pollingActive, true);
+  assert.equal(counters.reconnectTimerCount, 1);
+});
+
+// K. relogin (stop() puis start() à nouveau) -> nouveau channel propre,
+// aucun callback de l'ancienne génération ne doit pouvoir agir.
+test("K. relogin après logout : stop() puis start() reconstruit un channel propre, sans fuite de l'ancienne génération", async () => {
+  const h = createHarness();
+  h.manager.start();
+  await tick();
+  const firstChannel = h.currentChannel();
+  firstChannel.onStatusChange('SUBSCRIBED');
+  assert.equal(h.manager.getStatus(), 'live');
+
+  await h.manager.stop();
+  assert.equal(h.manager.getDebugCounters().activeChannelCount, 0);
+
+  // "Relogin" : nouveau start().
+  h.manager.start();
+  await tick();
+  assert.equal(h.subscribeCalls.length, 2, 'un nouveau channel est bien créé');
+
+  // Un événement tardif sur l'ANCIEN channel (ex. message réseau en vol
+  // au moment du stop()) ne doit jamais affecter l'état courant.
+  firstChannel.onStatusChange('CLOSED');
+  assert.equal(
+    h.manager.getStatus(),
+    'connecting',
+    "le statut ne doit pas retomber à 'reconnecting' à cause d'un callback de l'ancienne génération"
+  );
+
+  h.currentChannel().onStatusChange('SUBSCRIBED');
+  assert.equal(h.manager.getStatus(), 'live');
+});
+
+test("Bloc 5.7 APRÈS correctif : sans setAuth explicite fourni au manager, aucun token figé n'est jamais envoyé", async () => {
+  let sdkFreshToken = 'TOKEN_A';
+  const mockRealtime = createMockRealtimeClient(() => sdkFreshToken);
+
+  // Correctif : le manager ne reçoit plus aucune fonction setAuth --
+  // exactement le wiring admin.js après ce Bloc 5.7 (le SDK Supabase
+  // gère seul, nativement, l'auth Realtime via son propre accessToken
+  // callback, déjà appelé automatiquement à chaque RealtimeClient.
+  // connect(), avant même l'ouverture du WebSocket).
+  const h = buildManagerWithSetAuth(undefined);
+  h.manager.start();
+  await tick();
+
+  sdkFreshToken = 'TOKEN_B';
+
+  h.currentChannel().onStatusChange('CLOSED');
+  h.clock.advance(1000);
+  await tick();
+
+  assert.equal(
+    mockRealtime.authCallsSent.length,
+    0,
+    'le manager ne doit plus jamais appeler explicitement setAuth() avec un token -- laissé au SDK natif'
+  );
+});

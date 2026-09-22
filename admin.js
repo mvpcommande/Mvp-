@@ -99,11 +99,21 @@ const realtimeManager = createRealtimeConnectionManager({
       await supabase.removeChannel(channel);
     }
   },
-  setAuth: async () => {
-    if (supabase && session?.access_token) {
-      await supabase.realtime.setAuth(session.access_token);
-    }
-  },
+  /*
+   * Bloc 5.7 : pas de setAuth ici. L'appeler avec `session.access_token`
+   * réinjectait un JWT figé au login (jamais rafraîchi ensuite -- voir
+   * plus bas, `session` n'est réassignée qu'au login/logout), écrasant
+   * le mécanisme natif déjà correct du SDK : RealtimeClient est construit
+   * avec un accessToken callback qui relit toujours la session courante
+   * (SupabaseClient._getAccessToken -> auth.getSession(), vérifié dans
+   * node_modules/@supabase/supabase-js), et RealtimeClient.connect()
+   * s'authentifie déjà tout seul via ce callback avant même d'ouvrir le
+   * WebSocket (_setAuthSafely('connect'), vérifié dans
+   * node_modules/@supabase/realtime-js). Plus une session admin reste
+   * ouverte sans rechargement de page, plus le token qu'on réinjectait
+   * ici avait de chances d'être périmé -- cause racine des
+   * CHANNEL_ERROR/TIMED_OUT récurrents en production (Bloc 5.6).
+   */
   onMessage: (payload) => {
     if (payload?.eventType === 'INSERT') {
       showNewOrderToast();
