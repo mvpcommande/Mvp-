@@ -27,6 +27,7 @@ import {
   installGlobalErrorLogging
 } from './errorLog.mjs';
 import { escapeHtml } from './htmlEscape.mjs';
+import { createRealtimeConnectionManager } from './realtimeResilience.mjs';
 import './styles.css';
 const root = document.querySelector('#admin-root');
 
@@ -74,18 +75,84 @@ const deliveryLabels = {
 };
 let remote = null;
 let mode = 'local';
-let realtimeChannel = null;
 let session = null;
 let restaurant = null;
 
 /*
- * État de la connexion Realtime, affiché honnêtement dans le header
- * ("En direct" uniquement quand le canal est réellement SUBSCRIBED).
- * Alimenté par le statut déjà renvoyé par subscribeToOrderChanges()
- * (mécanisme existant, non modifié) — jamais affiché de façon
- * artificielle.
+ * Bloc 5.4 : le canal Realtime n'est plus créé/reconnecté "à la main"
+ * ici. realtimeResilience.mjs porte l'invariant "au plus un channel
+ * actif, au plus une reconnexion planifiée à la fois" (généralisé par
+ * un compteur de génération), le backoff borné, le polling de secours
+ * et la reprise Safari/iOS -- ce fichier ne garde que le câblage vers
+ * le vrai client Supabase et le rendu.
+ *
+ * Instance unique créée au chargement du module : ses callbacks
+ * relisent `session`/`restaurant`/`mode` à chaque appel (fermetures sur
+ * ces `let` mutables), donc un seul gestionnaire suffit pour tout le
+ * cycle de vie connexion/déconnexion/reconnexion du comptoir.
  */
-let realtimeStatus = 'connecting';
+const realtimeManager = createRealtimeConnectionManager({
+  subscribe: (onMessage, onStatusChange) =>
+    subscribeToOrderChanges(supabase, onMessage, onStatusChange),
+  unsubscribe: async (channel) => {
+    if (supabase) {
+      await supabase.removeChannel(channel);
+    }
+  },
+  setAuth: async () => {
+    if (supabase && session?.access_token) {
+      await supabase.realtime.setAuth(session.access_token);
+    }
+  },
+  onMessage: (payload) => {
+    if (payload?.eventType === 'INSERT') {
+      showNewOrderToast();
+    }
+    render();
+  },
+  onStatusChange: (status) => {
+    updateConnectionBadge();
+    if (status === 'reconnecting') {
+      logRealtimeDrop();
+    }
+  },
+  onPoll: () => render(),
+  isActive: () => mode === 'remote'
+});
+
+/*
+ * Anti-flood dédié aux logs "admin.realtime" : ceux-ci passent par un
+ * appel direct à logClientError() (pas par le filet console.error /
+ * window.onerror de errorLog.mjs, qui a son propre dédoublonnage 10s),
+ * car ils portent un contexte/restaurantId précis. Sans ça, une rafale de CLOSED (même
+ * dédupliquée côté connexion par realtimeResilience.mjs) continuerait
+ * de produire une ligne par transition d'état -- observé en prod
+ * (38 entrées "admin.realtime" pour un seul épisode d'instabilité).
+ */
+let lastRealtimeLogAt = 0;
+let realtimeLogSuppressedCount = 0;
+const REALTIME_LOG_DEDUPE_MS = 15000;
+
+function logRealtimeDrop() {
+  const now = Date.now();
+  if (now - lastRealtimeLogAt < REALTIME_LOG_DEDUPE_MS) {
+    realtimeLogSuppressedCount += 1;
+    return;
+  }
+  lastRealtimeLogAt = now;
+  const suppressed = realtimeLogSuppressedCount;
+  realtimeLogSuppressedCount = 0;
+  logClientError(supabase, {
+    restaurantId: restaurant?.id,
+    context: 'admin.realtime',
+    message:
+      'Canal realtime perdu, reconnexion programmée' +
+      (suppressed > 0
+        ? ` (+${suppressed} occurrence(s) similaire(s) supprimée(s) dans les 15s précédentes)`
+        : ''),
+    page: 'admin'
+  });
+}
 
 /*
  * Onglet actif sur mobile (<768px), où les 4 colonnes ne peuvent pas
@@ -125,6 +192,45 @@ installGlobalErrorLogging(supabase, {
   page: 'admin',
   getRestaurantId: () => restaurant?.id ?? null
 });
+
+/*
+ * Bloc 5.4 : reprise déterministe au retour au premier plan et sur les
+ * transitions réseau du navigateur. Safari/iOS suspend agressivement
+ * les timers et peut geler un WebSocket sans jamais délivrer son
+ * événement de fermeture tant que l'onglet reste en arrière-plan --
+ * d'où la rafale de CLOSED observée en prod, tous horodatés au moment
+ * du retour au premier plan plutôt qu'au moment réel de la coupure.
+ *
+ * `render()` est appelé ici indépendamment de realtimeManager : même si
+ * le channel semble sain (SUBSCRIBED jamais retombé), on revérifie
+ * quand même la liste des commandes, au cas où l'événement aurait été
+ * perdu silencieusement pendant la suspension.
+ */
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && mode === 'remote') {
+      render();
+      realtimeManager.healthCheck();
+    }
+  });
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', () => {
+    if (mode === 'remote') {
+      render();
+      realtimeManager.healthCheck();
+    }
+  });
+  window.addEventListener('online', () => {
+    if (mode === 'remote') {
+      render();
+      realtimeManager.handleOnline();
+    }
+  });
+  window.addEventListener('offline', () => {
+    realtimeManager.handleOffline();
+  });
+}
 
 function localOrders() {
   return JSON.parse(
@@ -173,94 +279,11 @@ async function init() {
     }
     remote = createSupabaseOrderStore(supabase, restaurant.id);
     mode = 'remote';
-    subscribeRealtime();
+    realtimeManager.start();
     await render();
     return;
   }
   renderLogin();
-}
-async function subscribeRealtime() {
-  realtimeStatus = 'connecting';
-  updateConnectionBadge();
-
-  if (
-    realtimeChannel &&
-    supabase
-  ) {
-    supabase.removeChannel(
-      realtimeChannel
-    );
-  }
-  /*
-   * IMPORTANT :
-   *
-   * S'abonner tout de suite après signInAdmin()/
-   * getAdminSession() peut, selon le timing, créer
-   * le canal avant que le token soit propagé au
-   * client realtime, et donc s'abonner en tant
-   * qu'anon (aucun droit de lecture sur orders,
-   * donc aucun événement ne remonte, sans erreur).
-   *
-   * On force explicitement l'auth du client realtime
-   * avec le token de session avant de créer le canal.
-   */
-  if (
-    supabase &&
-    session?.access_token
-  ) {
-    await supabase.realtime.setAuth(
-      session.access_token
-    );
-  }
-  realtimeChannel =
-    subscribeToOrderChanges(
-      supabase,
-      (payload) => {
-        /*
-         * Le payload postgres_changes existait déjà mais n'était
-         * jamais lu (seul un render() générique était déclenché) :
-         * on l'exploite uniquement pour distinguer une vraie
-         * nouvelle commande (INSERT) et afficher une notification
-         * discrète, sans changer l'abonnement lui-même ni élargir
-         * ce qu'il reçoit.
-         */
-        if (payload?.eventType === 'INSERT') {
-          showNewOrderToast();
-        }
-        render();
-      },
-      (status) => {
-        if (status === 'SUBSCRIBED') {
-          realtimeStatus = 'live';
-          updateConnectionBadge();
-        }
-        const dropped =
-          status === 'CLOSED' ||
-          status === 'TIMED_OUT' ||
-          status === 'CHANNEL_ERROR';
-        if (
-          dropped &&
-          mode === 'remote'
-        ) {
-          realtimeStatus = 'reconnecting';
-          updateConnectionBadge();
-          console.warn(
-            '[Realtime] Reconnexion dans 3s...'
-          );
-          logClientError(supabase, {
-            restaurantId: restaurant?.id,
-            context: 'admin.realtime',
-            message: `Canal realtime perdu (${status}), reconnexion dans 3s`,
-            page: 'admin'
-          });
-          setTimeout(() => {
-            if (mode === 'remote') {
-              subscribeRealtime();
-            }
-          }, 3000);
-        }
-      }
-    );
 }
 
 /**
@@ -285,7 +308,12 @@ const CONNECTION_STATES = {
   reconnecting: {
     badge: 'Reconnexion…',
     badgeClass: 'is-reconnecting',
-    footnote: 'Connexion perdue, reconnexion en cours…'
+    footnote: 'Connexion perdue, reconnexion en cours (commandes toujours à jour par vérification périodique).'
+  },
+  offline: {
+    badge: 'Hors ligne',
+    badgeClass: 'is-offline',
+    footnote: 'Aucune connexion réseau. Reprise automatique dès que la connexion revient.'
   },
   local: {
     badge: 'Mode démo local',
@@ -295,7 +323,7 @@ const CONNECTION_STATES = {
 };
 
 function getConnectionState() {
-  return mode !== 'remote' ? 'local' : realtimeStatus;
+  return mode !== 'remote' ? 'local' : realtimeManager.getStatus();
 }
 
 /**
@@ -515,7 +543,7 @@ function renderLogin(error = '') {
             restaurant.id
           );
         mode = 'remote';
-        subscribeRealtime();
+        realtimeManager.start();
         await render();
       } catch (error) {
         console.error(
@@ -979,14 +1007,7 @@ async function render() {
     logout.onclick =
       async () => {
         try {
-          if (
-            realtimeChannel &&
-            supabase
-          ) {
-            await supabase.removeChannel(
-              realtimeChannel
-            );
-          }
+          await realtimeManager.stop();
           if (supabase) {
             await signOutAdmin(
               supabase
@@ -997,8 +1018,6 @@ async function render() {
           restaurant = null;
           remote = null;
           mode = 'local';
-          realtimeChannel = null;
-          realtimeStatus = 'connecting';
           if (ageTickerHandle) {
             clearInterval(ageTickerHandle);
             ageTickerHandle = null;
