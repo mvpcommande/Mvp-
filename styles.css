@@ -300,3 +300,85 @@ button.has-errors {
   #root *{transition-duration:.001ms!important;animation-duration:.001ms!important}
 }
 
+/* ============================================================== */
+/* Bloc 3 — checkout mobile / conversion / confirmation            */
+/* Restylage uniquement (panier → coordonnées → confirmation),     */
+/* aucune logique métier touchée. Scopé #root comme le reste.      */
+/* ============================================================== */
+
+/* -- Repère d'étape léger ("1 Panier · 2 Coordonnées") -------------------- */
+.oi-steps{display:flex;align-items:center;gap:2px;list-style:none;margin:0 0 var(--sp-3);padding:0;font:600 12px 'DM Sans'}
+.oi-step{display:flex;align-items:center;gap:6px;color:var(--muted);opacity:.6}
+.oi-step.is-active{color:var(--ink);opacity:1}
+.oi-step.is-done{color:var(--muted);opacity:1}
+.oi-step+.oi-step{margin-left:8px}
+.oi-step+.oi-step::before{content:'→';margin-right:8px;color:var(--line);font-weight:400}
+.oi-step-num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--card);border:1px solid var(--line);font:700 10px 'DM Mono';flex-shrink:0}
+.oi-step.is-active .oi-step-num{background:var(--acid);border-color:var(--acid);color:var(--acid-ink)}
+.oi-step.is-done .oi-step-num{background:var(--ink);border-color:var(--ink);color:#fff;font-size:11px}
+
+/* -- Panier (étape 1) : hiérarchie qty × nom ------------------------------ */
+.oi-review-eyebrow{margin-bottom:var(--sp-2)}
+.oi-cart-item-title{display:flex;align-items:baseline;gap:6px}
+.oi-cart-item-qty{flex-shrink:0;font:700 12px 'DM Mono';color:var(--muted)}
+.oi-cart-item-name{font:600 14px 'DM Sans';color:var(--ink)}
+
+/* -- Coordonnées (étape 2) : formulaire ------------------------------------ */
+.oi-checkout-form{gap:var(--sp-3)}
+.oi-checkout-form label{font:500 12px 'DM Sans';letter-spacing:0;color:var(--muted);gap:6px}
+.oi-checkout-form input:not([type=file]),
+.oi-checkout-form textarea{
+  min-height:50px;border-radius:var(--radius-sm);font-size:16px;
+  padding:13px 14px;border:1px solid var(--line);background:#fffdf8;
+  transition:border-color .15s ease;
+}
+.oi-checkout-form textarea{min-height:auto}
+.oi-checkout-form input:not([type=file]):focus,
+.oi-checkout-form textarea:focus{border-color:var(--ink);outline:none}
+.oi-checkout-form input::placeholder,
+.oi-checkout-form textarea::placeholder{color:#9d968a}
+
+.oi-mode-readout{display:flex;align-items:center;gap:8px}
+.oi-mode-readout svg{width:16px;height:16px;flex-shrink:0;color:var(--muted)}
+.oi-mode-readout-label{color:var(--muted);font-weight:500;margin-right:2px}
+
+/* -- Retrait / Livraison : même habillage visuel que le segmented control
+   de mode de commande, appliqué ici à un groupe de radios. -------------- */
+.oi-segmented--radio{padding:4px}
+.oi-segmented-radio{flex:1;position:relative;display:flex}
+.oi-segmented-radio input{position:absolute;opacity:0;width:1px;height:1px}
+.oi-segmented-radio span{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;padding:6px 8px;border-radius:calc(var(--radius-md) - 4px);font:700 13px 'DM Sans';color:var(--ink);opacity:.5;cursor:pointer;transition:background-color .18s ease,opacity .18s ease}
+.oi-segmented-radio input:checked+span{background:var(--acid);color:var(--acid-ink);opacity:1}
+.oi-segmented-radio input:focus-visible+span{outline:2px solid var(--ink);outline-offset:2px}
+
+@keyframes oi-fade-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.oi-fade-in{animation:oi-fade-in .18s ease}
+
+/* -- Créneau : jour + heure regroupés visuellement ------------------------ */
+.oi-slot-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)}
+.oi-closed-banner--compact{padding:var(--sp-3);margin-bottom:var(--sp-2)}
+.oi-closed-banner--compact p:not(.eyebrow){font-size:12.5px}
+
+/* -- Paiement : réalité actuelle uniquement (aucun paiement en ligne) ----- */
+.oi-payment-note{margin:var(--sp-2) 0 0;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm)}
+.oi-payment-note-title{margin:0;font:600 13px 'DM Sans';color:var(--ink)}
+.oi-payment-note-sub{margin:2px 0 0;font:400 12px 'DM Sans';color:var(--muted)}
+
+/* -- CTA finale : focal point, état de chargement, anti double-submit ----- */
+.oi-sheet-cta .primary{min-height:52px;font-size:15px}
+.oi-sheet-cta .primary:disabled{opacity:.6;cursor:not-allowed}
+.oi-btn-spinner{display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-2px;border-radius:50%;border:2px solid rgba(63,74,18,.35);border-top-color:var(--acid-ink);animation:oi-spin .7s linear infinite}
+.oi-sheet-cta-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* -- Confirmation : numéro proéminent, récap factuel uniquement ----------- */
+#root .oi-confirmation-number{font-size:clamp(26px,8vw,38px);line-height:1.05;letter-spacing:-.02em;word-break:break-word;margin:4px 0 14px}
+.oi-confirmation-summary{display:flex;flex-direction:column;gap:6px;padding:var(--sp-3);margin:var(--sp-3) 0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md)}
+.oi-confirmation-row{display:flex;justify-content:space-between;gap:var(--sp-3);font:500 13px 'DM Sans';color:var(--muted)}
+.oi-confirmation-row strong{color:var(--ink);font-weight:700}
+.oi-confirmation-row--total{padding-top:6px;margin-top:2px;border-top:1px dashed var(--line)}
+.oi-confirmation-row--total strong{font:700 16px 'Space Grotesk'}
+
+@media(max-width:480px){
+  .oi-slot-grid{grid-template-columns:1fr}
+}
+

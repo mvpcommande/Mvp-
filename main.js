@@ -1064,6 +1064,8 @@ function render() {
         <button id="close-cart" class="icon-btn" type="button" aria-label="Fermer">×</button>
       </div>
 
+      <div id="cart-steps"></div>
+
       <div id="cart-content"></div>
 
     </aside>
@@ -2516,6 +2518,46 @@ function bindAccountDashboardEvents() {
   }
 }
 
+/**
+ * Repère léger "1 Panier · 2 Coordonnées" au-dessus du contenu du
+ * tiroir — pas un stepper façon SaaS, juste de quoi situer l'étape
+ * en cours. N'affiche rien si le panier est vide (rien à situer).
+ */
+function renderCartSteps() {
+  const stepsElement =
+    document.querySelector(
+      '#cart-steps'
+    );
+
+  if (!stepsElement) {
+    return;
+  }
+
+  if (!cart.length) {
+    stepsElement.innerHTML = '';
+    return;
+  }
+
+  const onDetails = cartStep === 'details';
+
+  stepsElement.innerHTML = `
+    <ol class="oi-steps" role="list">
+      <li class="oi-step${onDetails ? ' is-done' : ' is-active'}"${
+        onDetails ? '' : ' aria-current="step"'
+      }>
+        <span class="oi-step-num">${onDetails ? '✓' : '1'}</span>
+        Panier
+      </li>
+      <li class="oi-step${onDetails ? ' is-active' : ''}"${
+        onDetails ? ' aria-current="step"' : ''
+      }>
+        <span class="oi-step-num">2</span>
+        Coordonnées
+      </li>
+    </ol>
+  `;
+}
+
 function renderCart() {
   const element =
     document.querySelector(
@@ -2525,6 +2567,8 @@ function renderCart() {
   if (!element) {
     return;
   }
+
+  renderCartSteps();
 
   if (!cart.length) {
     cartStep = 'review';
@@ -2577,6 +2621,8 @@ function renderCartReview(element) {
   const cartEtaLabel = getCartEtaLabel();
 
   element.innerHTML = `
+    <p class="eyebrow oi-review-eyebrow">Ta commande</p>
+
     <div class="oi-cart-items">
       ${cart
         .map((item, index) => ticketItem(item, index))
@@ -2647,7 +2693,7 @@ function renderCartDetails(element) {
       </p>
 
       <label>
-        TON NOM
+        Ton nom
 
         <input
           name="name"
@@ -2658,7 +2704,7 @@ function renderCartDetails(element) {
       </label>
 
       <label>
-        TON TÉLÉPHONE
+        Ton téléphone
 
         <input
           name="phone"
@@ -2670,7 +2716,7 @@ function renderCartDetails(element) {
       </label>
 
       <label>
-        EMAIL (facultatif)
+        Email (facultatif)
 
         <input
           name="email"
@@ -2686,31 +2732,34 @@ function renderCartDetails(element) {
       </p>
 
       <p class="oi-mode-readout">
-        ${orderMode === 'onsite' ? 'Sur place' : 'À emporter'}
+        ${ICONS.cart}
+        <span><span class="oi-mode-readout-label">Mode</span> ${
+          orderMode === 'onsite' ? 'Sur place' : 'À emporter'
+        }</span>
       </p>
 
       ${
         restaurant?.settings?.delivery_mode === 'internal'
           ? `
-            <div class="fulfillment-toggle">
+            <div class="oi-segmented oi-segmented--radio fulfillment-toggle" role="radiogroup" aria-label="Mode de récupération">
 
-              <label>
+              <label class="oi-segmented-radio">
                 <input
                   type="radio"
                   name="fulfillmentType"
                   value="PICKUP"
                   checked
                 >
-                Retrait sur place
+                <span>Retrait sur place</span>
               </label>
 
-              <label>
+              <label class="oi-segmented-radio">
                 <input
                   type="radio"
                   name="fulfillmentType"
                   value="DELIVERY"
                 >
-                Livraison
+                <span>Livraison</span>
               </label>
 
             </div>
@@ -2722,7 +2771,7 @@ function renderCartDetails(element) {
             >
 
               <label>
-                ADRESSE
+                Adresse
 
                 <input
                   name="deliveryStreet"
@@ -2732,7 +2781,7 @@ function renderCartDetails(element) {
               </label>
 
               <label>
-                CODE POSTAL
+                Code postal
 
                 <input
                   name="deliveryPostalCode"
@@ -2743,7 +2792,7 @@ function renderCartDetails(element) {
               </label>
 
               <label>
-                VILLE
+                Ville
 
                 <input
                   name="deliveryCity"
@@ -2753,7 +2802,7 @@ function renderCartDetails(element) {
               </label>
 
               <label>
-                COMPLÉMENT (bâtiment, étage, code portail...)
+                Complément (bâtiment, étage, code portail...)
 
                 <input
                   name="deliveryComplement"
@@ -2770,30 +2819,32 @@ function renderCartDetails(element) {
         Créneau
       </p>
 
-      <label id="pickup-date-label">
-        <span>JOUR DE RETRAIT</span>
+      <div class="oi-slot-grid">
+        <label id="pickup-date-label">
+          <span>Jour de retrait</span>
 
-        <input
-          name="pickupDate"
-          type="date"
-          id="pickup-date"
-          required
-        >
-      </label>
+          <input
+            name="pickupDate"
+            type="date"
+            id="pickup-date"
+            required
+          >
+        </label>
+
+        <label>
+          <span>Heure souhaitée</span>
+
+          <input
+            name="pickupTime"
+            type="time"
+            id="pickup-time"
+            required
+          >
+        </label>
+      </div>
 
       <label>
-        HEURE SOUHAITÉE
-
-        <input
-          name="pickupTime"
-          type="time"
-          id="pickup-time"
-          required
-        >
-      </label>
-
-      <label>
-        DEMANDE SPÉCIALE (facultatif)
+        Demande spéciale (facultatif)
 
         <textarea
           name="specialInstructions"
@@ -2803,9 +2854,10 @@ function renderCartDetails(element) {
         ></textarea>
       </label>
 
-      <p class="oi-payment-note">
-        Paiement au restaurant
-      </p>
+      <div class="oi-payment-note">
+        <p class="oi-payment-note-title">Paiement au restaurant</p>
+        <p class="oi-payment-note-sub">Aucun paiement en ligne pour le moment.</p>
+      </div>
 
       <div class="oi-sheet-cta">
         <button
@@ -2815,6 +2867,8 @@ function renderCartDetails(element) {
         >
           Commander · ${euro(subtotal)}
         </button>
+
+        <p class="oi-sheet-cta-status" id="submit-status" aria-live="polite"></p>
 
         <small>
           ${
@@ -2863,17 +2917,32 @@ function renderCartDetails(element) {
         form.querySelector('input[name="fulfillmentType"]:checked')?.value === 'DELIVERY';
 
       if (deliveryFields) {
+        const wasHidden = deliveryFields.hidden;
+
         deliveryFields.hidden = !isDelivery;
 
         deliveryFields.querySelectorAll('input').forEach(input => {
           input.required = isDelivery && input.name !== 'deliveryComplement';
         });
+
+        /*
+         * Petite transition d'apparition (120-220ms, cohérente avec
+         * le reste du Bloc 2) uniquement quand les champs passent de
+         * masqués à visibles — l'attribut `hidden` reste la source
+         * de vérité pour l'accessibilité (focus/lecture d'écran),
+         * l'animation est purement décorative.
+         */
+        if (isDelivery && wasHidden) {
+          deliveryFields.classList.remove('oi-fade-in');
+          void deliveryFields.offsetWidth;
+          deliveryFields.classList.add('oi-fade-in');
+        }
       }
 
       if (pickupDateLabel) {
         pickupDateLabel.textContent = isDelivery
-          ? 'JOUR DE LIVRAISON'
-          : 'JOUR DE RETRAIT';
+          ? 'Jour de livraison'
+          : 'Jour de retrait';
       }
     }
 
@@ -2913,12 +2982,11 @@ function renderCartDetails(element) {
       banner.innerHTML = open
         ? ''
         : `
-          <div class="closed-banner">
-            <p class="eyebrow">FERMÉ À CE CRÉNEAU</p>
+          <div class="closed-banner oi-closed-banner oi-closed-banner--compact">
+            <p class="eyebrow">Fermé à ce créneau</p>
             <p>
-              ${escapeHtml(getRestaurantDisplayName())}
-              n'accepte pas de commande à l'horaire choisi.
-              Choisis un autre jour ou une autre heure.
+              ${escapeHtml(getRestaurantDisplayName())} n'accepte pas de
+              commande à cet horaire. Choisis un autre jour ou une autre heure.
             </p>
           </div>
         `;
@@ -3032,9 +3100,10 @@ function ticketItem(
 
       <div class="oi-cart-item-main">
 
-        <strong>
-          ${item.quantity} × ${escapeHtml(item.name)}
-        </strong>
+        <div class="oi-cart-item-title">
+          <span class="oi-cart-item-qty">${item.quantity}×</span>
+          <strong class="oi-cart-item-name">${escapeHtml(item.name)}</strong>
+        </div>
 
         ${options ? `<span class="oi-cart-item-options">${escapeHtml(options)}</span>` : ''}
 
@@ -3120,6 +3189,30 @@ function formatOptions(
 async function submitOrder(
   order
 ) {
+  const submitButton = document.querySelector('#submit-order');
+  const submitStatus = document.querySelector('#submit-status');
+
+  /*
+   * Le bouton natif désactivé bloque déjà tout second `submit` côté
+   * navigateur ; ce garde-fou est une seconde ligne de défense si la
+   * fonction était jamais appelée deux fois par ailleurs.
+   */
+  if (submitButton?.disabled) {
+    return;
+  }
+
+  const originalButtonLabel = submitButton?.innerHTML ?? '';
+
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.setAttribute('aria-busy', 'true');
+    submitButton.innerHTML = '<span class="oi-btn-spinner" aria-hidden="true"></span>Envoi…';
+  }
+
+  if (submitStatus) {
+    submitStatus.textContent = 'Envoi de la commande en cours…';
+  }
+
   try {
     let saved;
 
@@ -3211,6 +3304,21 @@ async function submitOrder(
         ? 'Trop de commandes envoyées récemment avec ce numéro. Réessaie dans quelques minutes.'
         : 'Impossible d’envoyer la commande pour le moment.'
     );
+
+    /*
+     * Échec : on ne touche ni au panier ni aux champs déjà remplis
+     * (le formulaire n'est pas re-rendu ici), on rétablit juste le
+     * bouton pour permettre un nouvel essai.
+     */
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.removeAttribute('aria-busy');
+      submitButton.innerHTML = originalButtonLabel;
+    }
+
+    if (submitStatus) {
+      submitStatus.textContent = '';
+    }
   }
 }
 
@@ -3231,37 +3339,49 @@ function showConfirmation(
   document.querySelector(
     '#modal-content'
   ).innerHTML = `
-    <div class="confirmation">
+    <div class="confirmation oi-confirmation">
 
       <div class="confirmed-stamp">
         ✓
       </div>
 
       <p class="eyebrow">
-        COMMANDE ENREGISTRÉE
+        Commande envoyée
       </p>
 
-      <h2>
+      <h2 class="oi-confirmation-number">
         ${escapeHtml(
           ticket.number
         )}
       </h2>
 
       <p>
-        Ton ticket est parti chez
+        Commande envoyée à
         <strong>
           ${escapeHtml(
             getRestaurantDisplayName()
           )}
         </strong>.
-
-        Retrait souhaité à
-        <strong>
-          ${escapeHtml(
-            ticket.pickup
-          )}
-        </strong>.
       </p>
+
+      <div class="oi-confirmation-summary">
+
+        <div class="oi-confirmation-row">
+          <span>Mode</span>
+          <strong>${orderMode === 'onsite' ? 'Sur place' : 'À emporter'}</strong>
+        </div>
+
+        <div class="oi-confirmation-row">
+          <span>Retrait</span>
+          <strong>${escapeHtml(ticket.pickup)}</strong>
+        </div>
+
+        <div class="oi-confirmation-row oi-confirmation-row--total">
+          <span>Total</span>
+          <strong>${escapeHtml(ticket.totalLabel)}</strong>
+        </div>
+
+      </div>
 
       <div class="ticket-paper compact">
 
