@@ -1,10 +1,54 @@
 -- ============================================================================
--- MIGRATION À VALIDER — NON APPLIQUÉE EN PRODUCTION PAR CET AGENT.
+-- MIGRATION À VALIDER — NON APPLIQUÉE PAR CET AGENT.
 -- Créée dans le cadre de l'audit de durcissement Bloc 5 (hardening
 -- pilote), à relire et appliquer manuellement après vérification.
 -- ============================================================================
 --
--- PROBLÈME (P1 — important avant pilote, concurrence comptoir) :
+-- MISE À JOUR POST-VÉRIFICATION LIVE (TEST LIVE, projet Supabase Foodatoi
+-- réel) -- CE GAP EST CONFIRMÉ EXPLOITABLE EN PRODUCTION ACTUELLEMENT,
+-- RECLASSÉ P0 :
+--
+--   1. Inspection en lecture seule (pg_trigger, pg_get_triggerdef) : les
+--      triggers réellement présents sur public.orders en production sont
+--      orders_link_customer (BEFORE INSERT), orders_set_updated_at
+--      (BEFORE UPDATE), orders_status_event (AFTER UPDATE OF status --
+--      appelle log_order_status_change, qui journalise uniquement, sans
+--      validation) et orders_loyalty_on_ready (AFTER UPDATE OF status).
+--      AUCUN trigger ne valide la transition. orders_admin_update.with
+--      check ne valide que l'appartenance de la nouvelle valeur à
+--      l'ensemble {NEW, ACCEPTED, PREPARING, READY, CANCELLED}, exactement
+--      comme documenté plus bas -- confirmé sur la policy live elle-même.
+--
+--   2. TEST COMPORTEMENTAL LIVE, exécuté sur une commande de test créée et
+--      nettoyée dans ce même audit (restaurant fixture demo-charge,
+--      commande supprimée avec order_items/order_events après le test,
+--      suppression vérifiée par comptage à zéro) :
+--        - `update orders set status = 'READY' where id = '<commande NEW>'`
+--          a RÉUSSI -- saut direct NEW -> READY sans passer par ACCEPTED
+--          ni PREPARING.
+--        - Sur cette même commande désormais READY,
+--          `update orders set status = 'NEW' where id = '<...>'`
+--          a ÉGALEMENT RÉUSSI -- retour en arrière READY -> NEW, sans
+--          aucune résistance serveur.
+--      Les deux résultats confirment intégralement, de façon
+--      comportementale et pas seulement structurelle, le scénario décrit
+--      plus bas.
+--
+--   L'utilisateur ayant explicitement listé "mutation de statut non
+--   autorisée" comme déclencheur P0 pour ce Bloc 5, ce problème est donc
+--   reclassé P0 (initialement documenté P1 lors de la revue statique,
+--   qui n'avait pas accès à un test comportemental live). Conformément
+--   à la règle STOP du Bloc 5 : cette migration N'A PAS été appliquée en
+--   production par cet agent et reste en attente d'approbation explicite
+--   avant toute application.
+--
+-- ---------------------------------------------------------------------------
+-- PROBLÈME D'ORIGINE, TEL QUE DOCUMENTÉ LORS DE LA REVUE STATIQUE
+-- (conservé ci-dessous pour traçabilité) :
+-- ---------------------------------------------------------------------------
+--
+-- PROBLÈME (P1 au moment de la revue statique -- reclassé P0, voir
+-- mise à jour ci-dessus) :
 --
 -- orders_admin_update.with check (20260822113258_lock_down_order_tenant_isolation.sql)
 -- vérifie que le nouveau statut appartient à l'ensemble valide
@@ -61,7 +105,8 @@
 --   CANCELLED -> (aucune, terminal)
 --
 -- RISQUE SI NON CORRIGÉ : régression silencieuse de statut sous
--- concurrence multi-appareils (P1, fiabilité opérationnelle).
+-- concurrence multi-appareils, CONFIRMÉE EXPLOITABLE EN PRODUCTION
+-- (TEST LIVE ci-dessus) -- P0.
 -- RISQUE DE CE CORRECTIF : un client (admin.js) qui enverrait déjà
 -- une transition invalide échouerait désormais avec une erreur
 -- explicite au lieu de réussir silencieusement -- comportement

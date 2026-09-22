@@ -1,10 +1,39 @@
 -- ============================================================================
--- MIGRATION À VALIDER — NON APPLIQUÉE EN PRODUCTION PAR CET AGENT.
+-- MIGRATION À VALIDER — NON APPLIQUÉE PAR CET AGENT.
 -- Créée dans le cadre de l'audit de durcissement Bloc 5 (hardening
 -- pilote), à relire et appliquer manuellement après vérification.
 -- ============================================================================
 --
--- PROBLÈME (P0 — bloquant pilote) :
+-- MISE À JOUR POST-VÉRIFICATION LIVE (TEST LIVE, projet Supabase Foodatoi
+-- réel, inspection en lecture seule de pg_policies) :
+--
+--   Ce correctif est DÉJÀ APPLIQUÉ EN PRODUCTION. Les policies
+--   orders_public_insert et order_items_public_insert N'EXISTENT PLUS
+--   sur la base live -- une migration non versionnée dans ce repo
+--   (visible dans l'historique live sous le nom
+--   "remove_order_insert_bypass") les a déjà supprimées.
+--
+--   Ce fichier ne corrige donc plus une vulnérabilité P0 active : il
+--   sert désormais à RESYNCHRONISER L'HISTORIQUE DE MIGRATIONS VERSIONNÉ
+--   DE CE REPO avec l'état réel de la production, qui a divergé (la
+--   base live porte des migrations appliquées manuellement/hors repo,
+--   jamais committées ici). Sans ce fichier, un environnement recréé
+--   à partir des migrations versionnées de ce repo (ex : nouvel
+--   environnement de dev, restauration) réintroduirait la faille
+--   corrigée en production.
+--
+--   Reclassé P3 (hygiène / cohérence repo) — l'impact P0 documenté
+--   ci-dessous restait réel au moment de l'audit statique, mais ne
+--   l'est plus sur la production actuelle. Le contenu de la migration
+--   (DROP POLICY IF EXISTS) reste inchangé et strictement idempotent :
+--   son application sur la prod actuelle est un no-op sans risque.
+--
+-- ---------------------------------------------------------------------------
+-- PROBLÈME D'ORIGINE, TEL QUE DÉMONTRÉ PAR REVUE STATIQUE DU REPO
+-- (conservé ci-dessous pour traçabilité -- ne reflète plus l'état live) :
+-- ---------------------------------------------------------------------------
+--
+-- PROBLÈME (P0 au moment de l'audit statique -- déjà corrigé en live) :
 --
 -- orders_public_insert et order_items_public_insert (voir
 -- 20260822113258_lock_down_order_tenant_isolation.sql) autorisent
@@ -66,17 +95,22 @@
 -- propres policies RLS par défaut (sauf si FORCE ROW LEVEL SECURITY est
 -- activé sur la table, ce qui n'est le cas nulle part dans ce repo).
 --
--- HYPOTHÈSE À CONFIRMER AVANT D'APPLIQUER CETTE MIGRATION (non vérifiable
--- par revue statique seule, nécessite une requête live sur le projet
--- Supabase réel de Foodatoi, non accessible depuis cette session) :
+-- HYPOTHÈSE D'ORIGINE -- DÉSORMAIS CONFIRMÉE (TEST LIVE) :
+--   l'hypothèse ci-dessous supposait que le propriétaire de create_order()
+--   est bien le même que celui des tables orders / order_items, condition
+--   nécessaire pour que SECURITY DEFINER continue de fonctionner une fois
+--   les policies INSERT publiques supprimées. La production actuelle,
+--   où ces policies sont déjà absentes ET où le flux légitime
+--   (create_order() via RPC) continue de fonctionner normalement pour
+--   anon, en est la preuve directe : l'hypothèse est vérifiée en
+--   pratique sur le seul environnement qui compte. Conservé ci-dessous
+--   pour mémoire :
+--
 --   le rôle propriétaire de la fonction create_order() est bien le même
 --   que le propriétaire des tables orders / order_items (typiquement le
 --   rôle ayant appliqué les migrations). Vérifier avec :
 --     select tableowner from pg_tables where tablename in ('orders','order_items');
 --     select proowner::regrole from pg_proc where proname = 'create_order';
---   Si les propriétaires diffèrent, il faut soit aligner les propriétaires,
---   soit ajouter explicitement "security definer" + un rôle BYPASSRLS
---   dédié, avant d'appliquer ce correctif.
 --
 -- RISQUE SI NON CORRIGÉ : prix falsifiable, statut initial falsifiable,
 -- horaires/quantité/idempotence/rate-limit tous contournables — P0.
