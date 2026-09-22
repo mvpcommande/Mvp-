@@ -77,6 +77,50 @@ let mode = 'local';
 let realtimeChannel = null;
 let session = null;
 let restaurant = null;
+
+/*
+ * État de la connexion Realtime, affiché honnêtement dans le header
+ * ("En direct" uniquement quand le canal est réellement SUBSCRIBED).
+ * Alimenté par le statut déjà renvoyé par subscribeToOrderChanges()
+ * (mécanisme existant, non modifié) — jamais affiché de façon
+ * artificielle.
+ */
+let realtimeStatus = 'connecting';
+
+/*
+ * Onglet actif sur mobile (<768px), où les 4 colonnes ne peuvent pas
+ * être visibles simultanément. Conservé en dehors de render() pour
+ * survivre à un re-render déclenché par un événement Realtime pendant
+ * que le comptoir consulte un autre onglet.
+ */
+let activeMobileTab = 'NEW';
+
+let toastTimeout = null;
+let ageTickerHandle = null;
+
+/*
+ * Verrous anti double-clic : id de commande en cours de mise à jour,
+ * indépendants de l'attribut `disabled` du bouton (qui est reconstruit
+ * à chaque render()).
+ */
+const pendingStatusChanges = new Set();
+const pendingDeliveryChanges = new Set();
+
+/*
+ * Les 4 statuts réellement actionnables par le comptoir (voir
+ * orderWorkflow.mjs). CANCELLED existe côté base (cf. policy RLS)
+ * mais n'a aucune transition cliquable ici — les commandes dans cet
+ * état restent visibles à part, jamais mélangées à ces 4 statuts ni
+ * masquées.
+ */
+const ACTIVE_STATUSES = ['NEW', 'ACCEPTED', 'PREPARING', 'READY'];
+const COLUMN_LABELS = {
+  NEW: 'Nouvelles',
+  ACCEPTED: 'Acceptées',
+  PREPARING: 'Préparation',
+  READY: 'Prêtes'
+};
+
 installGlobalErrorLogging(supabase, {
   page: 'admin',
   getRestaurantId: () => restaurant?.id ?? null
@@ -136,6 +180,9 @@ async function init() {
   renderLogin();
 }
 async function subscribeRealtime() {
+  realtimeStatus = 'connecting';
+  updateConnectionBadge();
+
   if (
     realtimeChannel &&
     supabase
@@ -168,8 +215,25 @@ async function subscribeRealtime() {
   realtimeChannel =
     subscribeToOrderChanges(
       supabase,
-      () => render(),
+      (payload) => {
+        /*
+         * Le payload postgres_changes existait déjà mais n'était
+         * jamais lu (seul un render() générique était déclenché) :
+         * on l'exploite uniquement pour distinguer une vraie
+         * nouvelle commande (INSERT) et afficher une notification
+         * discrète, sans changer l'abonnement lui-même ni élargir
+         * ce qu'il reçoit.
+         */
+        if (payload?.eventType === 'INSERT') {
+          showNewOrderToast();
+        }
+        render();
+      },
       (status) => {
+        if (status === 'SUBSCRIBED') {
+          realtimeStatus = 'live';
+          updateConnectionBadge();
+        }
         const dropped =
           status === 'CLOSED' ||
           status === 'TIMED_OUT' ||
@@ -178,6 +242,8 @@ async function subscribeRealtime() {
           dropped &&
           mode === 'remote'
         ) {
+          realtimeStatus = 'reconnecting';
+          updateConnectionBadge();
           console.warn(
             '[Realtime] Reconnexion dans 3s...'
           );
@@ -195,6 +261,55 @@ async function subscribeRealtime() {
         }
       }
     );
+}
+
+/**
+ * Reflète realtimeStatus/mode dans le badge du header sans passer
+ * par un render() complet (l'état de connexion change indépendamment
+ * de la liste des commandes). Best-effort : si le badge n'est pas
+ * encore dans le DOM (avant le premier render), ne fait rien.
+ */
+function updateConnectionBadge() {
+  const el = document.querySelector('#counter-live-badge');
+  if (!el) {
+    return;
+  }
+  const state = mode !== 'remote' ? 'local' : realtimeStatus;
+  const config = {
+    live: { text: 'En direct', cls: 'is-live' },
+    connecting: { text: 'Connexion…', cls: 'is-connecting' },
+    reconnecting: { text: 'Reconnexion…', cls: 'is-reconnecting' },
+    local: { text: 'Mode démo local', cls: 'is-local' }
+  }[state] ?? { text: 'Connexion…', cls: 'is-connecting' };
+  el.textContent = config.text;
+  el.className = `oi-counter-live ${config.cls}`;
+}
+
+/**
+ * Notification discrète (pas de son : aucun mécanisme sonore
+ * n'existait avant ce bloc, on n'en ajoute pas ici) affichée à la
+ * réception d'un événement INSERT réel via Realtime. Attachée à
+ * document.body (comme les autres overlays de ce fichier) pour
+ * survivre au réarment complet de #admin-root par render().
+ */
+function showNewOrderToast() {
+  let el = document.querySelector('#counter-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'counter-toast';
+    el.className = 'oi-counter-toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  el.textContent = 'Nouvelle commande reçue';
+  el.classList.remove('is-visible');
+  void el.offsetWidth;
+  el.classList.add('is-visible');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    el.classList.remove('is-visible');
+  }, 4000);
 }
 function renderSetup() {
   root.innerHTML = `
@@ -389,14 +504,24 @@ async function getOrders() {
   }
   return localOrders();
 }
-async function advance(order) {
+async function advance(order, button) {
   const next = {
     NEW: 'ACCEPTED',
     ACCEPTED: 'PREPARING',
     PREPARING: 'READY'
   }[order.status];
-  if (!next) {
+  if (
+    !next ||
+    pendingStatusChanges.has(order.id)
+  ) {
     return;
+  }
+  pendingStatusChanges.add(order.id);
+  const originalLabel = button?.innerHTML ?? '';
+  if (button) {
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = 'Mise à jour…';
   }
   try {
     if (mode === 'remote') {
@@ -413,8 +538,10 @@ async function advance(order) {
         )
       );
     }
+    pendingStatusChanges.delete(order.id);
     await render();
   } catch (error) {
+    pendingStatusChanges.delete(order.id);
     console.error(
       'Erreur changement statut:',
       error
@@ -433,23 +560,40 @@ async function advance(order) {
     alert(
       'Impossible de modifier le statut de la commande.'
     );
+    if (button) {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.textContent = originalLabel;
+    }
   }
 }
-async function toggleDelivery(order) {
-  if (mode !== 'remote') {
+async function toggleDelivery(order, button) {
+  if (
+    mode !== 'remote' ||
+    pendingDeliveryChanges.has(order.id)
+  ) {
     return;
   }
   const next =
     order.delivery_status === 'TO_DELIVER'
       ? 'DELIVERED'
       : 'TO_DELIVER';
+  pendingDeliveryChanges.add(order.id);
+  const originalLabel = button?.innerHTML ?? '';
+  if (button) {
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = 'Mise à jour…';
+  }
   try {
     await remote.updateDeliveryStatus(
       order.id,
       next
     );
+    pendingDeliveryChanges.delete(order.id);
     await render();
   } catch (error) {
+    pendingDeliveryChanges.delete(order.id);
     console.error(
       'Erreur changement statut livraison:',
       error
@@ -468,7 +612,82 @@ async function toggleDelivery(order) {
     alert(
       'Impossible de modifier le statut de livraison.'
     );
+    if (button) {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.textContent = originalLabel;
+    }
   }
+}
+
+/**
+ * "À l'instant" / "Il y a N min" / "Il y a N h" à partir de
+ * created_at (jamais stocké, recalculé côté client). Fonction pure
+ * pour rester testable, `now` en paramètre plutôt que Date.now() en
+ * dur.
+ */
+function formatOrderAge(createdAt, now = new Date()) {
+  if (!createdAt) {
+    return '';
+  }
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) {
+    return '';
+  }
+  const diffMinutes = Math.max(
+    0,
+    Math.round((now.getTime() - created.getTime()) / 60000)
+  );
+  if (diffMinutes < 1) {
+    return "À l'instant";
+  }
+  if (diffMinutes < 60) {
+    return `Il y a ${diffMinutes} min`;
+  }
+  const diffHours = Math.round(diffMinutes / 60);
+  return `Il y a ${diffHours} h`;
+}
+
+/**
+ * Rafraîchit uniquement le texte des pastilles d'ancienneté déjà
+ * dans le DOM, sans re-render()/re-fetch : évite de rappeler
+ * getOrders() (Supabase) toutes les 30s juste pour un texte relatif.
+ * Démarré une seule fois (voir render()).
+ */
+function tickOrderAges() {
+  document
+    .querySelectorAll('.oi-counter-age[data-created-at]')
+    .forEach((el) => {
+      el.textContent = formatOrderAge(el.dataset.createdAt);
+    });
+}
+function ensureAgeTicker() {
+  if (ageTickerHandle) {
+    return;
+  }
+  ageTickerHandle = setInterval(tickOrderAges, 30000);
+}
+
+/**
+ * Options d'un article de commande, jointes en une seule ligne
+ * lisible ("Poulet · Algérienne"), jamais en JSON brut. Partagée par
+ * orderCard() et renderOrderDetail() (auparavant dupliquée en ligne
+ * dans renderOrderDetail() uniquement) — même champs lus, aucune
+ * option métier perdue.
+ */
+function formatOrderItemOptions(item) {
+  return [
+    item.options?.meat,
+    item.options?.sauce,
+    item.options?.drink,
+    ...(Array.isArray(item.options?.groups)
+      ? item.options.groups.map((g) =>
+          g && g.label && g.choice ? `${g.label}: ${g.choice}` : null
+        )
+      : [])
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 async function render() {
   if (
@@ -492,36 +711,50 @@ async function render() {
             a.createdAt
           )
       );
-  const total =
-    data.reduce(
-      (sum, order) =>
-        sum +
-        Number(
-          order.total ??
-          (order.total_cents ?? 0) /
-            100
-        ),
-      0
-    );
+  /*
+   * Regroupement par statut réel (voir orderWorkflow.mjs) : les 4
+   * statuts actionnables forment le tableau de service principal ;
+   * tout le reste (CANCELLED aujourd'hui, ou un statut futur non
+   * géré côté client) reste visible mais à part, jamais mélangé ni
+   * masqué.
+   */
+  const grouped = {
+    NEW: [],
+    ACCEPTED: [],
+    PREPARING: [],
+    READY: []
+  };
+  const other = [];
+
+  data.forEach((order) => {
+    if (ACTIVE_STATUSES.includes(order.status)) {
+      grouped[order.status].push(order);
+    } else {
+      other.push(order);
+    }
+  });
+
+  const hasActiveOrders = ACTIVE_STATUSES.some(
+    (status) => grouped[status].length > 0
+  );
+
+  const savings = calculateUberEatsSavings(
+    data,
+    restaurant?.settings?.uber_eats_commission_rate
+  );
+
   root.innerHTML = `
-    <main class="admin-shell">
-      <header class="admin-header">
-        <div>
-          <p class="eyebrow">
-            ${escapeHtml((restaurant?.name || 'FOODATOI').toUpperCase())} · SERVICE
-          </p>
-          <h1>
-            Le comptoir.
-          </h1>
-          <p>
-            ${
-              mode === 'remote'
-                ? 'Commandes en direct · Supabase Realtime'
-                : 'Mode démo local'
-            }
-          </p>
+    <main class="admin-shell oi-counter-shell">
+      <header class="oi-counter-header">
+        <div class="oi-counter-identity">
+          <span class="oi-counter-eyebrow">FOODATOI</span>
+          <strong class="oi-counter-name">${escapeHtml(restaurant?.name || 'Restaurant')}</strong>
         </div>
-        <div class="admin-actions">
+        <div class="oi-counter-status">
+          <span class="oi-counter-role">Comptoir</span>
+          <span id="counter-live-badge" class="oi-counter-live"></span>
+        </div>
+        <div class="admin-actions oi-counter-tools">
           <button
             class="secondary"
             id="system-health"
@@ -567,71 +800,11 @@ async function render() {
           </a>
         </div>
       </header>
-      <section class="admin-stats">
-        <div>
-          <span>
-            À prendre en charge
-          </span>
-          <strong>
-            ${
-              data.filter(
-                order =>
-                  order.status ===
-                  'NEW'
-              ).length
-            }
-          </strong>
-        </div>
-        <div>
-          <span>
-            En préparation
-          </span>
-          <strong>
-            ${
-              data.filter(
-                order =>
-                  order.status ===
-                  'PREPARING'
-              ).length
-            }
-          </strong>
-        </div>
-        <div>
-          <span>
-            Prêtes
-          </span>
-          <strong>
-            ${
-              data.filter(
-                order =>
-                  order.status ===
-                  'READY'
-              ).length
-            }
-          </strong>
-        </div>
-        <div>
-          <span>
-            Commandé
-          </span>
-          <strong>
-            ${euro(total)}
-          </strong>
-        </div>
-      </section>
+
       ${
-        (() => {
-          const savings =
-            calculateUberEatsSavings(
-              data,
-              restaurant?.settings
-                ?.uber_eats_commission_rate
-            );
-          if (!savings || !savings.orderCount) {
-            return '';
-          }
-          return `
-            <section class="roi-banner">
+        savings && savings.orderCount
+          ? `
+            <section class="roi-banner oi-counter-roi">
               <p class="eyebrow">
                 VOTRE ÉCONOMIE FOODATOI
               </p>
@@ -646,32 +819,79 @@ async function render() {
                 intégralement chez vous.
               </p>
             </section>
-          `;
-        })()
+          `
+          : ''
       }
-      <section class="orders-grid">
-        ${
-          data.length
-            ? data
-                .map(orderCard)
-                .join('')
-            : `
-              <div class="empty-ticket admin-empty">
-                <div class="empty-ticket-mark">
-                  +
-                </div>
-                <h2>
-                  Le comptoir est calme.
-                </h2>
-                <p>
-                  La prochaine commande apparaîtra ici
-                  dès qu'elle sera envoyée.
-                </p>
+
+      ${
+        hasActiveOrders
+          ? `
+            <nav class="oi-counter-tabs" role="tablist" aria-label="Filtrer par état">
+              ${ACTIVE_STATUSES.map(
+                (status) => `
+                  <button
+                    type="button"
+                    role="tab"
+                    class="oi-counter-tab${activeMobileTab === status ? ' is-active' : ''}"
+                    aria-selected="${activeMobileTab === status}"
+                    data-tab="${status}"
+                  >
+                    ${COLUMN_LABELS[status]}
+                    <span class="oi-counter-tab-count">${grouped[status].length}</span>
+                  </button>
+                `
+              ).join('')}
+            </nav>
+
+            <section class="oi-counter-board" data-active="${activeMobileTab}">
+              ${ACTIVE_STATUSES.map(
+                (status) => `
+                  <div class="oi-counter-column" data-status="${status}">
+                    <h2 class="oi-counter-column-head">
+                      ${COLUMN_LABELS[status]}
+                      <span class="oi-counter-count">${grouped[status].length}</span>
+                    </h2>
+                    <div class="oi-counter-cards">
+                      ${
+                        grouped[status].length
+                          ? grouped[status].map(orderCard).join('')
+                          : `<p class="oi-counter-column-empty">Aucune commande.</p>`
+                      }
+                    </div>
+                  </div>
+                `
+              ).join('')}
+            </section>
+          `
+          : `
+            <div class="empty-ticket admin-empty oi-counter-empty">
+              <div class="empty-ticket-mark">
+                +
               </div>
-            `
-        }
-      </section>
-      <p class="admin-note">
+              <h2>
+                Aucune commande en attente
+              </h2>
+              <p>
+                Les nouvelles commandes apparaîtront ici automatiquement.
+              </p>
+            </div>
+          `
+      }
+
+      ${
+        other.length
+          ? `
+            <details class="oi-counter-archive">
+              <summary>Autres commandes (${other.length})</summary>
+              <div class="oi-counter-cards">
+                ${other.map(orderCard).join('')}
+              </div>
+            </details>
+          `
+          : ''
+      }
+
+      <p class="admin-note oi-counter-footnote">
         ●
         ${
           mode === 'remote'
@@ -681,6 +901,44 @@ async function render() {
       </p>
     </main>
   `;
+  updateConnectionBadge();
+  ensureAgeTicker();
+  root
+    .querySelectorAll(
+      '[data-tab]'
+    )
+    .forEach(tabButton => {
+      tabButton.onclick =
+        () => {
+          activeMobileTab =
+            tabButton.dataset.tab;
+          const board =
+            root.querySelector(
+              '.oi-counter-board'
+            );
+          if (board) {
+            board.dataset.active =
+              activeMobileTab;
+          }
+          root
+            .querySelectorAll(
+              '[data-tab]'
+            )
+            .forEach(otherTab => {
+              const isActive =
+                otherTab.dataset.tab ===
+                activeMobileTab;
+              otherTab.classList.toggle(
+                'is-active',
+                isActive
+              );
+              otherTab.setAttribute(
+                'aria-selected',
+                String(isActive)
+              );
+            });
+        };
+    });
   const logout =
     root.querySelector(
       '#logout'
@@ -708,6 +966,11 @@ async function render() {
           remote = null;
           mode = 'local';
           realtimeChannel = null;
+          realtimeStatus = 'connecting';
+          if (ageTickerHandle) {
+            clearInterval(ageTickerHandle);
+            ageTickerHandle = null;
+          }
           renderLogin();
         }
       };
@@ -730,7 +993,7 @@ async function render() {
                 )
             );
           if (order) {
-            advance(order);
+            advance(order, button);
           }
         };
     });
@@ -774,7 +1037,7 @@ async function render() {
                 )
             );
           if (order) {
-            toggleDelivery(order);
+            toggleDelivery(order, button);
           }
         };
     });
@@ -1049,20 +1312,7 @@ async function renderOrderDetail(order) {
                     <br>
                     <small>
                       ${escapeHtml(
-                        [
-                          item.options?.meat,
-                          item.options?.sauce,
-                          item.options?.drink,
-                          ...(Array.isArray(item.options?.groups)
-                            ? item.options.groups.map((g) =>
-                                g && g.label && g.choice
-                                  ? `${g.label}: ${g.choice}`
-                                  : null
-                              )
-                            : [])
-                        ]
-                          .filter(Boolean)
-                          .join(' · ') || '—'
+                        formatOrderItemOptions(item) || '—'
                       )}
                     </small>
                   </td>
@@ -1400,26 +1650,40 @@ function orderCard(order) {
     getNextStatusLabel(
       status
     );
-  const action =
-    actionLabel
-      ? `
-        <button
-          class="primary"
-          data-next
-          data-id="${order.id}"
-        >
-          ${actionLabel} →
-        </button>
-      `
-      : `
-        <span class="ready-badge">
-          ✓ Prête${
-            isDelivery
-              ? ', à livrer'
-              : ' pour retrait'
-          }
-        </span>
-      `;
+  let action;
+  if (actionLabel) {
+    action = `
+      <button
+        class="primary"
+        data-next
+        data-id="${order.id}"
+      >
+        ${actionLabel} →
+      </button>
+    `;
+  } else if (status === 'READY') {
+    action = `
+      <span class="ready-badge">
+        ✓ Prête${
+          isDelivery
+            ? ', à livrer'
+            : ' pour retrait'
+        }
+      </span>
+    `;
+  } else {
+    /*
+     * Statut sans action suivante ET différent de READY (ex.
+     * CANCELLED) : auparavant affiché à tort comme "✓ Prête" (le
+     * badge par défaut ne distinguait pas ce cas). On affiche
+     * désormais le vrai statut, jamais une confirmation inventée.
+     */
+    action = `
+      <span class="oi-counter-terminal-badge">
+        ${escapeHtml(labels[status] ?? status)}
+      </span>
+    `;
+  }
   const deliveryToggle =
     isDelivery
       ? `
@@ -1433,7 +1697,7 @@ function orderCard(order) {
           data-toggle-delivery
           data-id="${order.id}"
         >
-          🛵 ${
+          ${
             deliveryLabels[
               deliveryStatus
             ] ??
@@ -1442,33 +1706,39 @@ function orderCard(order) {
         </button>
       `
       : '';
+  const createdAt =
+    order.created_at ??
+    order.createdAt ??
+    null;
+  const modeLabel =
+    isDelivery ? 'Livraison' : 'Retrait';
+  const slotLine =
+    customer.pickupTime && customer.pickupTime !== '—'
+      ? `${modeLabel} ${customer.pickupTime}`
+      : '';
   return `
     <article
-      class="order-card status-${String(
+      class="order-card oi-counter-card status-${String(
         status
       ).toLowerCase()}"
       data-order="${order.id}"
     >
-      <header>
-        <div>
-          <span class="order-number">
-            ${number}
-          </span>
-          <span class="status">
-            ${
-              labels[status] ??
-              status
-            }
-          </span>
-        </div>
-        <strong>
-          ${
-            customer.pickupTime ||
-            '—'
-          }
-        </strong>
+      <header class="oi-counter-card-head">
+        <span class="oi-counter-number">
+          ${escapeHtml(number)}
+        </span>
+        ${
+          createdAt
+            ? `<span class="oi-counter-age" data-created-at="${escapeHtml(createdAt)}">${escapeHtml(formatOrderAge(createdAt))}</span>`
+            : ''
+        }
       </header>
-      <div class="order-customer">
+      <p class="oi-counter-mode">
+        <span class="oi-counter-mode-tag">${modeLabel}</span>
+        ${slotLine ? `<span class="oi-counter-slot">${escapeHtml(slotLine)}</span>` : ''}
+        <span class="oi-counter-status-tag">${escapeHtml(labels[status] ?? status)}</span>
+      </p>
+      <div class="oi-counter-customer">
         <strong>
           ${escapeHtml(customer.name)}
         </strong>
@@ -1480,7 +1750,6 @@ function orderCard(order) {
         isDelivery && deliveryAddress
           ? `
             <div class="order-delivery">
-              <span class="delivery-tag">🛵 LIVRAISON</span>
               <span>
                 ${escapeHtml(deliveryAddress.street ?? '')},
                 ${escapeHtml(deliveryAddress.postal_code ?? '')}
@@ -1498,10 +1767,12 @@ function orderCard(order) {
       ${
         items.length
           ? `
-            <ul>
+            <ul class="oi-counter-items">
               ${items
-                .map(
-                  item => `
+                .map((item) => {
+                  const optionsLine =
+                    formatOrderItemOptions(item);
+                  return `
                     <li>
                       <strong>
                         ${item.quantity}×
@@ -1512,46 +1783,13 @@ function orderCard(order) {
                         'Article'
                       )}
                       ${
-                        item.options?.meat
-                          ? `
-                            <small>
-                              · ${escapeHtml(item.options.meat)}
-                            </small>
-                          `
-                          : ''
-                      }
-                      ${
-                        item.options?.sauce
-                          ? `
-                            <small>
-                              · ${escapeHtml(item.options.sauce)}
-                            </small>
-                          `
-                          : ''
-                      }
-                      ${
-                        item.options?.drink
-                          ? `
-                            <small>
-                              · ${escapeHtml(item.options.drink)}
-                            </small>
-                          `
-                          : ''
-                      }
-                      ${
-                        Array.isArray(item.options?.groups)
-                          ? item.options.groups
-                              .map((g) =>
-                                g && g.label && g.choice
-                                  ? `<small> · ${escapeHtml(g.label)}: ${escapeHtml(g.choice)}</small>`
-                                  : ''
-                              )
-                              .join('')
+                        optionsLine
+                          ? `<small>${escapeHtml(optionsLine)}</small>`
                           : ''
                       }
                     </li>
-                  `
-                )
+                  `;
+                })
                 .join('')}
             </ul>
           `
@@ -1562,7 +1800,7 @@ function orderCard(order) {
           `
       }
       <footer>
-        <strong>
+        <strong class="oi-counter-total">
           ${euro(total)}
         </strong>
         <div class="order-actions">
@@ -1574,7 +1812,7 @@ function orderCard(order) {
             data-id="${order.id}"
             title="Imprimer le ticket"
           >
-            ⌁ TICKET
+            Ticket
           </button>
         </div>
       </footer>

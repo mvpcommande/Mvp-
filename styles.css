@@ -382,3 +382,135 @@ button.has-errors {
   .oi-slot-grid{grid-template-columns:1fr}
 }
 
+/* ============================================================== */
+/* Bloc 4 — comptoir temps réel / mode rush                        */
+/* Scopé #admin-root (écran de service uniquement) + #counter-toast */
+/* (notification attachée à document.body, hors de #admin-root).   */
+/* Restylage uniquement — aucune logique métier touchée.           */
+/* ============================================================== */
+
+#admin-root button,#admin-root input,#admin-root select,#admin-root textarea{font-family:inherit}
+#admin-root :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+@media(prefers-reduced-motion:reduce){
+  #admin-root *,#counter-toast{transition-duration:.001ms!important;animation-duration:.001ms!important}
+}
+
+.oi-counter-shell{padding-top:var(--sp-4)}
+
+/* -- Header compact, utilitaire (pas de hero / gros titre) ---------------- */
+.oi-counter-header{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3) var(--sp-6);padding-bottom:var(--sp-3);margin-bottom:var(--sp-4);border-bottom:1px solid var(--line)}
+.oi-counter-identity{display:flex;flex-direction:column;gap:2px}
+.oi-counter-eyebrow{font:700 10px 'DM Mono';letter-spacing:.13em;color:var(--muted)}
+.oi-counter-name{font:600 20px 'Space Grotesk';letter-spacing:-.01em;color:var(--ink)}
+.oi-counter-status{display:flex;align-items:center;gap:var(--sp-3);margin-right:auto}
+.oi-counter-role{font:600 12px 'DM Sans';color:var(--muted)}
+
+/*
+ * Badge de connexion honnête : reflète realtimeStatus/mode
+ * (admin.js), jamais affiché comme "En direct" par défaut. Le point
+ * (::before) reprend simplement la couleur du texte, pas de
+ * clignotement.
+ */
+.oi-counter-live{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--radius-pill);font:700 11px 'DM Mono';border:1px solid var(--line);color:var(--muted)}
+.oi-counter-live::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.oi-counter-live.is-live{color:#317040;border-color:rgba(49,112,64,.3);background:rgba(49,112,64,.08)}
+.oi-counter-live.is-reconnecting{color:var(--hot);border-color:rgba(232,77,39,.3);background:rgba(232,77,39,.06)}
+.oi-counter-live.is-connecting,.oi-counter-live.is-local{color:var(--muted)}
+
+.oi-counter-tools{flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:899px){
+  .oi-counter-tools{width:100%;justify-content:flex-start}
+}
+/*
+ * .secondary est partagé par toutes les pages (client, onboarding...)
+ * à 42px ; on ne touche pas la règle globale (non-régression), on
+ * relève juste la cible tactile ici, propre au comptoir tablette.
+ */
+.oi-counter-tools .secondary{min-height:44px}
+
+.oi-counter-roi{padding:14px 16px;margin-bottom:var(--sp-4);border-radius:var(--radius-md)}
+.oi-counter-roi p:not(.eyebrow){font-size:12.5px}
+
+/* -- Onglets d'état (mobile uniquement, <768px) --------------------------- */
+.oi-counter-tabs{display:none;gap:6px;margin-bottom:var(--sp-3);overflow-x:auto;scrollbar-width:none}
+.oi-counter-tabs::-webkit-scrollbar{display:none}
+.oi-counter-tab{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:var(--radius-pill);background:var(--card);font:600 12px 'DM Sans';color:#575148;cursor:pointer;white-space:nowrap}
+.oi-counter-tab.is-active{background:var(--ink);border-color:var(--ink);color:#fff}
+.oi-counter-tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--acid);color:var(--acid-ink);font:700 10px 'DM Mono'}
+
+/* -- Tableau de service : colonnes par statut réel ------------------------ */
+.oi-counter-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-4);align-items:start}
+.oi-counter-column-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 var(--sp-3);font:700 12px 'DM Mono';letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.oi-counter-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--card);border:1px solid var(--line);font:700 12px 'DM Sans';color:var(--ink)}
+.oi-counter-cards{display:flex;flex-direction:column;gap:var(--sp-3)}
+.oi-counter-column-empty{color:var(--muted);font-size:12.5px;padding:var(--sp-3);border:1px dashed var(--line);border-radius:var(--radius-md);text-align:center;margin:0}
+
+@media(max-width:1023px){
+  .oi-counter-board{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:767px){
+  .oi-counter-tabs{display:flex}
+  .oi-counter-board{display:block}
+  .oi-counter-column{display:none}
+  .oi-counter-board[data-active="NEW"] .oi-counter-column[data-status="NEW"],
+  .oi-counter-board[data-active="ACCEPTED"] .oi-counter-column[data-status="ACCEPTED"],
+  .oi-counter-board[data-active="PREPARING"] .oi-counter-column[data-status="PREPARING"],
+  .oi-counter-board[data-active="READY"] .oi-counter-column[data-status="READY"]{display:block}
+  .oi-counter-column-head{display:none}
+}
+
+/* -- Carte commande : numéro très visible, hiérarchie de service ---------- */
+.oi-counter-card{border-radius:var(--radius-lg);padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;border-left-width:3px}
+.oi-counter-card.status-new{border-left-color:var(--acid)}
+.oi-counter-card.status-accepted{border-left-color:var(--line)}
+.oi-counter-card.status-preparing{border-left-color:var(--hot)}
+.oi-counter-card.status-ready{border-left-color:#317040}
+.oi-counter-card.status-cancelled{border-left-color:var(--line);opacity:.7}
+
+.oi-counter-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-2);padding-bottom:0;border-bottom:0}
+.oi-counter-number{font:700 22px 'Space Grotesk';letter-spacing:-.02em;color:var(--ink)}
+/*
+ * Petit indicateur (pas de clignotement/rouge) pour repérer une
+ * commande neuve d'un coup d'œil dans la colonne "Nouvelles".
+ */
+.oi-counter-card.status-new .oi-counter-number::after{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--acid);margin-left:8px;vertical-align:middle}
+.oi-counter-age{font:600 11px 'DM Mono';color:var(--muted);white-space:nowrap}
+
+.oi-counter-mode{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0;font-size:12px}
+.oi-counter-mode-tag{font:700 10px 'DM Mono';letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
+.oi-counter-slot{color:var(--muted)}
+.oi-counter-status-tag{margin-left:auto;font:600 10px 'DM Mono';padding:2px 7px;border-radius:var(--radius-sm);background:#eee9df;color:var(--muted)}
+
+.oi-counter-customer{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+.oi-counter-customer strong{color:var(--ink);font-size:13px}
+
+.oi-counter-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.oi-counter-items li{font-size:13px;display:flex;flex-wrap:wrap;gap:0 4px;align-items:baseline}
+.oi-counter-items li strong{font-weight:700}
+.oi-counter-items li small{width:100%;color:var(--muted);font:400 11.5px 'DM Sans'}
+
+.oi-counter-total{font:700 16px 'Space Grotesk'}
+.oi-counter-terminal-badge{font:600 10px 'DM Mono';color:var(--muted);padding:6px 0}
+
+.oi-counter-card .order-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.oi-counter-card .order-actions button{min-height:44px}
+
+/* -- Commandes hors des 4 statuts actifs (ex. annulées) -------------------- */
+.oi-counter-archive{margin-top:var(--sp-6);padding-top:var(--sp-4);border-top:1px solid var(--line)}
+.oi-counter-archive summary{cursor:pointer;display:flex;align-items:center;min-height:44px;font:600 12px 'DM Mono';letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:var(--sp-3)}
+.oi-counter-archive .oi-counter-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--sp-3)}
+
+.oi-counter-empty{padding:60px 20px}
+.oi-counter-footnote{margin-top:var(--sp-6)}
+
+/* -- Notification discrète (nouvelle commande via Realtime) --------------- */
+.oi-counter-toast{position:fixed;top:var(--sp-4);right:var(--sp-4);z-index:60;padding:12px 18px;background:var(--ink);color:#fff;border-radius:var(--radius-md);font:600 13px 'DM Sans';box-shadow:0 10px 30px rgba(0,0,0,.18);opacity:0;transform:translateY(-8px);pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+.oi-counter-toast.is-visible{opacity:1;transform:none}
+.oi-counter-toast::before{content:'●';color:var(--acid);margin-right:8px}
+
+@media(max-width:480px){
+  .oi-counter-toast{left:var(--sp-4);right:var(--sp-4);top:var(--sp-3)}
+}
+
