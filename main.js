@@ -3174,6 +3174,16 @@ async function submitOrder(
     cart = [];
     checkoutIdempotencyKey = null;
 
+    /*
+     * Synchronise le badge panier (header) et la barre sticky tout
+     * de suite, sans attendre le clic sur "Terminé" (qui ne
+     * survient qu'au render() complet dans showConfirmation) : entre
+     * les deux, la commande vient d'être confirmée mais l'UI panier
+     * affichait encore l'ancien total. `saved` (la commande déjà
+     * envoyée) n'est pas concerné, seul l'état panier local l'est.
+     */
+    updateCartIndicators();
+
     showConfirmation(
       saved
     );
