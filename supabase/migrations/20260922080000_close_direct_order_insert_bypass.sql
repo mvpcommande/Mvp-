@@ -1,0 +1,159 @@
+-- ============================================================================
+-- MIGRATION À VALIDER — NON APPLIQUÉE EN PRODUCTION PAR CET AGENT.
+-- Créée dans le cadre de l'audit de durcissement Bloc 5 (hardening
+-- pilote), à relire et appliquer manuellement après vérification.
+-- ============================================================================
+--
+-- PROBLÈME (P0 — bloquant pilote) :
+--
+-- orders_public_insert et order_items_public_insert (voir
+-- 20260822113258_lock_down_order_tenant_isolation.sql) autorisent
+-- n'importe quel client (rôle anon ou authenticated) à insérer
+-- directement une ligne dans orders / order_items via l'API REST
+-- PostgREST (POST /rest/v1/orders, POST /rest/v1/order_items),
+-- entièrement en dehors de la fonction create_order().
+--
+-- Or c'est create_order() — et uniquement elle — qui :
+--   - recalcule total_cents / unit_price_cents / line_total_cents à
+--     partir de products.price_cents (jamais depuis le payload client) ;
+--   - plafonne la quantité à 1..99 ;
+--   - vérifie les horaires d'ouverture (settings.opening_hours) ;
+--   - applique la clé d'idempotence ;
+--   - applique le rate-limit (téléphone + coupe-circuit restaurant).
+--
+-- PREUVE (revue statique de ce repo, aucun accès DB live requis) :
+--
+--   1. orders_public_insert.with check ne valide que :
+--        - le restaurant existe et est actif
+--        - customer_id (si fourni) appartient au même restaurant
+--      Elle NE VALIDE JAMAIS total_cents, ni status, ni fulfillment_type,
+--      ni idempotency_key.
+--
+--   2. order_items_public_insert.with check ne valide que :
+--        - order_id existe
+--        - product_id (si fourni) appartient au même restaurant que la
+--          commande
+--      Elle NE VALIDE JAMAIS unit_price_cents, line_total_cents, ni
+--      quantity.
+--
+--   3. Aucune contrainte CHECK sur orders.total_cents, orders.status,
+--      order_items.unit_price_cents ni order_items.line_total_cents
+--      dans l'historique de migrations versionné de ce repo (grep
+--      "check(" sur supabase/migrations/*.sql : seule
+--      orders_delivery_status_check existe, sans rapport avec le prix).
+--
+-- Un client malveillant peut donc aujourd'hui, sans aucune authentification,
+-- construire directement :
+--
+--   POST /rest/v1/orders
+--   { restaurant_id: <un id réel actif>, total_cents: 1, status: 'READY', ... }
+--
+-- et contourner intégralement le prix serveur, les horaires, le plafond
+-- de quantité, l'idempotence et le rate-limit. C'est exactement le
+-- scénario "le backend accepte aveuglément un prix fourni par le
+-- client" que l'audit Bloc 5 demandait explicitement de classer
+-- CRITIQUE si démontré.
+--
+-- CORRECTIF PROPOSÉ :
+--
+-- Supprimer ces deux policies INSERT publiques. Aucun chemin
+-- légitime de ce repo n'insère directement dans orders / order_items :
+-- main.js -> supabaseStore.mjs::createOrder() appelle exclusivement
+-- client.rpc('create_order', ...). create_order() reste inchangée et
+-- continue de fonctionner à l'identique : étant SECURITY DEFINER, elle
+-- s'exécute avec les privilèges de son propriétaire plutôt que ceux de
+-- l'appelant, et le propriétaire d'une table n'est PAS soumis à ses
+-- propres policies RLS par défaut (sauf si FORCE ROW LEVEL SECURITY est
+-- activé sur la table, ce qui n'est le cas nulle part dans ce repo).
+--
+-- HYPOTHÈSE À CONFIRMER AVANT D'APPLIQUER CETTE MIGRATION (non vérifiable
+-- par revue statique seule, nécessite une requête live sur le projet
+-- Supabase réel de Foodatoi, non accessible depuis cette session) :
+--   le rôle propriétaire de la fonction create_order() est bien le même
+--   que le propriétaire des tables orders / order_items (typiquement le
+--   rôle ayant appliqué les migrations). Vérifier avec :
+--     select tableowner from pg_tables where tablename in ('orders','order_items');
+--     select proowner::regrole from pg_proc where proname = 'create_order';
+--   Si les propriétaires diffèrent, il faut soit aligner les propriétaires,
+--   soit ajouter explicitement "security definer" + un rôle BYPASSRLS
+--   dédié, avant d'appliquer ce correctif.
+--
+-- RISQUE SI NON CORRIGÉ : prix falsifiable, statut initial falsifiable,
+-- horaires/quantité/idempotence/rate-limit tous contournables — P0.
+-- RISQUE DE CE CORRECTIF : aucun impact sur les clients légitimes
+-- (aucun ne fait d'insertion directe) ; si l'hypothèse de propriétaire
+-- ci-dessus est fausse, create_order() cesserait de fonctionner pour
+-- anon/authenticated (erreur de permission immédiate et visible, pas
+-- une corruption silencieuse) — donc testable et sans risque de
+-- régression silencieuse.
+--
+-- ROLLBACK : recréer les deux policies avec leur définition d'origine,
+-- copiée telle quelle depuis 20260822113258_lock_down_order_tenant_isolation.sql :
+--
+--   create policy orders_public_insert
+--   on public.orders
+--   for insert
+--    to anon, authenticated
+--   with check (
+--     exists (
+--       select 1 from public.restaurants r
+--       where r.id = orders.restaurant_id
+--         and r.is_active = true
+--     )
+--     and (
+--       customer_id is null
+--       or exists (
+--         select 1 from public.customers c
+--         where c.id = orders.customer_id
+--           and c.restaurant_id = orders.restaurant_id
+--       )
+--     )
+--   );
+--
+--   create policy order_items_public_insert
+--   on public.order_items
+--   for insert
+--    to anon, authenticated
+--   with check (
+--     exists (
+--       select 1 from public.orders o
+--       where o.id = order_items.order_id
+--     )
+--     and (
+--       product_id is null
+--       or exists (
+--         select 1 from public.products p
+--         join public.orders o on o.id = order_items.order_id
+--         where p.id = order_items.product_id
+--           and p.restaurant_id = o.restaurant_id
+--       )
+--     )
+--   );
+--
+-- VÉRIFICATION MANUELLE AVANT/APRÈS (à exécuter sur une branche de dev
+-- Supabase, jamais en production) :
+--
+--   -- 1. Avant application : ceci doit RÉUSSIR aujourd'hui (preuve du bug) --
+--   -- avec la clé anon, sans authentification :
+--   insert into orders (restaurant_id, order_number, total_cents, status,
+--     payment_status, fulfillment_type, customer_name, customer_phone)
+--   values ('<restaurant actif réel>', 'FA-TEST-BYPASS', 1, 'READY',
+--     'PAY_AT_STORE', 'PICKUP', 'Test', '0600000000');
+--
+--   -- 2. Après application : la même requête doit ÉCHOUER
+--   --    (violation de policy RLS, 42501/RLS error) --
+--
+--   -- 3. Le flux légitime doit continuer à fonctionner normalement :
+--   select * from create_order(
+--     p_restaurant_id => '<restaurant actif réel>',
+--     p_customer_name => 'Test',
+--     p_customer_phone => '0600000000',
+--     p_pickup_time => now() + interval '20 minutes',
+--     p_notes => null,
+--     p_items => '[{"product_id": "<produit actif réel>", "quantity": 1}]'::jsonb
+--   );
+--
+-- ============================================================================
+
+drop policy if exists orders_public_insert on public.orders;
+drop policy if exists order_items_public_insert on public.order_items;

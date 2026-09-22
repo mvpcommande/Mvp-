@@ -104,7 +104,59 @@ let activeCategory = 'Tous';
 let categoryObserver = null;
 
 let remoteStore = null;
-let checkoutIdempotencyKey = null;
+
+/*
+ * Bloc 5 (hardening) : la clé d'idempotence checkout ne survivait
+ * qu'en mémoire — un refresh juste après un create_order réussi (ou
+ * juste après l'envoi, avant confirmation visible) la perdait. Un
+ * client qui retente alors sa commande générait une clé neuve,
+ * jamais reconnue comme un retry par create_order (qui déduplique
+ * par idempotency_key) : commande dupliquée silencieuse, réelle sous
+ * un timing très plausible sur mobile (refresh accidentel, retour
+ * d'arrière-plan, double navigation) — pas seulement un cas
+ * théorique de double-clic déjà couvert par orderSubmitting.
+ *
+ * sessionStorage (jamais localStorage) : scope strictement par onglet,
+ * donc deux onglets du même client génèrent naturellement deux clés
+ * distinctes (aucune collision entre deux commandes réellement
+ * différentes), tout en survivant à un refresh dans le même onglet.
+ * Best-effort : si sessionStorage est indisponible (navigation
+ * privée restrictive...), on retombe simplement sur l'ancien
+ * comportement (clé perdue au refresh), jamais une erreur bloquante.
+ */
+const CHECKOUT_IDEMPOTENCY_STORAGE_KEY =
+  'foodatoi-checkout-idempotency-key';
+
+function readStoredIdempotencyKey() {
+  try {
+    return (
+      sessionStorage.getItem(
+        CHECKOUT_IDEMPOTENCY_STORAGE_KEY
+      ) || null
+    );
+  } catch {
+    return null;
+  }
+}
+
+function persistIdempotencyKey(key) {
+  try {
+    if (key) {
+      sessionStorage.setItem(
+        CHECKOUT_IDEMPOTENCY_STORAGE_KEY,
+        key
+      );
+    } else {
+      sessionStorage.removeItem(
+        CHECKOUT_IDEMPOTENCY_STORAGE_KEY
+      );
+    }
+  } catch {
+    /* best-effort, voir commentaire ci-dessus */
+  }
+}
+
+let checkoutIdempotencyKey = readStoredIdempotencyKey();
 
 /**
  * Verrou logique anti double-soumission de submitOrder() — source de
@@ -3079,6 +3131,9 @@ function renderCartDetails(element) {
         if (!checkoutIdempotencyKey) {
           checkoutIdempotencyKey =
             crypto.randomUUID();
+          persistIdempotencyKey(
+            checkoutIdempotencyKey
+          );
         }
 
         order.idempotencyKey =
@@ -3276,6 +3331,7 @@ async function submitOrder(
 
     cart = [];
     checkoutIdempotencyKey = null;
+    persistIdempotencyKey(null);
 
     /*
      * Succès : on relâche le verrou tout de suite — l'écran de
