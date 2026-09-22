@@ -153,7 +153,8 @@
 -- de advance()/toggleDelivery() dans admin.js : le seul enchaînement
 -- utilisé est NEW->ACCEPTED->PREPARING->READY, un par un).
 --
--- ROLLBACK :
+-- ROLLBACK (SQL exact, prêt à exécuter -- également disponible en fichier
+-- autonome : supabase/rollbacks/rollback_20260922080100_enforce_order_status_transitions.sql) :
 --   drop trigger if exists enforce_order_status_transition_trigger on public.orders;
 --   drop function if exists public.enforce_order_status_transition();
 --

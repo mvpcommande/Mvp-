@@ -4,6 +4,55 @@
 -- pilote), à relire et appliquer manuellement après vérification.
 -- ============================================================================
 --
+-- MISE À JOUR PRÉ-VOL (Bloc 5.2, TEST LIVE, lecture seule sur
+-- ffuykessameuonpnyiyc, pg_indexes) -- CORRECTIF DE CETTE MIGRATION,
+-- LA PROTECTION INDEX EST DÉJÀ EN PRODUCTION :
+--
+--   Un index unique portant EXACTEMENT sur (restaurant_id,
+--   idempotency_key) WHERE idempotency_key IS NOT NULL existe déjà en
+--   production, sous le nom orders_restaurant_idempotency_key (et non
+--   orders_restaurant_idempotency_key_uidx comme le prévoyait la
+--   première version de cette migration) :
+--
+--     CREATE UNIQUE INDEX orders_restaurant_idempotency_key
+--       ON public.orders USING btree (restaurant_id, idempotency_key)
+--       WHERE (idempotency_key IS NOT NULL)
+--
+--   Cet index n'apparaît dans AUCUNE des migrations versionnées de ce
+--   repo ni dans supabase_migrations.schema_migrations (dernière entrée
+--   suivie : 20260904141948) -- il a été appliqué hors du système de
+--   suivi, comme d'autres objets déjà rencontrés en Bloc 5 (policies
+--   RLS products, suppression des policies INSERT publiques). Ceci
+--   explique pourquoi la revue statique du Bloc 5 (limitée à
+--   pg_constraint, qui n'indexe pas les `CREATE UNIQUE INDEX` créés
+--   hors `ALTER TABLE ... ADD CONSTRAINT`) ne l'avait pas détecté : un
+--   index unique créé directement n'apparaît PAS dans pg_constraint,
+--   seulement dans pg_indexes/pg_class -- un angle mort méthodologique
+--   de l'audit initial, corrigé ici.
+--
+--   CONSÉQUENCE : la partie "CREATE UNIQUE INDEX" de cette migration
+--   est RETIRÉE (elle aurait créé un second index fonctionnellement
+--   redondant sous un nom différent -- inutile, coûteux en écriture et
+--   en espace, aucun bénéfice). La protection au niveau donnée
+--   (aucun doublon possible en base) est donc déjà active aujourd'hui.
+--
+--   CE QUI RESTE VRAI ET NÉCESSAIRE : create_order() n'a PAS été mis à
+--   jour pour intercepter le unique_violation que cet index déjà
+--   présent peut déclencher. Aujourd'hui, sous vraie concurrence, un des
+--   deux appels concurrents reçoit donc une erreur Postgres brute
+--   ("duplicate key value violates unique constraint
+--   orders_restaurant_idempotency_key") au lieu de la commande existante
+--   -- pas de doublon créé (l'index empêche déjà cela), mais une erreur
+--   non gérée remonterait au client. Le correctif utile de cette
+--   migration se limite donc désormais à la fonction create_order()
+--   exception-safe ci-dessous.
+--
+-- ---------------------------------------------------------------------------
+--
+-- PROBLÈME D'ORIGINE, TEL QUE DOCUMENTÉ LORS DE L'AUDIT BLOC 5
+-- (conservé pour traçabilité -- la prémisse "aucune protection n'existe
+-- en base" ne reflète plus l'état live, voir mise à jour ci-dessus) :
+--
 -- PROBLÈME (P1 — fiabilité, race condition sous vraie concurrence) :
 --
 -- create_order() implémente l'idempotence en "check-then-insert" :
@@ -59,46 +108,57 @@
 -- idempotency_key) ; le check applicatif seul ne peut pas être
 -- atomique sans elle.
 --
--- CORRECTIF PROPOSÉ :
+-- CORRECTIF PROPOSÉ (mis à jour Bloc 5.2 -- l'index existe déjà live,
+-- voir mise à jour en tête de fichier) :
 --
---   1. Un index unique PARTIEL sur (restaurant_id, idempotency_key),
---      limité aux lignes où idempotency_key n'est pas null (les
---      commandes sans clé -- aucune aujourd'hui côté client, mais
---      possible via un appel RPC direct sans p_idempotency_key --
---      restent libres de se répéter, comme aujourd'hui).
---   2. create_order() enveloppe désormais son INSERT INTO orders dans
---      un bloc BEGIN/EXCEPTION : si l'insertion échoue avec
---      unique_violation (i.e. une autre transaction a gagné la course
---      entre-temps), la fonction relit la commande existante par
---      (restaurant_id, idempotency_key) et la retourne normalement,
---      au lieu de laisser remonter une erreur 23505 brute au client.
---      Le chemin "check" existant (étape 1) reste inchangé : il reste
---      la voie rapide normale (pas de course), l'exception ne se
---      déclenche que dans le cas rare qu'elle est censée couvrir.
+--   create_order() enveloppe désormais son INSERT INTO orders dans un
+--   bloc BEGIN/EXCEPTION : si l'insertion échoue avec unique_violation
+--   (l'index orders_restaurant_idempotency_key déjà en place détecte
+--   qu'une autre transaction a gagné la course entre-temps), la fonction
+--   relit la commande existante par (restaurant_id, idempotency_key) et
+--   la retourne normalement, au lieu de laisser remonter une erreur
+--   23505 brute au client. Le chemin "check" existant (étape 1) reste
+--   inchangé : il reste la voie rapide normale (pas de course),
+--   l'exception ne se déclenche que dans le cas rare qu'elle est censée
+--   couvrir. AUCUN index n'est créé par cette migration.
 --
--- RISQUE SI NON CORRIGÉ : doublons de commande sous vraie concurrence
--- (P1, fiabilité opérationnelle, pas de fuite de données ni de prix).
+-- RISQUE SI NON CORRIGÉ : sous vraie concurrence, un appel sur deux
+-- reçoit une erreur Postgres brute (23505) au lieu de la commande
+-- existante -- pas de doublon (déjà empêché par l'index live), mais une
+-- erreur non gérée exposée au client (P2, fiabilité/UX, pas de fuite de
+-- données ni de prix, pas de doublon possible).
 -- RISQUE DE CE CORRECTIF :
---   - L'index unique peut échouer à la création s'il existe déjà des
---     doublons (restaurant_id, idempotency_key) en base -- échec net et
---     visible à l'application de la migration, pas de corruption
---     silencieuse. À VÉRIFIER AVANT application avec la requête de
---     pré-contrôle ci-dessous.
+--   - CREATE OR REPLACE FUNCTION préserve l'OID de la fonction et donc
+--     TOUS ses grants existants (anon, authenticated, postgres,
+--     service_role, PUBLIC -- vérifié live via
+--     information_schema.role_routine_grants) ; le GRANT explicite en
+--     fin de fichier est redondant/idempotent, pas un remplacement.
 --   - Le comportement pour un appel normal (pas de course) est
 --     strictement inchangé : le chemin "check" trouve toujours la ligne
---     avant que l'exception n'entre en jeu.
+--     avant que l'exception n'entre en jeu -- confirmé par la suite de
+--     régression RPC complète (TEST LOCAL, Bloc 5.1), avant/après,
+--     0 régression.
 --
--- ROLLBACK :
---   drop index if exists public.orders_restaurant_idempotency_key_uidx;
---   -- puis restaurer la version de create_order() sans le bloc
---   -- BEGIN/EXCEPTION, telle que définie dans
---   -- 20260906130000_create_order_flood_breaker.sql.
+-- ROLLBACK : SQL exact, complet, prêt à exécuter, capturé depuis la
+-- définition LIVE de create_order au moment de l'audit (PAS une
+-- reconstruction approximative), disponible intégralement dans :
 --
--- VÉRIFICATION MANUELLE (à exécuter sur une branche de dev Supabase,
+--   supabase/rollbacks/rollback_20260922080200_enforce_idempotency_key_uniqueness.sql
+--
+-- Ce fichier n'est volontairement PAS dans supabase/migrations/ (pour ne
+-- jamais être ramassé comme une migration à appliquer) et n'est PAS
+-- tronqué : il contient le corps complet de create_order() tel que
+-- déployé en production avant cette migration, plus le GRANT et les
+-- requêtes de vérification post-rollback. Aucun index n'est à restaurer
+-- (cette migration n'en crée aucun, voir mise à jour pré-vol Bloc 5.2).
+--
+-- VÉRIFICATION MANUELLE (à exécuter sur un environnement de test,
 -- jamais en production) :
 --
 --   -- 0. PRÉ-CONTRÔLE avant d'appliquer cette migration (doit renvoyer
---   --    0 lignes ; sinon nettoyer les doublons avant d'appliquer) :
+--   --    0 lignes -- l'index live existant garantit déjà ce résultat,
+--   --    ce contrôle reste une vérification de bon sens avant tout
+--   --    déploiement) :
 --   select restaurant_id, idempotency_key, count(*)
 --   from public.orders
 --   where idempotency_key is not null
@@ -136,9 +196,12 @@
 --
 -- ============================================================================
 
-create unique index if not exists orders_restaurant_idempotency_key_uidx
-  on public.orders (restaurant_id, idempotency_key)
-  where idempotency_key is not null;
+-- Pas de CREATE UNIQUE INDEX ici : un index fonctionnellement identique
+-- (mêmes colonnes, même prédicat partiel) existe déjà en production sous
+-- le nom orders_restaurant_idempotency_key (voir mise à jour pré-vol
+-- Bloc 5.2 en tête de fichier). En créer un second sous un autre nom
+-- serait une redondance pure : coût d'écriture/espace disque pour aucun
+-- bénéfice.
 
 create or replace function public.create_order(
   p_restaurant_id uuid,
@@ -317,15 +380,15 @@ begin
     else 'PAY_AT_STORE'
   end;
 
-  -- Bloc 5 (hardening) : l'INSERT ci-dessous est désormais protégé par
-  -- l'index unique partiel orders_restaurant_idempotency_key_uidx. Sous
-  -- vraie concurrence (deux transactions passées le check ci-dessus avant
-  -- que l'une des deux n'ait inséré), l'une des deux insertions échoue
-  -- avec unique_violation au lieu de créer un doublon silencieux -- on
-  -- relit alors la commande gagnante et on la retourne normalement,
-  -- exactement comme le chemin "check" l'aurait fait si le timing avait
-  -- été légèrement différent. Comportement normal (pas de course)
-  -- strictement inchangé.
+  -- Bloc 5 (hardening) : l'INSERT ci-dessous est déjà protégé par
+  -- l'index unique partiel orders_restaurant_idempotency_key, déjà
+  -- présent en production (voir mise à jour pré-vol Bloc 5.2 en tête de
+  -- fichier). Sous vraie concurrence (deux transactions passées le check
+  -- ci-dessus avant que l'une des deux n'ait inséré), l'une des deux
+  -- insertions échoue avec unique_violation au lieu de créer un doublon
+  -- silencieux -- on relit alors la commande gagnante et on la retourne
+  -- normalement, au lieu de laisser remonter l'erreur 23505 brute.
+  -- Comportement normal (pas de course) strictement inchangé.
   begin
     insert into public.orders (
       id, restaurant_id, order_number, customer_name, customer_phone,
