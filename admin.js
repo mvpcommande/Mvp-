@@ -264,25 +264,61 @@ async function subscribeRealtime() {
 }
 
 /**
- * Reflète realtimeStatus/mode dans le badge du header sans passer
- * par un render() complet (l'état de connexion change indépendamment
- * de la liste des commandes). Best-effort : si le badge n'est pas
- * encore dans le DOM (avant le premier render), ne fait rien.
+ * Source unique de vérité pour l'état de connexion affiché : le
+ * badge du header et la note en bas de page doivent toujours
+ * raconter la même chose, donc un seul mapping état -> libellés,
+ * jamais deux (c'était le bug : le footer testait `mode === 'remote'`
+ * indépendamment du badge, et disait "Temps réel actif" même en
+ * 'connecting'/'reconnecting').
+ */
+const CONNECTION_STATES = {
+  live: {
+    badge: 'En direct',
+    badgeClass: 'is-live',
+    footnote: 'Temps réel actif. Les nouvelles commandes apparaissent automatiquement.'
+  },
+  connecting: {
+    badge: 'Connexion…',
+    badgeClass: 'is-connecting',
+    footnote: 'Connexion au temps réel en cours…'
+  },
+  reconnecting: {
+    badge: 'Reconnexion…',
+    badgeClass: 'is-reconnecting',
+    footnote: 'Connexion perdue, reconnexion en cours…'
+  },
+  local: {
+    badge: 'Mode démo local',
+    badgeClass: 'is-local',
+    footnote: 'Mode démo local.'
+  }
+};
+
+function getConnectionState() {
+  return mode !== 'remote' ? 'local' : realtimeStatus;
+}
+
+/**
+ * Reflète l'état de connexion (badge + note du footer) sans passer
+ * par un render() complet (cet état change indépendamment de la
+ * liste des commandes). Best-effort : si un élément n'est pas encore
+ * dans le DOM (avant le premier render), ce patch-là est ignoré.
  */
 function updateConnectionBadge() {
-  const el = document.querySelector('#counter-live-badge');
-  if (!el) {
-    return;
+  const config =
+    CONNECTION_STATES[getConnectionState()] ??
+    CONNECTION_STATES.connecting;
+
+  const badgeEl = document.querySelector('#counter-live-badge');
+  if (badgeEl) {
+    badgeEl.textContent = config.badge;
+    badgeEl.className = `oi-counter-live ${config.badgeClass}`;
   }
-  const state = mode !== 'remote' ? 'local' : realtimeStatus;
-  const config = {
-    live: { text: 'En direct', cls: 'is-live' },
-    connecting: { text: 'Connexion…', cls: 'is-connecting' },
-    reconnecting: { text: 'Reconnexion…', cls: 'is-reconnecting' },
-    local: { text: 'Mode démo local', cls: 'is-local' }
-  }[state] ?? { text: 'Connexion…', cls: 'is-connecting' };
-  el.textContent = config.text;
-  el.className = `oi-counter-live ${config.cls}`;
+
+  const footnoteEl = document.querySelector('#counter-footnote-text');
+  if (footnoteEl) {
+    footnoteEl.textContent = config.footnote;
+  }
 }
 
 /**
@@ -893,11 +929,7 @@ async function render() {
 
       <p class="admin-note oi-counter-footnote">
         ●
-        ${
-          mode === 'remote'
-            ? 'Temps réel actif. Les nouvelles commandes apparaissent automatiquement.'
-            : 'Mode démo local.'
-        }
+        <span id="counter-footnote-text"></span>
       </p>
     </main>
   `;
