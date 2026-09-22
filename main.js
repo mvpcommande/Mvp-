@@ -107,6 +107,15 @@ let remoteStore = null;
 let checkoutIdempotencyKey = null;
 
 /**
+ * Verrou logique anti double-soumission de submitOrder() — source de
+ * vérité indépendante de l'attribut `disabled` du bouton (purement
+ * visuel/DOM, reconstruit à chaque render). Remis à false dès qu'une
+ * tentative se termine (succès ou échec), pour qu'une commande
+ * suivante reste possible.
+ */
+let orderSubmitting = false;
+
+/**
  * Mode de commande affiché en tête de page (À emporter / Sur
  * place). Il n'existe aucune colonne dédiée côté données (le
  * système reste un click-and-collect classique) : ce choix est
@@ -3189,18 +3198,19 @@ function formatOptions(
 async function submitOrder(
   order
 ) {
-  const submitButton = document.querySelector('#submit-order');
-  const submitStatus = document.querySelector('#submit-status');
-
   /*
-   * Le bouton natif désactivé bloque déjà tout second `submit` côté
-   * navigateur ; ce garde-fou est une seconde ligne de défense si la
-   * fonction était jamais appelée deux fois par ailleurs.
+   * Verrou logique : seule source de vérité pour empêcher un double
+   * envoi. `submitButton.disabled` reste un effet visuel de cet état,
+   * jamais l'inverse.
    */
-  if (submitButton?.disabled) {
+  if (orderSubmitting) {
     return;
   }
 
+  orderSubmitting = true;
+
+  const submitButton = document.querySelector('#submit-order');
+  const submitStatus = document.querySelector('#submit-status');
   const originalButtonLabel = submitButton?.innerHTML ?? '';
 
   if (submitButton) {
@@ -3268,6 +3278,14 @@ async function submitOrder(
     checkoutIdempotencyKey = null;
 
     /*
+     * Succès : on relâche le verrou tout de suite — l'écran de
+     * confirmation remplace le formulaire, mais l'état module-level
+     * doit déjà être cohérent pour qu'une commande suivante (après
+     * "Terminé", qui ré-affiche un formulaire neuf) puisse repartir.
+     */
+    orderSubmitting = false;
+
+    /*
      * Synchronise le badge panier (header) et la barre sticky tout
      * de suite, sans attendre le clic sur "Terminé" (qui ne
      * survient qu'au render() complet dans showConfirmation) : entre
@@ -3307,9 +3325,11 @@ async function submitOrder(
 
     /*
      * Échec : on ne touche ni au panier ni aux champs déjà remplis
-     * (le formulaire n'est pas re-rendu ici), on rétablit juste le
-     * bouton pour permettre un nouvel essai.
+     * (le formulaire n'est pas re-rendu ici), on relâche le verrou
+     * et on rétablit le bouton pour permettre un nouvel essai.
      */
+    orderSubmitting = false;
+
     if (submitButton) {
       submitButton.disabled = false;
       submitButton.removeAttribute('aria-busy');
@@ -3333,6 +3353,23 @@ function showConfirmation(
     buildTicketModel(
       order
     );
+
+  /*
+   * `order.type` ('PICKUP' / 'DELIVERY') est calculé une seule fois,
+   * de façon déterministe, par createOrder() (orderLogic.mjs) à
+   * partir du radio "Retrait sur place / Livraison" réellement
+   * soumis — jamais deviné ici. 'DELIVERY' n'est possible que quand
+   * la livraison interne était proposée et explicitement choisie ;
+   * dans tous les autres cas (pas de livraison interne, ou "Retrait
+   * sur place" choisi) le libellé retombe sur le mode de commande
+   * (onsite/à emporter), déjà fiable et déjà affiché juste au-dessus.
+   */
+  const isInternalDelivery = order?.type === 'DELIVERY';
+  const slotLabel = isInternalDelivery
+    ? 'Livraison'
+    : orderMode === 'onsite'
+    ? 'Heure'
+    : 'Retrait';
 
   closeCart();
 
@@ -3372,7 +3409,7 @@ function showConfirmation(
         </div>
 
         <div class="oi-confirmation-row">
-          <span>Retrait</span>
+          <span>${escapeHtml(slotLabel)}</span>
           <strong>${escapeHtml(ticket.pickup)}</strong>
         </div>
 
