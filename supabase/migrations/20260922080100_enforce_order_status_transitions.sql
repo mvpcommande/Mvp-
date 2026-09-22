@@ -4,6 +4,48 @@
 -- pilote), à relire et appliquer manuellement après vérification.
 -- ============================================================================
 --
+-- CANCELLED_DECISION (Bloc 5.1, revue statique, corrige une erreur de la
+-- version précédente de cette migration) :
+--
+--   La version précédente de ce fichier autorisait NEW/ACCEPTED/PREPARING
+--   -> CANCELLED en la présentant comme "une copie fidèle de
+--   orderWorkflow.mjs". C'est FAUX et corrigé ici :
+--
+--     - orderWorkflow.mjs::transitions (source citée par admin.js
+--       lui-même comme la machine à états de référence) est :
+--         { NEW: ['ACCEPTED'], ACCEPTED: ['PREPARING'],
+--           PREPARING: ['READY'], READY: [] }
+--       CANCELLED n'y figure NULLE PART, ni comme état ni comme cible.
+--     - grep exhaustif de ce repo (`'CANCELLED'`/`"CANCELLED"` dans
+--       *.js/*.mjs) : aucun appel à updateStatus()/supabaseStore, aucun
+--       RPC, aucune action admin.js n'écrit jamais CANCELLED. Les deux
+--       seules occurrences hors commentaires/libellés sont
+--       admin.js:69 (COLUMN_LABELS, un libellé d'affichage pour le cas
+--       où la valeur existerait déjà en base) et
+--       adminFeatures.mjs:246 (un filtre en LECTURE qui exclut
+--       CANCELLED d'un calcul, jamais une écriture).
+--     - admin.js documente lui-même (commentaire ligne ~111) que
+--       CANCELLED "existe côté base... mais n'a aucune transition
+--       cliquable ici".
+--
+--   Autoriser CANCELLED comme cible aurait donc été l'ajout d'une
+--   RÈGLE MÉTIER INVENTÉE, non couverte par aucun chemin applicatif
+--   actuel -- explicitement interdit par les règles du Bloc 5
+--   ("ne jamais inventer de donnée/règle"). Le trigger ci-dessous
+--   protège donc EXACTEMENT et UNIQUEMENT les transitions qui existent
+--   réellement aujourd'hui :
+--
+--     NEW -> ACCEPTED
+--     ACCEPTED -> PREPARING
+--     PREPARING -> READY
+--     READY -> (aucune, terminal)
+--
+--   Si un besoin métier d'annulation existe, il doit être spécifié et
+--   implémenté (UI + RPC/policy dédiée) séparément, puis cette migration
+--   étendue en conséquence -- pas l'inverse.
+--
+-- ---------------------------------------------------------------------------
+--
 -- MISE À JOUR POST-VÉRIFICATION LIVE (TEST LIVE, projet Supabase Foodatoi
 -- réel) -- CE GAP EST CONFIRMÉ EXPLOITABLE EN PRODUCTION ACTUELLEMENT,
 -- RECLASSÉ P0 :
@@ -87,22 +129,18 @@
 --
 -- Un trigger BEFORE UPDATE qui rejette toute transition de statut qui
 -- ne correspond pas exactement à la machine à états déjà définie côté
--- client dans orderWorkflow.mjs, plus une entrée explicite vers
--- CANCELLED (valeur déjà présente dans la contrainte de la policy RLS
--- et dans admin.js::labels, bien qu'aucune action UI ne la déclenche
--- aujourd'hui -- l'autoriser en base ne change aucun comportement
--- observable tant qu'aucun bouton ne l'utilise, et évite de bloquer
--- une annulation manuelle ou une future fonctionnalité). Aucune
--- nouvelle machine à états n'est inventée : celle-ci est une copie
--- fidèle de orderWorkflow.mjs, appliquée une seconde fois côté
--- serveur (défense en profondeur, pas une nouvelle règle métier).
+-- client dans orderWorkflow.mjs. Aucune nouvelle machine à états n'est
+-- inventée : celle-ci est une copie fidèle de orderWorkflow.mjs,
+-- appliquée une seconde fois côté serveur (défense en profondeur, pas
+-- une nouvelle règle métier). Voir CANCELLED_DECISION en tête de
+-- fichier : CANCELLED n'est PAS incluse comme cible autorisée, faute
+-- de tout chemin applicatif actuel qui l'écrirait.
 --
 -- Transitions autorisées :
---   NEW       -> ACCEPTED | CANCELLED
---   ACCEPTED  -> PREPARING | CANCELLED
---   PREPARING -> READY | CANCELLED
+--   NEW       -> ACCEPTED
+--   ACCEPTED  -> PREPARING
+--   PREPARING -> READY
 --   READY     -> (aucune, terminal, comme aujourd'hui côté client)
---   CANCELLED -> (aucune, terminal)
 --
 -- RISQUE SI NON CORRIGÉ : régression silencieuse de statut sous
 -- concurrence multi-appareils, CONFIRMÉE EXPLOITABLE EN PRODUCTION
@@ -131,8 +169,12 @@
 --   -- Doit ÉCHOUER avec INVALID_STATUS_TRANSITION (retour en arrière) :
 --   update orders set status = 'PREPARING' where id = '<commande READY réelle>';
 --
---   -- Doit RÉUSSIR (annulation depuis un statut actif) :
+--   -- Doit ÉCHOUER avec INVALID_STATUS_TRANSITION (CANCELLED non autorisée
+--   -- par cette migration, voir CANCELLED_DECISION) :
 --   update orders set status = 'CANCELLED' where id = '<commande ACCEPTED réelle>';
+--
+--   -- Doit RÉUSSIR (update d'une autre colonne, status inchangé) :
+--   update orders set notes = 'test' where id = '<commande NEW réelle>';
 --
 -- ============================================================================
 
@@ -147,9 +189,9 @@ declare
 begin
   if new.status is distinct from old.status then
     v_allowed := case old.status
-      when 'NEW' then new.status in ('ACCEPTED', 'CANCELLED')
-      when 'ACCEPTED' then new.status in ('PREPARING', 'CANCELLED')
-      when 'PREPARING' then new.status in ('READY', 'CANCELLED')
+      when 'NEW' then new.status = 'ACCEPTED'
+      when 'ACCEPTED' then new.status = 'PREPARING'
+      when 'PREPARING' then new.status = 'READY'
       else false
     end;
 
